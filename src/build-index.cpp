@@ -1,7 +1,8 @@
 #include <iostream>
-#include "triple_bwt.hpp"
+#include "ring.hpp"
 #include <fstream>
 #include <sdsl/construct.hpp>
+#include <ltj_algorithm.hpp>
 
 using namespace std;
 
@@ -26,12 +27,12 @@ int main(int argc, char **argv)
     memory_monitor::start();
     auto start = timer::now();
     
-    triple_bwt A(D);
+    ring::ring A(D);
     auto stop = timer::now();
     memory_monitor::stop();
-    cout << "  Index built " << A.size() << " bytes" << endl;
-     
-    A.save(string(argv[1]));
+    cout << "  Index built " << sdsl::size_in_bytes(A) << " bytes" << endl;
+
+    sdsl::store_to_file(A, string(argv[1]));
     cout << "Index saved" << endl;
     cout << duration_cast<seconds>(stop-start).count() << " seconds." << endl;
     cout << memory_monitor::peak() << " bytes." << endl;

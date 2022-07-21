@@ -3,7 +3,7 @@
 
 #include <iostream>
 #include "Triple.h"
-#include "triple_bwt.hpp"
+#include "ring.hpp"
 
 class Iterator {
 public:
@@ -33,14 +33,14 @@ public:
             this->i_s = this->graph->open_SPO();
             this->current_level += 1;
 
-            this->cur_s = this->graph->min_S(this->i_s);
+            //this->cur_s = this->graph->min_S(this->i_s);
             this->cur_s = this->graph->next_S(this->i_s, this->triple->s->constant);
 
             // Down
             this->i_p = this->graph->down_S(this->cur_s);
             this->current_level += 1;
 
-            this->cur_p = this->graph->min_P_in_S(this->i_p, this->cur_s);
+            //this->cur_p = this->graph->min_P_in_S(this->i_p, this->cur_s);
             this->cur_p = this->graph->next_P_in_S(this->i_p, this->cur_s, this->triple->p->constant);
 
             if (this->cur_s == 0 || this->cur_p == 0) {

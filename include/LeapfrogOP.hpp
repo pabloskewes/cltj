@@ -5,7 +5,7 @@
 #include <map>
 #include <chrono>
 #include "Triple.h"
-#include "triple_bwt.hpp"
+#include "ring.hpp"
 #include "Iterator.hpp"
 
 class LeapfrogOP {
@@ -37,6 +37,7 @@ public:
             all_iterators.push_back(triple_iterator);
         }
     }
+
 
     ~LeapfrogOP() {
         for (Iterator* triple_iterator : all_iterators) {
@@ -78,6 +79,7 @@ public:
         string varname = (*this->gao)[level];
         vector<Iterator*>* var_iterators = &this->query_iterators[varname];
 
+        //TODO: por que va a ser size() == 1 en el último nivel
         if ((*var_iterators).size() == 1 && ((*var_iterators)[0]->current_level == 1)) {
             Iterator* triple_iterator = (*var_iterators)[0];
             vector<pair<uint64_t, uint64_t>> iterator_last = triple_iterator->down_last();
@@ -92,7 +94,7 @@ public:
                 if (std::chrono::duration_cast<std::chrono::seconds> (to_time - begin).count() >= 600) {
                     break;
                 }
-                if (level >= (this->gao->size() - 1)) {
+                if (level >= (this->gao->size() - 1)) { //TODO == size()-1
                     // Print Answers
                     (*bindings)[varname] = binding_last.second;
                     

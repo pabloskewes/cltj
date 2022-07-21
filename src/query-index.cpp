@@ -16,17 +16,13 @@
 #include <iostream>
 #include <utility>
 #include <map>
-#include "triple_bwt.hpp"
+#include "ring.hpp"
 #include <chrono>
-#include "Term.h"
-#include "Triple.h"
-#include "Iterator.hpp"
-#include "LeapfrogOP.hpp"
-#include <boost/algorithm/string.hpp>
+#include <triple_pattern.hpp>
+#include <ltj_algorithm.hpp>
 #include "utils.hpp"
 #include<map>
 
-using namespace boost;
 using namespace std;
 
 //#include<chrono>
@@ -45,7 +41,7 @@ bool get_file_content(string filename, vector<string> & vector_of_strings)
         return false;
     }
     string str;
-    // Read the next line from File untill it reaches the end.
+    // Read the next line from File until it reaches the end.
     while (getline(in, str))
     {
         // Line contains string of length > 0 then save it in vector
@@ -57,50 +53,65 @@ bool get_file_content(string filename, vector<string> & vector_of_strings)
     return true;
 }
 
-bool is_number(string & s)
+std::string ltrim(const std::string &s)
 {
-    return !s.empty() && find_if(s.begin(),
-        s.end(), [](unsigned char c) { return !isdigit(c); }) == s.end();
+    size_t start = s.find_first_not_of(' ');
+    return (start == std::string::npos) ? "" : s.substr(start);
 }
 
-Triple* get_triple(string & s, vector<Term*> & terms_created) {
-    vector<string> terms_strings;
-    split(terms_strings, s, is_any_of(" "), token_compress_on);
+std::string rtrim(const std::string &s)
+{
+    size_t end = s.find_last_not_of(' ');
+    return (end == std::string::npos) ? "" : s.substr(0, end + 1);
+}
 
-    Term* t1;
-    Term* t2;
-    Term* t3;
+std::string trim(const std::string &s) {
+    return rtrim(ltrim(s));
+}
 
-    if (is_number(terms_strings[0])) {
-        uint64_t value;
-        istringstream iss(terms_strings[0]);
-        iss >> value;
-        t1 = new Term(value);
-    } else {
-        t1 = new Term(terms_strings[0]);
+std::vector<std::string> tokenizer(const std::string &input, const char &delimiter){
+    std::stringstream stream(input);
+    std::string token;
+    std::vector<std::string> res;
+    while(getline(stream, token, delimiter)){
+        res.emplace_back(trim(token));
     }
+    return res;
+}
 
-    if (is_number(terms_strings[1])) {
-        uint64_t value;
-        istringstream iss(terms_strings[1]);
-        iss >> value;
-        t2 = new Term(value);
-    } else {
-        t2 = new Term(terms_strings[1]);
-    }
+bool is_variable(string & s)
+{
+    return (s.at(0) == '?');
+}
 
-    if (is_number(terms_strings[2])) {
-        uint64_t value;
-        istringstream iss(terms_strings[2]);
-        iss >> value;
-        t3 = new Term(value);
-    } else {
-        t3 = new Term(terms_strings[2]);
+uint8_t get_variable(string &s){
+    return (uint8_t) (s.at(1));
+}
+
+uint64_t get_constant(string &s){
+    return std::stoull(s);
+}
+
+ring::triple_pattern get_triple(string & s) {
+    vector<string> terms = tokenizer(s, ' ');
+
+    ring::triple_pattern triple;
+    if(is_variable(terms[0])){
+        triple.var_s(get_variable(terms[0]));
+    }else{
+        triple.const_s(get_constant(terms[0]));
     }
-    terms_created.push_back(t1);
-    terms_created.push_back(t2);
-    terms_created.push_back(t3);
-    return new Triple(t1, t2, t3);
+    if(is_variable(terms[1])){
+        triple.var_p(get_variable(terms[1]));
+    }else{
+        triple.const_p(get_constant(terms[1]));
+    }
+    if(is_variable(terms[2])){
+        triple.var_o(get_variable(terms[2]));
+    }else{
+        triple.const_o(get_constant(terms[2]));
+    }
+    return triple;
 }
 
 vector<string> get_gao(vector<Triple*> query) {
@@ -149,15 +160,13 @@ vector<string> get_gao(vector<Triple*> query) {
 
 }
 
-vector<string> get_gao_min(vector<Triple*> query, triple_bwt & graph) {
+vector<string> get_gao_min(vector<Triple*> query, ring::ring & graph) {
     map<string, vector<float>> triple_values;
     for (Triple * triple_pattern : query) {
 
-        bwt_interval open_interval = graph.open_PSO();
-        uint64_t cur_p = graph.min_P(open_interval);
-        cur_p = graph.next_P(open_interval, triple_pattern->p->constant);
-
-        bwt_interval i_p = graph.down_P(cur_p);
+        ring::bwt_interval open_interval = graph.open_PSO();
+        uint64_t cur_p = graph.next_P(open_interval, triple_pattern->p->constant);
+        ring::bwt_interval i_p = graph.down_P(cur_p);
 
         triple_values[triple_pattern->s->varname].push_back((float)i_p.size()/query.size());
         triple_values[triple_pattern->o->varname].push_back((float)i_p.size()/query.size());
@@ -201,12 +210,12 @@ int main(int argc, char* argv[])
     vector<string> dummy_queries;
     bool result = get_file_content(argv[2], dummy_queries);
 
-    triple_bwt graph;
+    ring::ring graph;
 
     cout << " Loading the index..."; fflush(stdout);
-    graph.load(string(argv[1]));
+    sdsl::load_from_file(graph, string(argv[1]));
 
-    cout << endl << " Index loaded " << graph.size() << " bytes" << endl;
+    cout << endl << " Index loaded " << sdsl::size_in_bytes(graph) << " bytes" << endl;
 
     std::ifstream ifs;
     uint64_t nQ = 0;
@@ -219,17 +228,15 @@ int main(int argc, char* argv[])
     {
 
         int count = 1;
-        for (string query_string : dummy_queries) {
+        for (string& query_string : dummy_queries) {
 
-            vector<Term*> terms_created;
-            vector<Triple*> query;
+            //vector<Term*> terms_created;
+            //vector<Triple*> query;
 
-            vector<string> tokens_query;
-            split(tokens_query, query_string, is_any_of("."), token_compress_on);
-
-            for (string token : tokens_query) {
-                trim(token);
-                Triple* triple_pattern = get_triple(token, terms_created);
+            std::vector<ring::triple_pattern> query;
+            vector<string> tokens_query = tokenizer(query_string, '.');
+            for (string& token : tokens_query) {
+                auto triple_pattern = get_triple(token);
                 query.push_back(triple_pattern);
             }
 
@@ -239,10 +246,9 @@ int main(int argc, char* argv[])
 
             start = high_resolution_clock::now();
             
-            vector<string> gao = get_gao_min_gen(query, graph);
-            set_scores(query, gao);
+            vector<uint8_t> gao = get_gao_min_gen(query, graph);
 
-            LeapfrogOP lf(&gao, &graph, &query);
+            ring::ltj_algorithm<> ltj(&query, &gao, &graph);
 
             /*
             cout << "Query Details:" << endl;
@@ -252,32 +258,24 @@ int main(int argc, char* argv[])
             cout << "##########" << endl;
             */
 
-            map<string, uint64_t> bindings;
-            int number_of_results = 0;
+            typedef std::vector<typename ring::ltj_algorithm<>::tuple_type> results_type;
+            results_type res;
 
             std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-            lf.evaluate(0, &bindings, &number_of_results, begin);
+
+            ltj.join(res, 1000, 600);
             //std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 
             stop = high_resolution_clock::now();
             time_span = duration_cast<microseconds>(stop - start);
             total_time = time_span.count();
 
-            cout << nQ <<  ";" << number_of_results << ";" << (unsigned long long)(total_time*1000000000ULL) << endl;
+            cout << nQ <<  ";" << res.size() << ";" << (unsigned long long)(total_time*1000000000ULL) << endl;
             nQ++;
 
             // cout << std::chrono::duration_cast<std::chrono::nanoseconds> (end - begin).count() << std::endl;
 
             //cout << "RESULTS QUERY " << count << ": " << number_of_results << endl;
-
-            // Delete pointers and empty vectors
-            for (Triple* triple_pattern : query) {
-                delete triple_pattern;
-            }
-
-            for (Term* term : terms_created) {
-                delete term;
-            }
         count += 1;
         }
 
