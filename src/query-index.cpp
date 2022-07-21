@@ -82,30 +82,38 @@ bool is_variable(string & s)
     return (s.at(0) == '?');
 }
 
-uint8_t get_variable(string &s){
-    return (uint8_t) (s.at(1));
+uint8_t get_variable(string &s, std::unordered_map<std::string, uint8_t> &hash_table_vars){
+    auto var = s.substr(1);
+    auto it = hash_table_vars.find(var);
+    if(it == hash_table_vars.end()){
+        uint8_t id = hash_table_vars.size();
+        hash_table_vars.insert({var, id });
+        return id;
+    }else{
+        return it->second;
+    }
 }
 
 uint64_t get_constant(string &s){
     return std::stoull(s);
 }
 
-ring::triple_pattern get_triple(string & s) {
+ring::triple_pattern get_triple(string & s, std::unordered_map<std::string, uint8_t> &hash_table_vars) {
     vector<string> terms = tokenizer(s, ' ');
 
     ring::triple_pattern triple;
     if(is_variable(terms[0])){
-        triple.var_s(get_variable(terms[0]));
+        triple.var_s(get_variable(terms[0], hash_table_vars));
     }else{
         triple.const_s(get_constant(terms[0]));
     }
     if(is_variable(terms[1])){
-        triple.var_p(get_variable(terms[1]));
+        triple.var_p(get_variable(terms[1], hash_table_vars));
     }else{
         triple.const_p(get_constant(terms[1]));
     }
     if(is_variable(terms[2])){
-        triple.var_o(get_variable(terms[2]));
+        triple.var_o(get_variable(terms[2], hash_table_vars));
     }else{
         triple.const_o(get_constant(terms[2]));
     }
@@ -141,11 +149,11 @@ int main(int argc, char* argv[])
 
             //vector<Term*> terms_created;
             //vector<Triple*> query;
-
+            std::unordered_map<std::string, uint8_t> hash_table_vars;
             std::vector<ring::triple_pattern> query;
             vector<string> tokens_query = tokenizer(query_string, '.');
             for (string& token : tokens_query) {
-                auto triple_pattern = get_triple(token);
+                auto triple_pattern = get_triple(token, hash_table_vars);
                 query.push_back(triple_pattern);
             }
 
