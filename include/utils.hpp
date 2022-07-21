@@ -83,7 +83,7 @@ uint64_t get_size_interval(ring::triple_pattern &triple_pattern, ring::ring & gr
     return 0;
 }
 
-bool compare_by_second(pair<string, int> a, pair<string, int> b) {
+bool compare_by_second(pair<uint8_t, uint64_t> a, pair<uint8_t, uint64_t> b) {
     return a.second < b.second;
 }
 
@@ -91,7 +91,7 @@ bool compare_by_second(pair<string, int> a, pair<string, int> b) {
 vector<uint8_t> get_gao_min_gen(vector<ring::triple_pattern> &query, ring::ring &graph) {
     std::map<uint8_t , vector<uint64_t>> triple_values;
     std::map<uint8_t, vector<ring::triple_pattern*>> triples_var;
-    for (auto& triple_pattern : query) {
+    for (auto& triple_pattern : query) { //TODO: esto está ben (solo refactoring)
         uint64_t triple_size = get_size_interval(triple_pattern, graph);
         if (triple_pattern.s_is_variable()) {
           triple_values[(uint8_t) triple_pattern.term_s.value].push_back(triple_size);
@@ -133,7 +133,8 @@ vector<uint8_t> get_gao_min_gen(vector<ring::triple_pattern> &query, ring::ring 
         if (triple_values[it->first].size() == 1) {
             single_vars.push_back(it->first);
         } else {
-            varmin_pairs.push_back(pair<uint8_t, uint64_t>(it->first, *min_element(triple_values[it->first].begin(), triple_values[it->first].end())));
+            varmin_pairs.push_back(pair<uint8_t, uint64_t>(it->first, *min_element(triple_values[it->first].begin(),
+                                                                                   triple_values[it->first].end())));
             selectable_vars[it->first] = false;
         }
     }

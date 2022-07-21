@@ -48,7 +48,7 @@ link_directories(~/lib)
 
 
 add_executable(build-index src/build-index.cpp)
-target_link_libraries(build-index sdsl divsufsort divsufsort64 nfa)
+target_link_libraries(build-index sdsl divsufsort divsufsort64)
 
 add_executable(query-index src/query-index.cpp)
-target_link_libraries(query-index sdsl divsufsort divsufsort64 nfa)
+target_link_libraries(query-index sdsl divsufsort divsufsort64)

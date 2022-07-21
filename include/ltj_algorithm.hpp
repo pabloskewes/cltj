@@ -38,6 +38,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <triple_pattern.hpp>
 #include <ring.hpp>
 #include <ltj_iterator.hpp>
+#include <gao.hpp>
 
 namespace ring {
 
@@ -59,7 +60,7 @@ namespace ring {
         const std::vector<triple_pattern>* m_ptr_triple_patterns;
         const std::vector<var_type>* m_ptr_gao;
         ring* m_ptr_ring;
-        std::vector<ltj_iter_type*> m_iterators;
+        std::vector<ltj_iter_type> m_iterators;
         var_to_iterators_type m_var_to_iterators;
         bool m_is_empty = false;
 
@@ -159,15 +160,29 @@ namespace ring {
             std::swap(m_is_empty, o.m_is_empty);
         }
 
-
+        /**
+         *
+         * @param res               Results
+         * @param limit_results     Limit of results
+         * @param timeout_seconds   Timeout in seconds
+         */
         void join(std::vector<tuple_type> &res,
-                      const size_type limit_results = 0, const size_type timeout_seconds = 0){
+                  const size_type limit_results = 0, const size_type timeout_seconds = 0){
             if(m_is_empty) return;
             time_point_type start = std::chrono::high_resolution_clock::now();
             tuple_type t(m_ptr_gao->size());
             search(0, t, res, start, limit_results, timeout_seconds);
         };
 
+        /**
+         *
+         * @param j                 Index of the variable
+         * @param tuple             Tuple of the current search
+         * @param res               Results
+         * @param start             Initial time to check timeout
+         * @param limit_results     Limit of results
+         * @param timeout_seconds   Timeout in seconds
+         */
         void search(const size_type j, tuple_type &tuple, std::vector<tuple_type> &res,
                         const time_point_type start,
                         const size_type limit_results = 0, const size_type timeout_seconds = 0){
@@ -192,7 +207,7 @@ namespace ring {
                 while(c != 0){ //If empty c=0
                     //1. Adding result to tuple
                     tuple[j] = {x_j, c};
-                    //2. Going down in the tries by setting x_j = c
+                    //2. Going down in the tries by setting x_j = c (\mu(t_i) in paper)
                     for(ltj_iter_type* iter : itrs){
                         iter->down(x_j, c);
                     }
@@ -212,10 +227,10 @@ namespace ring {
 
         /**
          *
-         * @param x_j Variable
-         * @param c Constant. If it is unknown the value is -1
-         * @return The next constant that matches the intersection between the triples of x_j.
-         *         If the intersection of elements is empty, returns 0.
+         * @param x_j   Variable
+         * @param c     Constant. If it is unknown the value is -1
+         * @return      The next constant that matches the intersection between the triples of x_j.
+         *              If the intersection is empty, it returns 0.
          */
         value_type seek(const var_type x_j, value_type c=-1){
             while (true){
