@@ -55,7 +55,7 @@ namespace ring {
         value_type m_cur_s;
         value_type m_cur_p;
         value_type m_cur_o;
-        bool m_is_empty;
+        bool m_is_empty = false;
         //TODO: ao mellor hai que meter o nivel para saber cando parar de facer down
         //std::stack<state_type> m_states;
 
