@@ -354,10 +354,13 @@ namespace ring {
         void up(var_type var) { //Go up in the trie
             if (is_variable_subject(var)) {
                 m_cur_s = -1;
+                std::cout << "Up in S" << std::endl;
             } else if (is_variable_predicate(var)) {
                 m_cur_p = -1;
+                std::cout << "Up in P" << std::endl;
             } else if (is_variable_object(var)) {
                 m_cur_o = -1;
+                std::cout << "Up in O" << std::endl;
             }
 
         };
