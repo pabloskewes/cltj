@@ -34,6 +34,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef RING_LTJ_ITERATOR_HPP
 #define RING_LTJ_ITERATOR_HPP
 
+#define VERBOSE 0
+
 namespace ring {
 
     template<class var_t, class cons_t>
@@ -300,60 +302,84 @@ namespace ring {
         void down(var_type var, size_type c) { //Go down in the trie
             if (is_variable_subject(var)) {
                 if (m_cur_o != -1 && m_cur_p != -1){
+#if VERBOSE
                     std::cout << "Nothing to do" << std::endl;
+#endif
                     return;
                 }
                 if (m_cur_o != -1) {
                     //OS->P
+#if VERBOSE
                     std::cout << "down_O_S" << std::endl;
+#endif
                     m_i_p = m_ptr_ring->down_O_S(m_i_s, m_cur_o, c);
                 } else if (m_cur_p != -1) {
                     //PS->O
+#if VERBOSE
                     std::cout << "down_P_S" << std::endl;
+#endif
                     m_i_o = m_ptr_ring->down_P_S(m_i_s, c);
                 } else {
                     //S->{OP,PO} same range in SOP and SPO
+#if VERBOSE
                     std::cout << "down_S" << std::endl;
+#endif
                     m_i_o = m_i_p = m_ptr_ring->down_S(c);
                 }
                 //m_states.emplace(state_type::s);
                 m_cur_s = c;
             } else if (is_variable_predicate(var)) {
                 if (m_cur_s != -1 && m_cur_o != -1){
+#if VERBOSE
                     std::cout << "Nothing to do" << std::endl;
+#endif
                     return;
                 }
                 if (m_cur_o != -1) {
                     //OP->S
+#if VERBOSE
                     std::cout << "down_O_P" << std::endl;
+#endif
                     m_i_s = m_ptr_ring->down_O_P(m_i_p, c);
                 } else if (m_cur_s != -1) {
                     //SP->O
+#if VERBOSE
                     std::cout << "down_S_P" << std::endl;
+#endif
                     m_i_o = m_ptr_ring->down_S_P(m_i_p, m_cur_s, c);
                 } else {
                     //P->{OS,SO} same range in POS and PSO
+#if VERBOSE
                     std::cout << "down_P" << std::endl;
+#endif
                     m_i_o = m_i_s = m_ptr_ring->down_P(c);
                 }
                 //m_states.emplace(state_type::p);
                 m_cur_p = c;
             } else if (is_variable_object(var)) {
                 if (m_cur_s != -1 && m_cur_p != -1){
+#if VERBOSE
                     std::cout << "Nothing to do" << std::endl;
+#endif
                     return;
                 }
                 if (m_cur_p != -1) {
                     //PO->S
+#if VERBOSE
                     std::cout << "down_P_O" << std::endl;
+#endif
                     m_i_s = m_ptr_ring->down_P_O(m_i_o, m_cur_p, c);
                 } else if (m_cur_s != -1) {
                     //SO->P
+#if VERBOSE
                     std::cout << "down_S_O" << std::endl;
+#endif
                     m_i_p = m_ptr_ring->down_S_O(m_i_o, c);
                 } else {
                     //O->{PS,SP} same range in OPS and OSP
+#if VERBOSE
                     std::cout << "down_O" << std::endl;
+#endif
                     m_i_p = m_i_s = m_ptr_ring->down_O(c);
                 }
                 //m_states.emplace(state_type::o);
@@ -366,13 +392,19 @@ namespace ring {
         void up(var_type var) { //Go up in the trie
             if (is_variable_subject(var)) {
                 m_cur_s = -1;
+#if VERBOSE
                 std::cout << "Up in S" << std::endl;
+#endif
             } else if (is_variable_predicate(var)) {
                 m_cur_p = -1;
+#if VERBOSE
                 std::cout << "Up in P" << std::endl;
+#endif
             } else if (is_variable_object(var)) {
                 m_cur_o = -1;
+#if VERBOSE
                 std::cout << "Up in O" << std::endl;
+#endif
             }
 
         };
@@ -383,57 +415,81 @@ namespace ring {
                 //1. We have to go down through s
                 if (m_cur_p != -1 && m_cur_o != -1) {
                     //PO->S
+#if VERBOSE
                     std::cout << "min_S_in_PO" << std::endl;
+#endif
                     return m_ptr_ring->min_S_in_PO(m_i_s);
                 } else if (m_cur_o != -1) {
                     //O->S
+#if VERBOSE
                     std::cout << "min_S_in_O" << std::endl;
+#endif
                     return m_ptr_ring->min_S_in_O(m_i_s, m_cur_o);
                 } else if (m_cur_p != -1) {
                     //P->S
+#if VERBOSE
                     std::cout << "min_S_in_P" << std::endl;
+#endif
                     return m_ptr_ring->min_S_in_P(m_i_s);
                 } else {
                     //S
+#if VERBOSE
                     std::cout << "min_S" << std::endl;
+#endif
                     return m_ptr_ring->min_S(m_i_s);
                 }
             } else if (is_variable_predicate(var)) {
                 //1. We have to go down in the trie of p
                 if (m_cur_s != -1 && m_cur_o != -1) {
                     //SO->P
+#if VERBOSE
                     std::cout << "min_P_in_SO" << std::endl;
+#endif
                     return m_ptr_ring->min_P_in_SO(m_i_p);
                 } else if (m_cur_s != -1) {
                     //S->P
+#if VERBOSE
                     std::cout << "min_P_in_S" << std::endl;
+#endif
                     return m_ptr_ring->min_P_in_S(m_i_p, m_cur_s);
                 } else if (m_cur_o != -1) {
                     //O->P
+#if VERBOSE
                     std::cout << "min_P_in_O" << std::endl;
+#endif
                     return m_ptr_ring->min_P_in_O(m_i_p);
                 } else {
                     //P
+#if VERBOSE
                     std::cout << "min_P" << std::endl;
+#endif
                     return m_ptr_ring->min_P(m_i_p);
                 }
             } else if (is_variable_object(var)) {
                 //1. We have to go down in the trie of o
                 if (m_cur_s != -1 && m_cur_p != -1) {
                     //SP->O
+#if VERBOSE
                     std::cout << "min_O_in_SP" << std::endl;
+#endif
                     return m_ptr_ring->min_O_in_SP(m_i_o);
                 } else if (m_cur_s != -1) {
                     //S->O
+#if VERBOSE
                     std::cout << "min_O_in_S" << std::endl;
+#endif
                     return m_ptr_ring->min_O_in_S(m_i_o);
                 } else if (m_cur_p != -1) {
                     //P->O
+#if VERBOSE
                     std::cout << "min_O_in_P" << std::endl;
+#endif
                     return m_ptr_ring->min_O_in_P(m_i_o, m_cur_p);
                 } else {
                     //O
+#if VERBOSE
                     std::cout << "min_O" << std::endl;
+#endif
                     return m_ptr_ring->min_O(m_i_o);
                 }
             }
@@ -445,57 +501,81 @@ namespace ring {
                 //1. We have to go down through s
                 if (m_cur_p != -1 && m_cur_o != -1) {
                     //PO->S
+#if VERBOSE
                     std::cout << "next_S_in_PO" << std::endl;
+#endif
                     return m_ptr_ring->next_S_in_PO(m_i_s, c);
                 } else if (m_cur_o != -1) {
                     //O->S
+#if VERBOSE
                     std::cout << "next_S_in_O" << std::endl;
+#endif
                     return m_ptr_ring->next_S_in_O(m_i_s, m_cur_o, c);
                 } else if (m_cur_p != -1) {
                     //P->S
+#if VERBOSE
                     std::cout << "next_S_in_P" << std::endl;
+#endif
                     return m_ptr_ring->next_S_in_P(m_i_s, c);
                 } else {
                     //S
+#if VERBOSE
                     std::cout << "next_S" << std::endl;
+#endif
                     return m_ptr_ring->next_S(m_i_s, c);
                 }
             } else if (is_variable_predicate(var)) {
                 //1. We have to go down in the trie of p
                 if (m_cur_s != -1 && m_cur_o != -1) {
                     //SO->P
+#if VERBOSE
                     std::cout << "next_P_in_SO" << std::endl;
+#endif
                     return m_ptr_ring->next_P_in_SO(m_i_p, c);
                 } else if (m_cur_s != -1) {
                     //S->P
+#if VERBOSE
                     std::cout << "next_P_in_S" << std::endl;
+#endif
                     return m_ptr_ring->next_P_in_S(m_i_p, m_cur_s, c);
                 } else if (m_cur_o != -1) {
                     //O->P
+#if VERBOSE
                     std::cout << "next_P_in_O" << std::endl;
+#endif
                     return m_ptr_ring->next_P_in_O(m_i_p, c);
                 } else {
                     //P
+#if VERBOSE
                     std::cout << "next_P" << std::endl;
+#endif
                     return m_ptr_ring->next_P(m_i_p, c);
                 }
             } else if (is_variable_object(var)) {
                 //1. We have to go down in the trie of o
                 if (m_cur_s != -1 && m_cur_p != -1) {
                     //SP->O
+#if VERBOSE
                     std::cout << "next_O_in_SP" << std::endl;
+#endif
                     return m_ptr_ring->next_O_in_SP(m_i_o, c);
                 } else if (m_cur_s != -1) {
                     //S->O
+#if VERBOSE
                     std::cout << "next_O_in_S" << std::endl;
+#endif
                     return m_ptr_ring->next_O_in_S(m_i_o, c);
                 } else if (m_cur_p != -1) {
                     //P->O
+#if VERBOSE
                     std::cout << "next_O_in_P" << std::endl;
+#endif
                     return m_ptr_ring->next_O_in_P(m_i_o, m_cur_p, c);
                 } else {
                     //O
+#if VERBOSE
                     std::cout << "next_O" << std::endl;
+#endif
                     return m_ptr_ring->next_O(m_i_o, c);
                 }
             }
