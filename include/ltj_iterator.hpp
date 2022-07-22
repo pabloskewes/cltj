@@ -580,6 +580,21 @@ namespace ring {
                 }
             }
         }
+
+        bool in_last_level(){
+            return (m_cur_o !=-1 && m_cur_p != -1) || (m_cur_s !=-1 && m_cur_p != -1)
+                    || (m_cur_o !=-1 && m_cur_s != -1);
+        }
+
+        std::vector<pair<uint64_t, uint64_t>> leap_lonely_last(var_type var){
+            if (is_variable_subject(var)){
+                return m_ptr_ring->all_S_in_range(m_i_s);
+            }else if (is_variable_predicate(var)){
+                return m_ptr_ring->all_P_in_range(m_i_p);
+            }else if (is_variable_object(var)){
+                return m_ptr_ring->all_O_in_range(m_i_o);
+            }
+        }
     };
 
 }

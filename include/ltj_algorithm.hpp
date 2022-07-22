@@ -178,6 +178,20 @@ namespace ring {
         };
 
         /**
+        *
+        * @param res               Results
+        * @param limit_results     Limit of results
+        * @param timeout_seconds   Timeout in seconds
+        */
+        void join_opt(std::vector<tuple_type> &res,
+                  const size_type limit_results = 0, const size_type timeout_seconds = 0){
+            if(m_is_empty) return;
+            time_point_type start = std::chrono::high_resolution_clock::now();
+            tuple_type t(m_ptr_gao->size());
+            search_opt(0, t, res, start, limit_results, timeout_seconds);
+        };
+
+        /**
          *
          * @param j                 Index of the variable
          * @param tuple             Tuple of the current search
@@ -222,6 +236,70 @@ namespace ring {
                     }
                     //5. Next constant for x_j
                     c = seek(x_j, c+1);
+                }
+            }
+        };
+
+        /**
+         *
+         * @param j                 Index of the variable
+         * @param tuple             Tuple of the current search
+         * @param res               Results
+         * @param start             Initial time to check timeout
+         * @param limit_results     Limit of results
+         * @param timeout_seconds   Timeout in seconds
+         */
+        void search_opt(const size_type j, tuple_type &tuple, std::vector<tuple_type> &res,
+                    const time_point_type start,
+                    const size_type limit_results = 0, const size_type timeout_seconds = 0){
+
+            //(Optional) Check timeout
+            if(timeout_seconds > 0){
+                time_point_type stop = std::chrono::high_resolution_clock::now();
+                auto sec = std::chrono::duration_cast<std::chrono::seconds>(stop-start).count();
+                if(sec > timeout_seconds) return;
+            }
+
+            //(Optional) Check limit
+            if(limit_results > 0 && res.size() == limit_results) return;
+
+            if(j == m_ptr_gao->size()){
+                //Report results
+                res.emplace_back(tuple);
+            }else{
+                var_type x_j = m_ptr_gao->at(j);
+                std::vector<ltj_iter_type*>& itrs = m_var_to_iterators[x_j];
+                if(itrs.size() == 1 && itrs[0]->in_last_level()) {
+                    auto results = itrs[0]->leap_lonely_last(x_j);
+                    for (const auto &r : results) {
+                        value_type c = r.second;
+                        //1. Adding result to tuple
+                        tuple[j] = {x_j, c};
+                        //2. Going down in the tries by setting x_j = c (\mu(t_i) in paper)
+                        itrs[0]->down(x_j, c);
+                        //4. Search with the next variable x_{j+1}
+                        search_opt(j + 1, tuple, res, start, limit_results, timeout_seconds);
+                        itrs[0]->up(x_j);
+                    }
+                }else {
+                    value_type c = seek(x_j);
+                    while (c != 0) { //If empty c=0
+                        //1. Adding result to tuple
+                        tuple[j] = {x_j, c};
+                        //2. Going down in the tries by setting x_j = c (\mu(t_i) in paper)
+                        for (ltj_iter_type *iter : itrs) {
+                            iter->down(x_j, c);
+                        }
+                        //4. Search with the next variable x_{j+1}
+                        search_opt(j + 1, tuple, res, start, limit_results, timeout_seconds);
+
+                        //3. Going up in the tries by removing x_j = c
+                        for (ltj_iter_type *iter : itrs) {
+                            iter->up(x_j);
+                        }
+                        //5. Next constant for x_j
+                        c = seek(x_j, c + 1);
+                    }
                 }
             }
         };
