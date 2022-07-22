@@ -207,6 +207,7 @@ namespace ring {
                 var_type x_j = m_ptr_gao->at(j);
                 std::vector<ltj_iter_type*>& itrs = m_var_to_iterators[x_j];
                 value_type c = seek(x_j);
+                std::cout << "Seek (init): " << c << std::endl;
                 while(c != 0){ //If empty c=0
                     //1. Adding result to tuple
                     tuple[j] = {x_j, c};
@@ -222,6 +223,7 @@ namespace ring {
                     }
                     //5. Next constant for x_j
                     c = seek(x_j, c+1);
+                    std::cout << "Seek (bucle): " << c << std::endl;
                 }
             }
         };
