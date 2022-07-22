@@ -242,13 +242,9 @@ namespace ring {
                 std::vector<ltj_iter_type*>& itrs = m_var_to_iterators[x_j];
                 for(ltj_iter_type* iter : itrs){
                     if(c == -1){
-                        std::cout << "Leap (min) with x_j=" << (uint64_t) x_j << ": " << std::flush;
                         c_i = iter->leap(x_j);
-                        std::cout << c_i << std::endl;
                     }else{
-                        std::cout << "Leap (next) with x_j=" << (uint64_t) x_j << ": " << std::flush;
                         c_i = iter->leap(x_j, c);
-                        std::cout << c_i << std::endl;
                     }
                     if(c_i == 0) {
                         return 0; //Empty intersection
