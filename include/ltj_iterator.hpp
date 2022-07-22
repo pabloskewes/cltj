@@ -149,7 +149,7 @@ namespace ring {
                 m_i_s = m_ptr_ring->down_P(p_aux);
                 auto s_aux = m_ptr_ring->next_S_in_P(m_i_s, m_ptr_triple_pattern->term_s.value);
                 //Is the constant of O in m_i_o?
-                if (s_aux != m_ptr_triple_pattern->term_o.value) {
+                if (s_aux != m_ptr_triple_pattern->term_s.value) {
                     m_is_empty = true;
                     return;
                 }
@@ -226,7 +226,7 @@ namespace ring {
                 //Interval in P
                 auto p_aux = m_ptr_ring->next_P(m_i_p, m_ptr_triple_pattern->term_p.value);
                 //Is the constant of P in m_i_p?
-                if (p_aux != m_ptr_triple_pattern->term_s.value) {
+                if (p_aux != m_ptr_triple_pattern->term_p.value) {
                     m_is_empty = true;
                     return;
                 }
