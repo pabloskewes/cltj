@@ -74,6 +74,8 @@ namespace ring {
             m_is_empty = o.m_is_empty;
         }
 
+
+        //TODO: repasar o que pasa aqui
         inline void add_var_to_iterator(const var_type var, ltj_iter_type* ptr_iterator){
             auto it =  m_var_to_iterators.find(var);
             if(it != m_var_to_iterators.end()){
@@ -98,10 +100,11 @@ namespace ring {
             m_ptr_ring = ring;
 
             size_type i = 0;
+            m_iterators.resize(m_ptr_triple_patterns->size());
             for(const auto& triple : *m_ptr_triple_patterns){
                 //Bulding iterators
-                m_iterators.emplace_back(ltj_iter_type(&triple, m_ptr_ring));
-                if(m_iterators.back().is_empty){
+                m_iterators[i] = ltj_iter_type(&triple, m_ptr_ring);
+                if(m_iterators[i].is_empty){
                     m_is_empty = true;
                     return;
                 }
