@@ -88,7 +88,7 @@ namespace ring {
         }
 
         bool o_is_variable() const {
-            return term_p.is_variable;
+            return term_o.is_variable;
         }
     };
 }
