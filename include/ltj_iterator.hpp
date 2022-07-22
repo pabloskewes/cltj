@@ -301,12 +301,15 @@ namespace ring {
             if (is_variable_subject(var)) {
                 if (m_cur_o != -1) {
                     //OS->P
+                    std::cout << "down_O_S" << std::endl;
                     m_i_p = m_ptr_ring->down_O_S(m_i_s, m_cur_o, c);
                 } else if (m_cur_p != -1) {
                     //PS->O
+                    std::cout << "down_P_S" << std::endl;
                     m_i_o = m_ptr_ring->down_P_S(m_i_s, c);
                 } else {
                     //S->{OP,PO} same range in SOP and SPO
+                    std::cout << "down_S" << std::endl;
                     m_i_o = m_i_p = m_ptr_ring->down_S(c);
                 }
                 //m_states.emplace(state_type::s);
@@ -314,12 +317,15 @@ namespace ring {
             } else if (is_variable_predicate(var)) {
                 if (m_cur_o != -1) {
                     //OP->S
+                    std::cout << "down_O_P" << std::endl;
                     m_i_s = m_ptr_ring->down_O_P(m_i_p, c);
                 } else if (m_cur_s != -1) {
                     //SP->O
+                    std::cout << "down_S_P" << std::endl;
                     m_i_o = m_ptr_ring->down_S_P(m_i_p, m_cur_s, c);
                 } else {
                     //P->{OS,SO} same range in POS and PSO
+                    std::cout << "down_P" << std::endl;
                     m_i_o = m_i_s = m_ptr_ring->down_P(c);
                 }
                 //m_states.emplace(state_type::p);
@@ -327,12 +333,15 @@ namespace ring {
             } else if (is_variable_object(var)) {
                 if (m_cur_p != -1) {
                     //PO->S
+                    std::cout << "down_P_O" << std::endl;
                     m_i_s = m_ptr_ring->down_P_O(m_i_o, m_cur_p, c);
                 } else if (m_cur_s != -1) {
                     //SO->P
+                    std::cout << "down_S_O" << std::endl;
                     m_i_p = m_ptr_ring->down_S_O(m_i_o, c);
                 } else {
                     //O->{PS,SP} same range in OPS and OSP
+                    std::cout << "down_O" << std::endl;
                     m_i_p = m_i_s = m_ptr_ring->down_O(c);
                 }
                 //m_states.emplace(state_type::o);
