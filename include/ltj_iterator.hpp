@@ -299,6 +299,10 @@ namespace ring {
 
         void down(var_type var, size_type c) { //Go down in the trie
             if (is_variable_subject(var)) {
+                if (m_cur_o != -1 && m_cur_p != -1){
+                    std::cout << "Nothing to do" << std::endl;
+                    return;
+                }
                 if (m_cur_o != -1) {
                     //OS->P
                     std::cout << "down_O_S" << std::endl;
@@ -315,6 +319,10 @@ namespace ring {
                 //m_states.emplace(state_type::s);
                 m_cur_s = c;
             } else if (is_variable_predicate(var)) {
+                if (m_cur_s != -1 && m_cur_o != -1){
+                    std::cout << "Nothing to do" << std::endl;
+                    return;
+                }
                 if (m_cur_o != -1) {
                     //OP->S
                     std::cout << "down_O_P" << std::endl;
@@ -331,6 +339,10 @@ namespace ring {
                 //m_states.emplace(state_type::p);
                 m_cur_p = c;
             } else if (is_variable_object(var)) {
+                if (m_cur_s != -1 && m_cur_p != -1){
+                    std::cout << "Nothing to do" << std::endl;
+                    return;
+                }
                 if (m_cur_p != -1) {
                     //PO->S
                     std::cout << "down_P_O" << std::endl;
