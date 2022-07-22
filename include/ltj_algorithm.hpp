@@ -236,7 +236,8 @@ namespace ring {
             while (true){
                 value_type c_i, c_min = UINT64_MAX, c_max = 0;
                 //Compute leap for each triple that contains x_j
-                for(ltj_iter_type* iter : m_var_to_iterators[x_j]){
+                std::vector<ltj_iter_type*>& itrs = m_var_to_iterators[x_j];
+                for(ltj_iter_type* iter : itrs){
                     if(c == -1){
                         c_i = iter->leap(x_j);
                     }else{
