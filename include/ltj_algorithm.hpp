@@ -108,13 +108,13 @@ namespace ring {
 
                 //For each variable we add the pointers to its iterators
                 if(triple.o_is_variable()){
-                    add_var_to_iterator(triple.term_o.value, &m_iterators[i]);
+                    add_var_to_iterator(triple.term_o.value, &(m_iterators[i]));
                 }
                 if(triple.p_is_variable()){
-                    add_var_to_iterator(triple.term_p.value, &m_iterators[i]);
+                    add_var_to_iterator(triple.term_p.value, &(m_iterators[i]));
                 }
                 if(triple.s_is_variable()){
-                    add_var_to_iterator(triple.term_s.value, &m_iterators[i]);
+                    add_var_to_iterator(triple.term_s.value, &(m_iterators[i]));
                 }
                 ++i;
             }
