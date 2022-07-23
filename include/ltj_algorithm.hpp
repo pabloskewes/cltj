@@ -286,7 +286,7 @@ namespace ring {
                     }
                 }else {
                     value_type c = seek(x_j);
-                    while (ok && c != 0) { //If empty c=0
+                    while (c != 0) { //If empty c=0
                         //1. Adding result to tuple
                         tuple[j] = {x_j, c};
                         //2. Going down in the tries by setting x_j = c (\mu(t_i) in paper)
