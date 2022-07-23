@@ -269,18 +269,20 @@ namespace ring {
             }else{
                 var_type x_j = m_ptr_gao->at(j);
                 std::vector<ltj_iter_type*>& itrs = m_var_to_iterators[x_j];
-                bool ok = true;
+                bool ok;
                 if(itrs.size() == 1 && itrs[0]->in_last_level()) {
                     auto results = itrs[0]->leap_lonely_last(x_j);
-                    for (size_type i = 0; ok && i < results.size(); ++i) {
+                    for (size_type i = 0; i < results.size(); ++i) {
                         value_type c = results[i].second;
                         //1. Adding result to tuple
                         tuple[j] = {x_j, c};
                         //2. Going down in the tries by setting x_j = c (\mu(t_i) in paper)
                         itrs[0]->down(x_j, c);
-                        //4. Search with the next variable x_{j+1}
+                        //3. Search with the next variable x_{j+1}
                         ok = search_opt(j + 1, tuple, res, start, limit_results, timeout_seconds);
+                        //4. Going up in the tries by removing x_j = c
                         itrs[0]->up(x_j);
+                        if(!ok) return false;
                     }
                 }else {
                     value_type c = seek(x_j);
@@ -291,13 +293,13 @@ namespace ring {
                         for (ltj_iter_type *iter : itrs) {
                             iter->down(x_j, c);
                         }
-                        //4. Search with the next variable x_{j+1}
+                        //3. Search with the next variable x_{j+1}
                         ok = search_opt(j + 1, tuple, res, start, limit_results, timeout_seconds);
-
-                        //3. Going up in the tries by removing x_j = c
+                        //4. Going up in the tries by removing x_j = c
                         for (ltj_iter_type *iter : itrs) {
                             iter->up(x_j);
                         }
+                        if(!ok) return false;
                         //5. Next constant for x_j
                         c = seek(x_j, c + 1);
                     }
