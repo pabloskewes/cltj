@@ -270,15 +270,16 @@ namespace ring {
                 var_type x_j = m_ptr_gao->at(j);
                 std::vector<ltj_iter_type*>& itrs = m_var_to_iterators[x_j];
                 bool ok;
-                if(itrs.size() == 1 && itrs[0]->in_last_level()) {
-                    auto results = itrs[0]->leap_lonely_last(x_j);
-                    for (size_type i = 0; i < results.size(); ++i) {
-                        value_type c = results[i];
+                if(itrs.size() == 1) {
+                    auto results = itrs[0]->seek_all(x_j);
+                    for (const auto &c : results) {
                         //1. Adding result to tuple
                         tuple[j] = {x_j, c};
+                        itrs[0]->down(x_j, c);
                         //2. Search with the next variable x_{j+1}
                         ok = search_opt(j + 1, tuple, res, start, limit_results, timeout_seconds);
                         if(!ok) return false;
+                        itrs[0]->up(x_j);
                     }
                 }else {
                     value_type c = seek(x_j);
@@ -286,7 +287,7 @@ namespace ring {
                         //1. Adding result to tuple
                         tuple[j] = {x_j, c};
                         //2. Going down in the tries by setting x_j = c (\mu(t_i) in paper)
-                        for (ltj_iter_type *iter : itrs) {
+                        for (ltj_iter_type* iter : itrs) {
                             iter->down(x_j, c);
                         }
                         //3. Search with the next variable x_{j+1}
