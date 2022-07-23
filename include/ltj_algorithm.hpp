@@ -273,7 +273,7 @@ namespace ring {
                 if(itrs.size() == 1 && itrs[0]->in_last_level()) {
                     auto results = itrs[0]->leap_lonely_last(x_j);
                     for (size_type i = 0; i < results.size(); ++i) {
-                        value_type c = results[i].second;
+                        value_type c = results[i];
                         //1. Adding result to tuple
                         tuple[j] = {x_j, c};
                         //2. Going down in the tries by setting x_j = c (\mu(t_i) in paper)

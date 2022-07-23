@@ -187,12 +187,11 @@ namespace ring {
             return m_L.range_next_value(x, l, r);
         }
 
-        std::vector<pair<uint64_t, uint64_t>>
+        std::vector<uint64_t>
         //inline void
-        values_in_range(uint64_t pos_min, uint64_t pos_max,
-                        uint64_t sigma/*, std::vector<uint64_t> & values, uint64_t & k*/) {
+        values_in_range(uint64_t pos_min, uint64_t pos_max) {
             //interval_symbols(L, pos_min, pos_max+1, k, values, r_i, r_j);
-            return m_L.range_search_2d(pos_min, pos_max, 1, sigma).second;
+            return m_L.all_values_in_range(pos_min, pos_max);
         }
 
         // backward search for pattern of length 1

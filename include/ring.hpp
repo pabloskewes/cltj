@@ -427,9 +427,9 @@ namespace ring {
             return I.get_cur_value() != I.end();
         }
 
-        std::vector<std::pair<uint64_t, uint64_t>>
+        std::vector<uint64_t>
         all_O_in_range(bwt_interval &I) {
-            return m_bwt_o.values_in_range(I.left(), I.right(), m_sigma_s + m_sigma_o);
+            return m_bwt_o.values_in_range(I.left(), I.right());
         }
 
         /**********************************/
@@ -490,9 +490,9 @@ namespace ring {
             return I.get_cur_value() != I.end();
         }
 
-        std::vector<std::pair<uint64_t, uint64_t>>
+        std::vector<uint64_t>
         all_S_in_range(bwt_interval &I) {
-            return m_bwt_s.values_in_range(I.left() - m_n_triples, I.right() - m_n_triples, m_sigma_s + m_sigma_o);
+            return m_bwt_s.values_in_range(I.left() - m_n_triples, I.right() - m_n_triples);
         }
 
 
@@ -555,9 +555,9 @@ namespace ring {
             return I.get_cur_value() != I.end();
         }
 
-        std::vector<std::pair<uint64_t, uint64_t>>
+        std::vector<uint64_t>
         all_P_in_range(bwt_interval &I) {
-            return m_bwt_p.values_in_range(I.left() - 2 * m_n_triples, I.right() - 2 * m_n_triples, m_sigma_p);
+            return m_bwt_p.values_in_range(I.left() - 2 * m_n_triples, I.right() - 2 * m_n_triples);
         }
 
 
