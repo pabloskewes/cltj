@@ -109,17 +109,19 @@ namespace ring {
                 }
             }
 
-            bool compare(const info_var_type& linfo,
-                         const info_var_type& rinfo)
+            struct compare_var_info
             {
-                if(linfo.n_triples > 1 && rinfo.n_triples == 1){
-                    return true;
+                inline bool operator() (const info_var_type& linfo, const info_var_type& rinfo)
+                {
+                    if(linfo.n_triples > 1 && rinfo.n_triples == 1){
+                        return true;
+                    }
+                    if(linfo.n_triples == 1 && rinfo.n_triples > 1){
+                        return false;
+                    }
+                    return linfo.weight < rinfo.weight;
                 }
-                if(linfo.n_triples == 1 && rinfo.n_triples > 1){
-                    return false;
-                }
-                return linfo.weight < rinfo.weight;
-            }
+            };
 
         public:
 
@@ -133,7 +135,7 @@ namespace ring {
 
                 //1. Filling var_info with data about each variable
                 std::vector<info_var_type> var_info;
-                std::unordered_set<var_type> hash_table_position;
+                std::unordered_map<var_type, size_type> hash_table_position;
                 for (const triple_pattern& triple_pattern : *m_ptr_triple_patterns) {
                     size_type size = util::get_size_interval(triple_pattern, m_ptr_ring);
                     var_type var_s = -1, var_p = -1, var_o = -1;
@@ -163,7 +165,7 @@ namespace ring {
                 }
 
                 //2. Sorting variables according to their weights.
-                std::sort(var_info.begin(), var_info.end(), compare());
+                std::sort(var_info.begin(), var_info.end(), compare_var_info());
                 for(size_type i = 0; i < var_info.size(); ++i){
                     hash_table_position[var_info[i].name] = i;
                 }
