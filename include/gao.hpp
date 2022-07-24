@@ -171,7 +171,8 @@ namespace ring {
                 std::sort(var_info.begin(), var_info.end(), compare_var_info());
                 for(size_type i = 0; i < var_info.size(); ++i){
                     hash_table_position[var_info[i].name] = i;
-                    std::cout << "Weight i="<< i << " w=" << var_info[i].weight << std::endl;
+                    std::cout << "Weight i="<< i << " w=" << var_info[i].weight << " set="
+                    << var_info[i].related.size() << std::endl;
                 }
                 //std::cout << "Done. " << std::endl;
 
