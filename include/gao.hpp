@@ -143,27 +143,31 @@ namespace ring {
                 std::unordered_map<var_type, size_type> hash_table_position;
                 for (const triple_pattern& triple_pattern : *m_ptr_triple_patterns) {
                     size_type size = util::get_size_interval(triple_pattern, m_ptr_ring);
-                    var_type var_s = -1, var_p = -1, var_o = -1;
+                    bool s = false, p = false, o = false;
+                    var_type var_s, var_p, var_o;
                     if(triple_pattern.s_is_variable()){
+                        s = true;
                         var_s = (var_type) triple_pattern.term_s.value;
                         var_to_vector(var_s, size,hash_table_position, var_info);
                     }
                     if(triple_pattern.p_is_variable()){
+                        p = true;
                         var_p = (var_type) triple_pattern.term_p.value;
                         var_to_vector(var_p, size,hash_table_position, var_info);
                     }
                     if(triple_pattern.o_is_variable()){
+                        o = true;
                         var_o = triple_pattern.term_o.value;
                         var_to_vector(var_o, size,hash_table_position, var_info);
                     }
 
-                    if(var_s != -1 && var_p != -1){
+                    if(s && p){
                         var_to_related(var_s, var_p, hash_table_position, var_info);
                     }
-                    if(var_s != -1 && var_o != -1){
+                    if(s && o){
                         var_to_related(var_s, var_o, hash_table_position, var_info);
                     }
-                    if(var_p != -1 && var_o != -1){
+                    if(p && o){
                         var_to_related(var_p, var_o, hash_table_position, var_info);
                     }
                 }
