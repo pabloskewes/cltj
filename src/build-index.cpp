@@ -30,7 +30,7 @@ int main(int argc, char **argv)
     ring::ring A(D);
     auto stop = timer::now();
     memory_monitor::stop();
-    cout << "  Index built " << sdsl::size_in_bytes(A) << " bytes" << endl;
+    cout << "  Index built  " << sdsl::size_in_bytes(A) << " bytes" << endl;
 
     sdsl::store_to_file(A, string(argv[1]));
     cout << "Index saved" << endl;
