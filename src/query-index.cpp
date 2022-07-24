@@ -163,9 +163,11 @@ int main(int argc, char* argv[])
 
             start = high_resolution_clock::now();
             
-            vector<uint8_t> gao = get_gao_min_gen(query, graph);
+            //vector<uint8_t> gao = get_gao_min_gen(query, graph);
+            
+            ring::gao::gao_size<> m_gao(&query, &graph);
 
-            ring::ltj_algorithm<> ltj(&query, &gao, &graph);
+            ring::ltj_algorithm<> ltj(&query, &m_gao.gao, &graph);
 
             /*
             cout << "Query Details:" << endl;

@@ -105,6 +105,8 @@ public:
                     cout << endl;
                     */
                     (*number_of_results) = (*number_of_results) + 1;
+                    /*TODO: preguntar Gonzalo! OJO: aqui falta continuar evaluando. Pode haber mais solucions
+                     * que veñan de estados posteriores! */
 
                 } else {
                     (*bindings)[varname] = binding_last.second;

@@ -54,13 +54,16 @@ namespace ring {
                 var_type name;
                 size_type n_triples;
                 size_type weight;
-                std::unordered_set<size_type> related;
+                std::unordered_set<var_type> related;
             } info_var_type;
+
+            typedef std::pair<size_type, var_type> pair_type;
+            typedef std::priority_queue<pair_type, std::vector<pair_type>, greater<pair_type>> min_heap_type;
 
         private:
             const std::vector<triple_pattern>* m_ptr_triple_patterns;
             ring* m_ptr_ring;
-            std::vector<std::pair<var_type, info_var_type>> m_gao;
+            std::vector<var_type> m_gao;
 
 
             void var_to_vector(const var_type var, const size_type size,
@@ -89,8 +92,21 @@ namespace ring {
                                 std::vector<info_var_type> &vec){
 
                 auto pos_var = hash_table[var];
-                auto pos_rel = hash_table[rel];
-                vec[pos_var].related.insert(pos_rel);
+                vec[pos_var].related.insert(rel);
+            }
+
+            void fill_heap(const var_type var,  std::unordered_map<var_type, size_type> &hash_table,
+                           std::vector<info_var_type> &vec,
+                           min_heap_type &heap){
+
+                auto pos_var = hash_table[var];
+                for(const auto &e : vec[pos_var].related){
+                    auto it = hash_table.find(e);
+                    if(it != hash_table.end()){
+                        heap.push({vec[it->second].weight, e});
+                        hash_table.erase(it);
+                    }
+                }
             }
 
             bool compare(const info_var_type& linfo,
@@ -107,13 +123,17 @@ namespace ring {
 
         public:
 
+            const std::vector<var_type> &gao = m_gao;
+
+
             gao_size(const std::vector<triple_pattern>* triple_patterns, ring* r){
                 m_ptr_triple_patterns = triple_patterns;
                 m_ptr_ring = r;
 
-                //std::unordered_map<var_type, std::set<size_type>> related_vars;
+
+                //1. Filling var_info with data about each variable
                 std::vector<info_var_type> var_info;
-                std::unordered_map<var_type, size_type> hash_table_position;
+                std::unordered_set<var_type> hash_table_position;
                 for (const triple_pattern& triple_pattern : *m_ptr_triple_patterns) {
                     size_type size = util::get_size_interval(triple_pattern, m_ptr_ring);
                     var_type var_s = -1, var_p = -1, var_o = -1;
@@ -142,71 +162,33 @@ namespace ring {
                     }
                 }
 
-                std::vector<var_type> lonely;
-                size_type pos_min, weight_min = UINT64_MAX, i = 0;
-                for(const auto &var : var_info){
-                    if(var.n_triples > 1 && var.weight < weight_min){
-                        pos_min = i;
-                        weight_min = var.weight;
-                    }else if (var.n_triples == 1){
-                        lonely.push_back(var);
-                    }
+                //2. Sorting variables according to their weights.
+                std::sort(var_info.begin(), var_info.end(), compare());
+                for(size_type i = 0; i < var_info.size(); ++i){
+                    hash_table_position[var_info[i].name] = i;
                 }
 
-                typedef std::pair<size_type, var_type> pair_type;
-                typedef std::priority_queue<pair_type, std::vector<pair_type>, greater<pair_type>> min_heap_type;
-
-                std::vector<var_type> gao;
-                gao.push_back(var_info[pos_min].var_name);
-                min_heap_type heap;
-                /*      (*) for()
-
-
-
-
-                m_gao.reserve(hash_table.size());
-                for(auto& d : hash_table){
-                    m_gao.push_back(d);
-                }*/
-
-
-
-
-                std::unordered_map<var_type, info_var_type> hash_table;
-                std::unordered_map<var_type, std::set<var_type>> related_vars;
-                for (const triple_pattern& triple_pattern : *m_ptr_triple_patterns) { //TODO: esto está ben (solo refactoring)
-                    size_type size = util::get_size_interval(triple_pattern, m_ptr_ring);
-                    var_type var_s = -1, var_p = -1, var_o = -1;
-
-                    std::vector<var_type> rel;
-                    if(triple_pattern.s_is_variable()){
-                        var_s = (var_type) triple_pattern.term_s.value;
-                        var_to_map(var_s, size,hash_table);
-                        rel.push_back(var_s);
-                    }
-                    if(triple_pattern.p_is_variable()){
-                        var_p = (var_type) triple_pattern.term_p.value;
-                        var_to_map(var_p, size, hash_table);
-                        rel.push_back(var_p);
-                    }
-                    if(triple_pattern.o_is_variable()){
-                        var_o = triple_pattern.term_o.value;
-                        var_to_map(var_o, size, hash_table);
-                        rel.push_back(var_o);
-                    }
-
-                    for(size_type i = 0; i < rel.size(); i++){
-                        for(size_type j = 0; j < rel.size(); j++){
-                            if(i == j) continue;
-                            var_to_related(rel[i], rel[j]);
+                //3. Choosing the variables
+                size_type i = 0;
+                while(!hash_table_position.empty()){
+                    auto it = hash_table_position.find(var_info[i].name);
+                    if(it != hash_table_position.end()){
+                        m_gao.push_back(var_info[i].name); //Adding var to gao
+                        if(var_info[i].n_triples > 1){
+                            min_heap_type heap; //Stores the variables that are related with the chosen ones
+                            auto var_name = var_info[i].name;
+                            fill_heap(var_name, hash_table_position, var_info, heap);
+                            hash_table_position.erase(it); //Removing var from hash_table
+                            while(!heap.empty()){
+                                var_name = heap.top().second;
+                                heap.pop();
+                                m_gao.push_back(var_name);
+                                fill_heap(var_name, hash_table_position, var_info, heap);
+                            }
                         }
                     }
+                    ++i;
                 }
-
-
-
-
-
             }
 
         };

@@ -266,26 +266,22 @@ namespace ring {
             if(j == m_ptr_gao->size()){
                 //Report results
                 res.emplace_back(tuple);
-                /*for(const auto &pair : tuple){
-                    std::cout << "(" <<  (uint64_t) pair.first << ": "  << pair.second << ") ";
-                }
-                std::cout << std::endl;*/
             }else{
                 var_type x_j = m_ptr_gao->at(j);
                 std::vector<ltj_iter_type*>& itrs = m_var_to_iterators[x_j];
                 bool ok;
-                if(itrs.size() == 1 && itrs[0]->in_last_level()) {//Lonely variables
+                if(itrs.size() == 1) {//Lonely variables
                     auto results = itrs[0]->seek_all(x_j);
                     //std::cout << "Results: " << results.size() << std::endl;
                     for (const auto &c : results) {
                         //1. Adding result to tuple
                         tuple[j] = {x_j, c};
-                        //2. Going down in the tries by setting x_j = c (\mu(t_i) in paper)
+                        //2. Going down in the trie by setting x_j = c (\mu(t_i) in paper)
                         itrs[0]->down(x_j, c);
                         //2. Search with the next variable x_{j+1}
                         ok = search_opt(j + 1, tuple, res, start, limit_results, timeout_seconds);
                         if(!ok) return false;
-                        //4. Going up in the tries by removing x_j = c
+                        //4. Going up in the trie by removing x_j = c
                         itrs[0]->up(x_j);
                     }
                 }else {
