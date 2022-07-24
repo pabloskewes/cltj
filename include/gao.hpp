@@ -136,7 +136,7 @@ namespace ring {
 
 
                 //1. Filling var_info with data about each variable
-                std::cout << "Filling... " << std::flush;
+                //std::cout << "Filling... " << std::flush;
                 std::vector<info_var_type> var_info;
                 std::unordered_map<var_type, size_type> hash_table_position;
                 for (const triple_pattern& triple_pattern : *m_ptr_triple_patterns) {
@@ -166,19 +166,19 @@ namespace ring {
                         }
                     }
                 }
-                std::cout << "Done. " << std::endl;
+                //std::cout << "Done. " << std::endl;
 
                 //2. Sorting variables according to their weights.
-                std::cout << "Sorting... " << std::flush;
+                //std::cout << "Sorting... " << std::flush;
                 std::sort(var_info.begin(), var_info.end(), compare_var_info());
                 for(size_type i = 0; i < var_info.size(); ++i){
                     hash_table_position[var_info[i].name] = i;
                 }
-                std::cout << "Done. " << std::endl;
+                //std::cout << "Done. " << std::endl;
 
                 //3. Choosing the variables
                 size_type i = 0;
-                std::cout << "Choosing GAO ... " << std::flush;
+                //std::cout << "Choosing GAO ... " << std::flush;
                 std::vector<bool> checked(var_info.size(), false);
                 while(i < var_info.size()){
                     if(!checked[i]){
@@ -198,7 +198,7 @@ namespace ring {
                     }
                     ++i;
                 }
-                std::cout << "Done. " << std::endl;
+                //std::cout << "Done. " << std::endl;
             }
 
         };
