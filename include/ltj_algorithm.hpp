@@ -266,17 +266,17 @@ namespace ring {
             if(j == m_ptr_gao->size()){
                 //Report results
                 res.emplace_back(tuple);
-                for(const auto &pair : tuple){
+                /*for(const auto &pair : tuple){
                     std::cout << "(" <<  (uint64_t) pair.first << ": "  << pair.second << ") ";
                 }
-                std::cout << std::endl;
+                std::cout << std::endl;*/
             }else{
                 var_type x_j = m_ptr_gao->at(j);
                 std::vector<ltj_iter_type*>& itrs = m_var_to_iterators[x_j];
                 bool ok;
                 if(itrs.size() == 1) {//Lonely variables
                     auto results = itrs[0]->seek_all(x_j);
-                    std::cout << "Results: " << results.size() << std::endl;
+                    //std::cout << "Results: " << results.size() << std::endl;
                     for (const auto &c : results) {
                         //1. Adding result to tuple
                         tuple[j] = {x_j, c};
@@ -290,7 +290,7 @@ namespace ring {
                     }
                 }else {
                     value_type c = seek(x_j);
-                    std::cout << "Seek (init): (" << (uint64_t) x_j << ": " << c << ")" <<std::endl;
+                    //std::cout << "Seek (init): (" << (uint64_t) x_j << ": " << c << ")" <<std::endl;
                     while (c != 0) { //If empty c=0
                         //1. Adding result to tuple
                         tuple[j] = {x_j, c};
@@ -307,7 +307,7 @@ namespace ring {
                         }
                         //5. Next constant for x_j
                         c = seek(x_j, c + 1);
-                        std::cout << "Seek (bucle): (" << (uint64_t) x_j << ": " << c << ")" <<std::endl;
+                        //std::cout << "Seek (bucle): (" << (uint64_t) x_j << ": " << c << ")" <<std::endl;
                     }
                 }
             }
@@ -346,8 +346,8 @@ namespace ring {
 
 
         value_type seek(const var_type x_j, value_type c=-1){
+            value_type c_i, c_min = UINT64_MAX, c_max = 0;
             while (true){
-                value_type c_i, c_min = UINT64_MAX, c_max = 0;
                 //Compute leap for each triple that contains x_j
                 std::vector<ltj_iter_type*>& itrs = m_var_to_iterators[x_j];
                 for(ltj_iter_type* iter : itrs){
@@ -364,6 +364,7 @@ namespace ring {
                     c = c_max;
                 }
                 if(c_min == c_max) return c_min;
+                c_min = UINT64_MAX; c_max = 0;
             }
         }
 
