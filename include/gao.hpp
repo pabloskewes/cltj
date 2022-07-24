@@ -95,14 +95,14 @@ namespace ring {
             }
 
             void fill_heap(const var_type var,
-                           const std::unordered_map<var_type, size_type> &hash_table,
+                           std::unordered_map<var_type, size_type> &hash_table,
                            std::vector<info_var_type> &vec,
                            std::vector<bool> &checked,
                            min_heap_type &heap){
 
-                const auto pos_var = hash_table[var];
+                auto& pos_var = hash_table[var];
                 for(const auto &e : vec[pos_var].related){
-                    const auto pos_rel = hash_table[e];
+                    auto& pos_rel = hash_table[e];
                     if(!checked[pos_rel]){
                         heap.push({vec[pos_rel].weight, e});
                         checked[pos_rel] = true;
@@ -114,10 +114,10 @@ namespace ring {
             {
                 inline bool operator() (const info_var_type& linfo, const info_var_type& rinfo)
                 {
-                    if(linfo.n_triples > 1 && rinfo.n_triples == 1){
+                    if(linfo.related.size() > 1 && rinfo.related.size() == 1){
                         return true;
                     }
-                    if(linfo.n_triples == 1 && rinfo.n_triples > 1){
+                    if(linfo.related.size() == 1 && rinfo.related.size() > 1){
                         return false;
                     }
                     return linfo.weight < rinfo.weight;
