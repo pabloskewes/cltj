@@ -8,7 +8,7 @@ print(df_data.head())
 axes = df_data.boxplot(column=['Orig', 'V1', 'V2', 'V3'], grid=False, return_type='axes')
 #axes = df_data.boxplot(column=['Intersection'], grid=False, return_type='axes')
 
-#plt.ylim(0, 40000000)
+plt.ylim(0, 40000000)
 plt.ylabel("Time (ns)")
 plt.xlabel("")
 plt.show()
