@@ -265,9 +265,9 @@ namespace ring {
 
             if(j == m_ptr_gao->size()){
                 //Report results
-                res.emplace_back(tuple);
+                //res.emplace_back(tuple);
                 for(const auto &pair : tuple){
-                    std::cout << "(" << pair.first << ": "  << pair.second << ") ";
+                    std::cout << "(" <<  (uint64_t) pair.first << ": "  << pair.second << ") ";
                 }
                 std::cout << std::endl;
             }else{
