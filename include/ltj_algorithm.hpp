@@ -266,6 +266,10 @@ namespace ring {
             if(j == m_ptr_gao->size()){
                 //Report results
                 res.emplace_back(tuple);
+                for(const auto &pair : tuple){
+                    std::cout << "(" << pair.first << ": "  << pair.second << ") ";
+                }
+                std::cout << std::endl;
             }else{
                 var_type x_j = m_ptr_gao->at(j);
                 std::vector<ltj_iter_type*>& itrs = m_var_to_iterators[x_j];
