@@ -53,6 +53,7 @@ namespace ring {
             typedef struct {
                 var_type name;
                 size_type weight;
+                size_type n_triples;
                 std::unordered_set<var_type> related;
             } info_var_type;
 
@@ -74,10 +75,12 @@ namespace ring {
                     info_var_type info;
                     info.name = var;
                     info.weight = size;
+                    info.n_triples = 1;
                     vec.emplace_back(info);
                     hash_table.insert({var, vec.size()-1});
                 }else{
                     info_var_type& info = vec[it->second];
+                    ++info.n_triples;
                     if(info.weight > size){
                         info.weight = size;
                     }
@@ -114,10 +117,10 @@ namespace ring {
             {
                 inline bool operator() (const info_var_type& linfo, const info_var_type& rinfo)
                 {
-                    if(!linfo.related.empty() && rinfo.related.empty()){
+                    if(linfo.n_triples>1 && rinfo.n_triples==1){
                         return true;
                     }
-                    if(linfo.related.empty() && !rinfo.related.empty()){
+                    if(linfo.n_triples==1 && rinfo.n_triples>1){
                         return false;
                     }
                     return linfo.weight < rinfo.weight;
@@ -171,8 +174,8 @@ namespace ring {
                 std::sort(var_info.begin(), var_info.end(), compare_var_info());
                 for(size_type i = 0; i < var_info.size(); ++i){
                     hash_table_position[var_info[i].name] = i;
-                    std::cout << "Weight i="<< i << " w=" << var_info[i].weight << " set="
-                    << var_info[i].related.size() << std::endl;
+                    std::cout << "Weight i="<< i << " w=" << var_info[i].weight << " triples="
+                    << var_info[i].n_triples << std::endl;
                 }
                 //std::cout << "Done. " << std::endl;
 
