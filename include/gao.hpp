@@ -100,9 +100,9 @@ namespace ring {
                            std::vector<bool> &checked,
                            min_heap_type &heap){
 
-                auto& pos_var = hash_table[var];
+                auto pos_var = hash_table[var];
                 for(const auto &e : vec[pos_var].related){
-                    auto& pos_rel = hash_table[e];
+                    auto pos_rel = hash_table[e];
                     if(!checked[pos_rel]){
                         heap.push({vec[pos_rel].weight, e});
                         checked[pos_rel] = true;
@@ -114,10 +114,10 @@ namespace ring {
             {
                 inline bool operator() (const info_var_type& linfo, const info_var_type& rinfo)
                 {
-                    if(linfo.related.size() > 1 && rinfo.related.size() == 1){
+                    if(!linfo.related.empty() && rinfo.related.empty()){
                         return true;
                     }
-                    if(linfo.related.size() == 1 && rinfo.related.size() > 1){
+                    if(linfo.related.empty() && !rinfo.related.empty()){
                         return false;
                     }
                     return linfo.weight < rinfo.weight;
