@@ -187,6 +187,8 @@ namespace ring {
                                 m_gao.push_back(var_name);
                                 fill_heap(var_name, hash_table_position, var_info, heap);
                             }
+                        }else{
+                            hash_table_position.erase(it); //Removing var from hash_table
                         }
                     }
                     ++i;
