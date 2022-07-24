@@ -354,17 +354,16 @@ namespace ring {
                     if(c == -1){
                         c_i = iter->leap(x_j);
                     }else{
-                        c_i = iter->leap(x_j, c_max);
+                        c_i = iter->leap(x_j, c);
                     }
                     if(c_i == 0) {
                         return 0; //Empty intersection
                     }
                     if(c_i > c_max) c_max = c_i;
                     if(c_i < c_min) c_min = c_i;
-
+                    c = c_max;
                 }
                 if(c_min == c_max) return c_min;
-                c = c_max;
             }
         }
 
