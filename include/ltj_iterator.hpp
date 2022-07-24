@@ -583,8 +583,10 @@ namespace ring {
             return 0;
         }
 
-
-
+        bool in_last_level(){
+            return (m_cur_o !=-1 && m_cur_p != -1) || (m_cur_s !=-1 && m_cur_p != -1)
+                    || (m_cur_o !=-1 && m_cur_s != -1);
+        }
 
         std::vector<uint64_t> seek_all(var_type var){
             if (is_variable_subject(var)){

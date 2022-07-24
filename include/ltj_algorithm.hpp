@@ -274,7 +274,7 @@ namespace ring {
                 var_type x_j = m_ptr_gao->at(j);
                 std::vector<ltj_iter_type*>& itrs = m_var_to_iterators[x_j];
                 bool ok;
-                if(itrs.size() == 1) {//Lonely variables
+                if(itrs.size() == 1 && itrs[0]->in_last_level()) {//Lonely variables
                     auto results = itrs[0]->seek_all(x_j);
                     //std::cout << "Results: " << results.size() << std::endl;
                     for (const auto &c : results) {
@@ -347,9 +347,9 @@ namespace ring {
 
         value_type seek(const var_type x_j, value_type c=-1){
             value_type c_i, c_min = UINT64_MAX, c_max = 0;
+            std::vector<ltj_iter_type*>& itrs = m_var_to_iterators[x_j];
             while (true){
                 //Compute leap for each triple that contains x_j
-                std::vector<ltj_iter_type*>& itrs = m_var_to_iterators[x_j];
                 for(ltj_iter_type* iter : itrs){
                     if(c == -1){
                         c_i = iter->leap(x_j);
