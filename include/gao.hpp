@@ -178,8 +178,6 @@ namespace ring {
                 std::sort(var_info.begin(), var_info.end(), compare_var_info());
                 for(size_type i = 0; i < var_info.size(); ++i){
                     hash_table_position[var_info[i].name] = i;
-                    std::cout << "Weight i="<< i << " w=" << var_info[i].weight << " triples="
-                    << var_info[i].n_triples << " set=" << var_info[i].related.size() << std::endl;
                 }
                 //std::cout << "Done. " << std::endl;
 
@@ -187,6 +185,7 @@ namespace ring {
                 size_type i = 0;
                 //std::cout << "Choosing GAO ... " << std::flush;
                 std::vector<bool> checked(var_info.size(), false);
+                m_gao.reserve(var_info.size());
                 while(i < var_info.size()){
                     if(!checked[i]){
                         m_gao.push_back(var_info[i].name); //Adding var to gao

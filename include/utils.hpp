@@ -3,7 +3,6 @@
 
 #include <iostream>
 #include <set>
-#include "Triple.h"
 #include "ring.hpp"
 
 
