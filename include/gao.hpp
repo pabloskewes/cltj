@@ -95,16 +95,18 @@ namespace ring {
                 vec[pos_var].related.insert(rel);
             }
 
-            void fill_heap(const var_type var,  std::unordered_map<var_type, size_type> &hash_table,
+            void fill_heap(const var_type var,
+                           std::unordered_map<var_type, size_type> &hash_table,
                            std::vector<info_var_type> &vec,
+                           std::vector<bool> &checked,
                            min_heap_type &heap){
 
                 auto pos_var = hash_table[var];
                 for(const auto &e : vec[pos_var].related){
-                    auto it = hash_table.find(e);
-                    if(it != hash_table.end()){
-                        heap.push({vec[it->second].weight, e});
-                        hash_table.erase(it);
+                    auto pos_rel = hash_table[e];
+                    if(!checked[pos_rel]){
+                        heap.push({vec[pos_rel].weight, e});
+                        checked[pos_rel] = true;
                     }
                 }
             }
@@ -134,6 +136,7 @@ namespace ring {
 
 
                 //1. Filling var_info with data about each variable
+                std::cout << "Filling... " << std::flush;
                 std::vector<info_var_type> var_info;
                 std::unordered_map<var_type, size_type> hash_table_position;
                 for (const triple_pattern& triple_pattern : *m_ptr_triple_patterns) {
@@ -163,36 +166,39 @@ namespace ring {
                         }
                     }
                 }
+                std::cout << "Done. " << std::endl;
 
                 //2. Sorting variables according to their weights.
+                std::cout << "Sorting... " << std::flush;
                 std::sort(var_info.begin(), var_info.end(), compare_var_info());
                 for(size_type i = 0; i < var_info.size(); ++i){
                     hash_table_position[var_info[i].name] = i;
                 }
+                std::cout << "Done. " << std::endl;
 
                 //3. Choosing the variables
                 size_type i = 0;
-                while(!hash_table_position.empty()){
-                    auto it = hash_table_position.find(var_info[i].name);
-                    if(it != hash_table_position.end()){
+                std::cout << "Choosing GAO ... " << std::flush;
+                std::vector<bool> checked(var_info.size(), false);
+                while(i < var_info.size()){
+                    if(!checked[i]){
                         m_gao.push_back(var_info[i].name); //Adding var to gao
+                        checked[i] = true;
                         if(var_info[i].n_triples > 1){
                             min_heap_type heap; //Stores the variables that are related with the chosen ones
                             auto var_name = var_info[i].name;
-                            fill_heap(var_name, hash_table_position, var_info, heap);
-                            hash_table_position.erase(it); //Removing var from hash_table
+                            fill_heap(var_name, hash_table_position, var_info, checked,heap);
                             while(!heap.empty()){
                                 var_name = heap.top().second;
                                 heap.pop();
                                 m_gao.push_back(var_name);
-                                fill_heap(var_name, hash_table_position, var_info, heap);
+                                fill_heap(var_name, hash_table_position, var_info, checked, heap);
                             }
-                        }else{
-                            hash_table_position.erase(it); //Removing var from hash_table
                         }
                     }
                     ++i;
                 }
+                std::cout << "Done. " << std::endl;
             }
 
         };
