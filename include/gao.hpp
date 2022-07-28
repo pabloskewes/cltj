@@ -176,10 +176,10 @@ namespace ring {
                 //2. Sorting variables according to their weights.
                 //std::cout << "Sorting... " << std::flush;
                 std::sort(var_info.begin(), var_info.end(), compare_var_info());
-                size_type lonely_start = -1;
+                size_type lonely_start = var_info.size();
                 for(size_type i = 0; i < var_info.size(); ++i){
                     hash_table_position[var_info[i].name] = i;
-                    if(lonely_start == -1 && var_info[i].n_triples == 1){
+                    if(var_info[i].n_triples == 1 && i < lonely_start){
                         lonely_start = i;
                     }
                 }
