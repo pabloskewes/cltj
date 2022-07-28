@@ -106,7 +106,7 @@ namespace ring {
                 auto pos_var = hash_table[var];
                 for(const auto &e : vec[pos_var].related){
                     auto pos_rel = hash_table[e];
-                    if(!checked[pos_rel]){
+                    if(!checked[pos_rel] && vec[pos_rel].n_triples > 1){
                         heap.push({vec[pos_rel].weight, e});
                         checked[pos_rel] = true;
                     }
@@ -176,8 +176,12 @@ namespace ring {
                 //2. Sorting variables according to their weights.
                 //std::cout << "Sorting... " << std::flush;
                 std::sort(var_info.begin(), var_info.end(), compare_var_info());
+                size_type lonely_start = -1;
                 for(size_type i = 0; i < var_info.size(); ++i){
                     hash_table_position[var_info[i].name] = i;
+                    if(lonely_start == -1 && var_info[i].n_triples == 1){
+                        lonely_start = i;
+                    }
                 }
                 //std::cout << "Done. " << std::endl;
 
@@ -186,22 +190,24 @@ namespace ring {
                 //std::cout << "Choosing GAO ... " << std::flush;
                 std::vector<bool> checked(var_info.size(), false);
                 m_gao.reserve(var_info.size());
-                while(i < var_info.size()){
+                while(i < lonely_start){ //Related variables
                     if(!checked[i]){
                         m_gao.push_back(var_info[i].name); //Adding var to gao
                         checked[i] = true;
-                        if(var_info[i].related.size() > 1){
-                            min_heap_type heap; //Stores the variables that are related with the chosen ones
-                            auto var_name = var_info[i].name;
-                            fill_heap(var_name, hash_table_position, var_info, checked,heap);
-                            while(!heap.empty()){
-                                var_name = heap.top().second;
-                                heap.pop();
-                                m_gao.push_back(var_name);
-                                fill_heap(var_name, hash_table_position, var_info, checked, heap);
-                            }
+                        min_heap_type heap; //Stores the related variables that are related with the chosen ones
+                        auto var_name = var_info[i].name;
+                        fill_heap(var_name, hash_table_position, var_info, checked,heap);
+                        while(!heap.empty()){
+                            var_name = heap.top().second;
+                            heap.pop();
+                            m_gao.push_back(var_name);
+                            fill_heap(var_name, hash_table_position, var_info, checked, heap);
                         }
                     }
+                    ++i;
+                }
+                while(i < var_info.size()){ //Lonely variables
+                    m_gao.push_back(var_info[i].name); //Adding var to gao
                     ++i;
                 }
                 //std::cout << "Done. " << std::endl;

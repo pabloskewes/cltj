@@ -105,13 +105,12 @@ public:
                     cout << endl;
                     */
                     (*number_of_results) = (*number_of_results) + 1;
-                    /*TODO: preguntar Gonzalo! OJO: aqui falta continuar evaluando. Pode haber mais solucions
-                     * que veñan de estados posteriores! */
 
                 } else {
                     (*bindings)[varname] = binding_last.second;
                     int new_level = level + 1;
                     evaluate(new_level, bindings, number_of_results, begin);
+
                 }
             }
             for (Iterator* triple_iterator : *var_iterators) {
