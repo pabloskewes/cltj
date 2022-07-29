@@ -11,7 +11,8 @@ namespace ring {
     namespace util {
 
         //TODO: refacer esto para que evite os forward steps
-        uint64_t get_size_interval(const triple_pattern &triple_pattern, ring* ptr_ring) {
+        template<class Ring>
+        uint64_t get_size_interval(const triple_pattern &triple_pattern, Ring* ptr_ring) {
             if (triple_pattern.s_is_variable() && triple_pattern.p_is_variable() && triple_pattern.o_is_variable()) {
                 bwt_interval open_interval = ptr_ring->open_SPO();
                 return open_interval.size();
@@ -101,8 +102,8 @@ namespace ring {
 }
 
 
-
-uint64_t get_size_interval(ring::triple_pattern &triple_pattern, ring::ring & graph) {
+template<class Ring>
+uint64_t get_size_interval(ring::triple_pattern &triple_pattern, Ring &graph) {
     if (triple_pattern.s_is_variable() && triple_pattern.p_is_variable() && triple_pattern.o_is_variable()) {
         ring::bwt_interval open_interval = graph.open_SPO();
         return open_interval.size();
@@ -184,7 +185,8 @@ bool compare_by_second(pair<uint8_t, uint64_t> a, pair<uint8_t, uint64_t> b) {
 }
 
 // Cambiar retorno
-vector<uint8_t> get_gao_min_gen(vector<ring::triple_pattern> &query, ring::ring &graph) {
+template<class Ring>
+vector<uint8_t> get_gao_min_gen(vector<ring::triple_pattern> &query, Ring &graph) {
     std::map<uint8_t , vector<uint64_t>> triple_values;
     std::map<uint8_t, vector<ring::triple_pattern*>> triples_var;
     for (auto& triple_pattern : query) { //TODO: esto está ben (solo refactoring)

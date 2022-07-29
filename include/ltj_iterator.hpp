@@ -38,19 +38,20 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace ring {
 
-    template<class var_t, class cons_t>
+    template<class ring_t, class var_t, class cons_t>
     class ltj_iterator {
 
     public:
         typedef cons_t value_type;
         typedef var_t var_type;
+        typedef ring_t ring_type;
         typedef uint64_t size_type;
         //enum state_type {s, p, o};
         //std::vector<value_type> leap_result_type;
 
     private:
         const triple_pattern *m_ptr_triple_pattern;
-        ring *m_ptr_ring; //TODO: should be const
+        ring_type *m_ptr_ring; //TODO: should be const
         bwt_interval m_i_s;
         bwt_interval m_i_p;
         bwt_interval m_i_o;
@@ -92,7 +93,7 @@ namespace ring {
 
         ltj_iterator() = default;
 
-        ltj_iterator(const triple_pattern *triple, ring *ring) {
+        ltj_iterator(const triple_pattern *triple, ring_type *ring) {
             m_ptr_triple_pattern = triple;
             m_ptr_ring = ring;
             m_cur_s = -1;

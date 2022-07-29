@@ -44,12 +44,13 @@ namespace ring {
 
     namespace gao {
 
-        template<class var_t = uint8_t >
+        template<class ring_t = ring<>, class var_t = uint8_t >
         class gao_size {
 
         public:
             typedef var_t var_type;
             typedef uint64_t size_type;
+            typedef ring_t ring_type;
             typedef struct {
                 var_type name;
                 size_type weight;
@@ -62,7 +63,7 @@ namespace ring {
 
         private:
             const std::vector<triple_pattern>* m_ptr_triple_patterns;
-            ring* m_ptr_ring;
+            ring_type* m_ptr_ring;
             std::vector<var_type> m_gao;
 
 
@@ -132,7 +133,7 @@ namespace ring {
             const std::vector<var_type> &gao = m_gao;
 
 
-            gao_size(const std::vector<triple_pattern>* triple_patterns, ring* r){
+            gao_size(const std::vector<triple_pattern>* triple_patterns, ring_type* r){
                 m_ptr_triple_patterns = triple_patterns;
                 m_ptr_ring = r;
 

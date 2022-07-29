@@ -124,10 +124,15 @@ ring::triple_pattern get_triple(string & s, std::unordered_map<std::string, uint
 
 int main(int argc, char* argv[])
 {
+
+    typedef ring::ring<> ring_type;
+    //typedef ring::c_ring ring_type;
+
+
     vector<string> dummy_queries;
     bool result = get_file_content(argv[2], dummy_queries);
 
-    ring::ring graph;
+    ring_type graph;
 
     cout << " Loading the index..."; fflush(stdout);
     sdsl::load_from_file(graph, string(argv[1]));
@@ -165,9 +170,9 @@ int main(int argc, char* argv[])
             
             //vector<uint8_t> gao = get_gao_min_gen(query, graph);
 
-            ring::gao::gao_size<> m_gao(&query, &graph);
+            ring::gao::gao_size<ring_type> m_gao(&query, &graph);
 
-            ring::ltj_algorithm<> ltj(&query, &m_gao.gao, &graph);
+            ring::ltj_algorithm<ring_type> ltj(&query, &m_gao.gao, &graph);
 
             /*
             cout << "Query Details:" << endl;

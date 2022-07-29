@@ -42,15 +42,16 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace ring {
 
-    template<class var_t = uint8_t, class cons_t = uint64_t>
+    template<class ring_t = ring<>, class var_t = uint8_t, class cons_t = uint64_t>
     class ltj_algorithm {
 
     public:
         typedef uint64_t value_type;
         typedef uint64_t size_type;
         typedef var_t var_type;
+        typedef ring_t ring_type;
         typedef cons_t const_type;
-        typedef ltj_iterator<var_type, const_type> ltj_iter_type;
+        typedef ltj_iterator<ring_type, var_type, const_type> ltj_iter_type;
         typedef std::unordered_map<var_type, std::vector<ltj_iter_type*>> var_to_iterators_type;
         //TODO: darlle unha volta a esto
         typedef std::vector<std::pair<var_type, value_type>> tuple_type;
@@ -59,7 +60,7 @@ namespace ring {
     private:
         const std::vector<triple_pattern>* m_ptr_triple_patterns;
         const std::vector<var_type>* m_ptr_gao;
-        ring* m_ptr_ring;
+        ring_type* m_ptr_ring;
         std::vector<ltj_iter_type> m_iterators;
         var_to_iterators_type m_var_to_iterators;
         bool m_is_empty = false;
@@ -93,7 +94,7 @@ namespace ring {
 
         ltj_algorithm(const std::vector<triple_pattern>* triple_patterns,
                       const std::vector<var_type>* gao,
-                      ring* ring){
+                      ring_type* ring){
 
             m_ptr_triple_patterns = triple_patterns;
             m_ptr_gao = gao;

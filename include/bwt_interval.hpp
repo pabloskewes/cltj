@@ -86,11 +86,13 @@ namespace ring {
             std::swap(cur_rank, o.cur_rank);
         }
 
-        uint64_t begin(bwt &B) {
+        template<class Bwt>
+        uint64_t begin(Bwt &B) {
             return B.min_in_range(l, r);
         }
 
-        uint64_t next_value(uint64_t val, bwt &B) {
+        template<class Bwt>
+        uint64_t next_value(uint64_t val, Bwt &B) {
             return B.range_next_value(val, l, r);
         }
 

@@ -13,6 +13,9 @@ using timer = std::chrono::high_resolution_clock;
 int main(int argc, char **argv)
 {
 
+    typedef ring::ring<> ring_type;
+    //typedef ring::c_ring ring_type;
+
     vector<spo_triple> D, E;
 
     std::ifstream ifs(argv[1]);
@@ -26,8 +29,8 @@ int main(int argc, char **argv)
     cout << "--Indexing " << D.size() << " triples" << endl;
     memory_monitor::start();
     auto start = timer::now();
-    
-    ring::ring A(D);
+
+    ring_type A(D);
     auto stop = timer::now();
     memory_monitor::stop();
     cout << "  Index built  " << sdsl::size_in_bytes(A) << " bytes" << endl;
