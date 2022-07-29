@@ -25,8 +25,10 @@
 
 using namespace std;
 
+
 namespace ring {
 
+    template <class bwt_bit_vector_t = bit_vector>
     class bwt {
 
     public:
@@ -36,7 +38,7 @@ namespace ring {
         typedef sdsl::rank_support_v<> c_rank_type;
         typedef sdsl::select_support_mcl<1> c_select_1_type;
         typedef sdsl::select_support_mcl<0> c_select_0_type;
-        typedef sdsl::wm_int<bit_vector> bwt_type;
+        typedef sdsl::wm_int<bwt_bit_vector_t> bwt_type;
 
     private:
         bwt_type m_L;

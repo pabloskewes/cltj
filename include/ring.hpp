@@ -27,16 +27,19 @@
 #include <stdlib.h>
 
 namespace ring {
+
+    template <class bwt_t = bwt<>>
     class ring {
     public:
         typedef uint64_t size_type;
         typedef uint64_t value_type;
+        typedef bwt_t bwt_type;
         typedef std::tuple<uint32_t, uint32_t, uint32_t> spo_triple_type;
 
     private:
-        bwt m_bwt_s; //POS
-        bwt m_bwt_p; //OSP
-        bwt m_bwt_o; //SPO
+        bwt_type m_bwt_s; //POS
+        bwt_type m_bwt_p; //OSP
+        bwt_type m_bwt_o; //SPO
 
         size_type m_max_s;
         size_type m_max_p;
@@ -175,7 +178,7 @@ namespace ring {
                 M_S.clear();
 
                 // builds the WT for BWT(O)
-                m_bwt_o = bwt(O, C_O);
+                m_bwt_o = bwt_type(O, C_O);
             }
 
             //cout << "  > Building m_bwt_s" << endl; fflush(stdout);
@@ -203,7 +206,7 @@ namespace ring {
 
                 M_P.clear();
 
-                m_bwt_s = bwt(S, C_S);
+                m_bwt_s = bwt_type(S, C_S);
             }
 
             //cout << "  > Building m_bwt_p" << endl; fflush(stdout);
@@ -231,7 +234,7 @@ namespace ring {
 
                 M_O.clear();
 
-                m_bwt_p = bwt(P, C_P);
+                m_bwt_p = bwt_type(P, C_P);
             }
             cout << "-- Index constructed successfully" << endl;
             fflush(stdout);
@@ -806,6 +809,7 @@ namespace ring {
 
     };
 
+    typedef ring<bwt<rrr_vector<15>>> c_ring;
 
 }
 
