@@ -334,14 +334,14 @@ namespace ring {
 
         //Given a Predicate returns its range in BWT
         pair<uint64_t, uint64_t> init_P(uint64_t P) const {
-            auto I = m_bwt_s.backward_search_1_interval(P);
-            return {I.first + m_n_triples, I.second + m_n_triples};
+            return m_bwt_s.backward_search_1_interval(P);
+            //return {I.first + m_n_triples, I.second + m_n_triples};
         }
 
         //Given an Object returns its range in BWT
         pair<uint64_t, uint64_t> init_O(uint64_t O) const {
-            pair<uint64_t, uint64_t> I = m_bwt_p.backward_search_1_interval(O);
-            return {I.first + 2 * m_n_triples, I.second + 2 * m_n_triples};
+            return m_bwt_p.backward_search_1_interval(O);
+            //return {I.first + 2 * m_n_triples, I.second + 2 * m_n_triples};
         }
 
 
@@ -358,16 +358,16 @@ namespace ring {
         //SPO -> OSP
         pair<uint64_t, uint64_t> init_SO(uint64_t S, uint64_t O) const {
             auto I = m_bwt_o.backward_search_1_rank(S, O); //SPO
-            I = m_bwt_p.backward_search_2_interval(O, I); //OSP
-            return {I.first + 2 * m_n_triples, I.second + 2 * m_n_triples};
+            return m_bwt_p.backward_search_2_interval(O, I); //OSP
+           // return {I.first + 2 * m_n_triples, I.second + 2 * m_n_triples};
         }
 
 
         //OSP -> POS
         pair<uint64_t, uint64_t> init_PO(uint64_t P, uint64_t O) const {
             auto I = m_bwt_p.backward_search_1_rank(O, P); //OSP
-            I = m_bwt_s.backward_search_2_interval(P, I); //POS
-            return {I.first + m_n_triples, I.second + m_n_triples};
+            return m_bwt_s.backward_search_2_interval(P, I); //POS
+            //return {I.first + m_n_triples, I.second + m_n_triples};
         }
 
         //OSP -> POS -> SPO
@@ -382,14 +382,15 @@ namespace ring {
         //
 
         bwt_interval open_PSO() {
-            return bwt_interval(2 * m_n_triples + 1, 3 * m_n_triples);
+            //return bwt_interval(2 * m_n_triples + 1, 3 * m_n_triples);
+            return bwt_interval( 1, m_n_triples);
         }
 
         /**********************************/
         // P->S  (simulates going down in the trie)
         // Returns an interval within m_bwt_o
         bwt_interval down_P_S(bwt_interval &p_int, uint64_t s) {
-            auto I = m_bwt_s.backward_step(p_int.left() - m_n_triples, p_int.right() - m_n_triples, s);
+            auto I = m_bwt_s.backward_step(p_int.left(), p_int.right(), s);
             uint64_t c = m_bwt_o.get_C(s);
             return bwt_interval(I.first + c, I.second + c);
         }
@@ -448,21 +449,19 @@ namespace ring {
         // O->P  (simulates going down in the trie)
         // Returns an interval within m_bwt_s
         bwt_interval down_O_P(bwt_interval &o_int, uint64_t p) {
-            auto I = m_bwt_p.backward_step(o_int.left() - 2 * m_n_triples, o_int.right() - 2 * m_n_triples, p);
+            auto I = m_bwt_p.backward_step(o_int.left(), o_int.right(), p);
             uint64_t c = m_bwt_s.get_C(p);
-            return bwt_interval(I.first + c + m_n_triples, I.second + c + m_n_triples);
+            return bwt_interval(I.first + c, I.second + c);
         }
 
         uint64_t min_S_in_OP(bwt_interval &I) {
-            bwt_interval I_aux(I.left() - m_n_triples, I.right() - m_n_triples);
-            return I_aux.begin(m_bwt_s);
+            return I.begin(m_bwt_s);
         }
 
         uint64_t next_S_in_OP(bwt_interval &I, uint64_t s_value) {
             if (s_value > m_max_s) return 0;
 
-            bwt_interval I_aux(I.left() - m_n_triples, I.right() - m_n_triples);
-            uint64_t nextv = I_aux.next_value(s_value, m_bwt_s);
+            uint64_t nextv = I.next_value(s_value, m_bwt_s);
             if (nextv == 0)
                 return 0;
             else
@@ -474,15 +473,13 @@ namespace ring {
         }
 
         uint64_t min_S_in_P(bwt_interval &I) {
-            bwt_interval I_aux(I.left() - m_n_triples, I.right() - m_n_triples);
-            return I_aux.begin(m_bwt_s);
+            return I.begin(m_bwt_s);
         }
 
         uint64_t next_S_in_P(bwt_interval &I, uint64_t s_value) {
             if (s_value > m_max_s) return 0;
 
-            bwt_interval I_aux(I.left() - m_n_triples, I.right() - m_n_triples);
-            uint64_t nextv = I_aux.next_value(s_value, m_bwt_s);
+            uint64_t nextv = I.next_value(s_value, m_bwt_s);
             if (nextv == 0)
                 return 0;
             else
@@ -495,7 +492,7 @@ namespace ring {
 
         std::vector<uint64_t>
         all_S_in_range(bwt_interval &I) {
-            return m_bwt_s.values_in_range(I.left() - m_n_triples, I.right() - m_n_triples);
+            return m_bwt_s.values_in_range(I.left(), I.right());
         }
 
 
@@ -504,7 +501,7 @@ namespace ring {
         //
 
         bwt_interval open_SOP() {
-            return bwt_interval(m_n_triples + 1, 2 * m_n_triples);
+            return bwt_interval(1,  m_n_triples);
         }
 
 
@@ -515,19 +512,17 @@ namespace ring {
         bwt_interval down_S_O(bwt_interval &s_int, uint64_t o) {
             pair<uint64_t, uint64_t> I = m_bwt_o.backward_step(s_int.left(), s_int.right(), o);
             uint64_t c = m_bwt_p.get_C(o);
-            return bwt_interval(I.first + c + 2 * m_n_triples, I.second + c + 2 * m_n_triples);
+            return bwt_interval(I.first + c, I.second + c);
         }
 
         uint64_t min_P_in_SO(bwt_interval &I) {
-            bwt_interval I_aux(I.left() - 2 * m_n_triples, I.right() - 2 * m_n_triples);
-            return I_aux.begin(m_bwt_p);
+            return I.begin(m_bwt_p);
         }
 
         uint64_t next_P_in_SO(bwt_interval &I, uint64_t p_value) {
             if (p_value > m_max_p) return 0;
 
-            bwt_interval I_aux(I.left() - 2 * m_n_triples, I.right() - 2 * m_n_triples);
-            uint64_t nextv = I_aux.next_value(p_value, m_bwt_p);
+            uint64_t nextv = I.next_value(p_value, m_bwt_p);
             if (nextv == 0)
                 return 0;
             else
@@ -539,15 +534,13 @@ namespace ring {
         }
 
         uint64_t min_P_in_O(bwt_interval &I) {
-            bwt_interval I_aux(I.left() - 2 * m_n_triples, I.right() - 2 * m_n_triples);
-            return I_aux.begin(m_bwt_p);
+            return I.begin(m_bwt_p);
         }
 
         uint64_t next_P_in_O(bwt_interval &I, uint64_t p_value) {
             if (p_value > m_max_p) return 0;
 
-            bwt_interval I_aux(I.left() - 2 * m_n_triples, I.right() - 2 * m_n_triples);
-            uint64_t nextv = I_aux.next_value(p_value, m_bwt_p);
+            uint64_t nextv = I.next_value(p_value, m_bwt_p);
             if (nextv == 0)
                 return 0;
             else
@@ -560,7 +553,7 @@ namespace ring {
 
         std::vector<uint64_t>
         all_P_in_range(bwt_interval &I) {
-            return m_bwt_p.values_in_range(I.left() - 2 * m_n_triples, I.right() - 2 * m_n_triples);
+            return m_bwt_p.values_in_range(I.left(), I.right());
         }
 
 
@@ -568,19 +561,17 @@ namespace ring {
         // Functions for SPO
         //
         bwt_interval open_SPO() {
-            return bwt_interval(m_n_triples + 1, 2 * m_n_triples);
+            return bwt_interval(1, m_n_triples);
         }
 
         uint64_t min_S(bwt_interval &I) {
-            bwt_interval I_aux = bwt_interval(I.left() - m_n_triples, I.right() - m_n_triples);
-            return I_aux.begin(m_bwt_s);
+            return I.begin(m_bwt_s);
         }
 
         uint64_t next_S(bwt_interval &I, uint64_t s_value) {
             if (s_value > m_max_s) return 0;
 
-            bwt_interval I_aux = bwt_interval(I.left() - m_n_triples, I.right() - m_n_triples);
-            return I_aux.next_value(s_value, m_bwt_s);
+            return I.next_value(s_value, m_bwt_s);
         }
 
         bwt_interval down_S(uint64_t s_value) {
@@ -650,19 +641,21 @@ namespace ring {
         //
 
         bwt_interval open_POS() {
-            return bwt_interval(2 * m_n_triples + 1, 3 * m_n_triples);
+            return bwt_interval( 1, m_n_triples);
         }
 
         uint64_t min_P(bwt_interval &I) {
-            bwt_interval I_aux(I.left() - 2 * m_n_triples, I.right() - 2 * m_n_triples);
-            return I_aux.begin(m_bwt_p);
+            //bwt_interval I_aux(I.left() - 2 * m_n_triples, I.right() - 2 * m_n_triples);
+            //return I_aux.begin(m_bwt_p);
+            return I.begin(m_bwt_p);
         }
 
         uint64_t next_P(bwt_interval &I, uint64_t p_value) {
             if (p_value > m_max_p) return 0;
 
-            bwt_interval I_aux(I.left() - 2 * m_n_triples, I.right() - 2 * m_n_triples);
-            uint64_t nextv = I_aux.next_value(p_value, m_bwt_p);
+            //bwt_interval I_aux(I.left() - 2 * m_n_triples, I.right() - 2 * m_n_triples);
+            //uint64_t nextv = I_aux.next_value(p_value, m_bwt_p);
+            uint64_t nextv = I.next_value(p_value, m_bwt_p);
             if (nextv == 0)
                 return 0;
             else
@@ -711,15 +704,17 @@ namespace ring {
         }
 
         uint64_t min_S_in_PO(bwt_interval &I) {
-            bwt_interval I_aux = bwt_interval(I.left() - m_n_triples, I.right() - m_n_triples);
-            return I_aux.begin(m_bwt_s);
+           // bwt_interval I_aux = bwt_interval(I.left() - m_n_triples, I.right() - m_n_triples);
+            //return I_aux.begin(m_bwt_s);
+            return I.begin(m_bwt_s);
         }
 
         uint64_t next_S_in_PO(bwt_interval &I, uint64_t s_value) {
             if (s_value > m_max_s) return 0;
 
-            bwt_interval I_aux = bwt_interval(I.left() - m_n_triples, I.right() - m_n_triples);
-            return I_aux.next_value(s_value, m_bwt_s);
+            //bwt_interval I_aux = bwt_interval(I.left() - m_n_triples, I.right() - m_n_triples);
+            //return I_aux.next_value(s_value, m_bwt_s);
+            return I.next_value(s_value, m_bwt_s);
         }
 
         bool there_are_S_in_PO(bwt_interval &I) {
@@ -788,15 +783,13 @@ namespace ring {
         }
 
         uint64_t min_P_in_OS(bwt_interval &I) {
-            bwt_interval I_aux = bwt_interval(I.left() - 2 * m_n_triples, I.right() - 2 * m_n_triples);
-            return I_aux.begin(m_bwt_p);
+            return I.begin(m_bwt_p);
         }
 
         uint64_t next_P_in_OS(bwt_interval &I, uint64_t p_value) {
             if (p_value > m_max_p) return 0;
 
-            bwt_interval I_aux = bwt_interval(I.left() - 2 * m_n_triples, I.right() - 2 * m_n_triples);
-            uint64_t nextv = I_aux.next_value(p_value, m_bwt_p);
+            uint64_t nextv = I.next_value(p_value, m_bwt_p);
             if (nextv == 0)
                 return 0;
             else
