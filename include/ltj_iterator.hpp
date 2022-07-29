@@ -89,7 +89,12 @@ namespace ring {
 
     public:
         const bool &is_empty = m_is_empty;
-
+        const bwt_interval &i_s = m_i_s;
+        const bwt_interval &i_p = m_i_p;
+        const bwt_interval &i_o = m_i_o;
+        const value_type &cur_s = m_cur_s;
+        const value_type &cur_p = m_cur_p;
+        const value_type &cur_o = m_cur_o;
 
         ltj_iterator() = default;
 

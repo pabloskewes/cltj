@@ -38,8 +38,8 @@ namespace ring {
                 if (cur_s != triple_pattern.term_s.value) {
                     return 0;
                 }
-                bwt_interval i_s = ptr_ring->down_S(cur_s);
-                return i_s.size();
+                bwt_interval i_p = ptr_ring->down_S(cur_s);
+                return i_p.size();
 
             } else if (!triple_pattern.s_is_variable() && !triple_pattern.p_is_variable() && triple_pattern.o_is_variable()) {
 
@@ -52,14 +52,14 @@ namespace ring {
                 }
 
                 //Interval in S
-                bwt_interval i_p = ptr_ring->down_P(p_aux);
-                auto s_aux = ptr_ring->next_S_in_P(i_p, triple_pattern.term_s.value);
+                bwt_interval i_s = ptr_ring->down_P(p_aux);
+                auto s_aux = ptr_ring->next_S_in_P(i_s, triple_pattern.term_s.value);
                 //Is the constant of O in m_i_o?
                 if (s_aux != triple_pattern.term_s.value) {
                     return 0;
                 }
-                bwt_interval i_s = ptr_ring->down_P_S(i_p, s_aux);
-                return i_s.size();
+                bwt_interval i_o = ptr_ring->down_P_S(i_s, s_aux);
+                return i_o.size();
 
             } else if (!triple_pattern.s_is_variable() && triple_pattern.p_is_variable() && !triple_pattern.o_is_variable()) {
                 bwt_interval open_interval = ptr_ring->open_SOP();
@@ -67,13 +67,13 @@ namespace ring {
                 if (cur_s != triple_pattern.term_s.value) {
                     return 0;
                 }
-                bwt_interval i_s = ptr_ring->down_S(cur_s);
-                auto cur_o = ptr_ring->next_O_in_S(i_s, triple_pattern.term_o.value);
+                bwt_interval i_o = ptr_ring->down_S(cur_s);
+                auto cur_o = ptr_ring->next_O_in_S(i_o, triple_pattern.term_o.value);
                 if (cur_o != triple_pattern.term_o.value) {
                     return 0;
                 }
-                bwt_interval i_o = ptr_ring->down_S_O(i_s, cur_o);
-                return i_o.size();
+                bwt_interval i_p = ptr_ring->down_S_O(i_o, cur_o);
+                return i_p.size();
 
             } else if (triple_pattern.s_is_variable() && !triple_pattern.p_is_variable() && !triple_pattern.o_is_variable()) {
 
@@ -87,17 +87,38 @@ namespace ring {
                 }
 
                 //Interval in P
-                bwt_interval i_o = ptr_ring->down_O(o_aux);
-                auto p_aux = ptr_ring->next_P_in_O(i_o, triple_pattern.term_p.value);
+                bwt_interval i_p = ptr_ring->down_O(o_aux);
+                auto p_aux = ptr_ring->next_P_in_O(i_p, triple_pattern.term_p.value);
                 //Is the constant of O in m_i_o?
                 if (p_aux != triple_pattern.term_p.value) {
                     return 0;
                 }
-                bwt_interval i_p = ptr_ring->down_O_P(i_o, o_aux);
-                return i_p.size();
+                bwt_interval i_s = ptr_ring->down_O_P(i_p, p_aux);
+                return i_s.size();
             }
             return 0;
         }
+    }
+
+
+    template<class Iterator>
+    uint64_t get_size_interval(const Iterator &iter) {
+        if(iter.cur_s == -1 && iter.cur_p == -1 && iter.cur_o == -1){
+            return iter.i_s.size();
+        } else if (iter.cur_s == -1 && iter.cur_p != -1 && iter.cur_o == -1) {
+            return iter.i_s.size(); //i_s = i_o
+        } else if (iter.cur_s == -1 && iter.cur_p == -1 && iter.cur_o != -1) {
+            return iter.i_s.size(); //i_s = i_p
+        } else if (iter.cur_s != -1 && iter.cur_p == -1 && iter.cur_o == -1) {
+            return iter.i_o.size(); //i_o = i_p
+        } else if (iter.cur_s != -1 && iter.cur_p != -1 && iter.cur_o == -1) {
+            return iter.i_o.size();
+        } else if (iter.cur_s != -1 && iter.cur_p == -1 && iter.cur_o != -1) {
+            return iter.i_p.size();
+        } else if (iter.cur_s == -1 && iter.cur_p != -1 && iter.cur_o != -1) {
+            return iter.i_s.size();
+        }
+        return 0;
     }
 }
 

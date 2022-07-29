@@ -31,8 +31,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // Created by Adrián on 19/7/22.
 //
 
-#ifndef RING_LTJ_ALGORITHM_HPP
-#define RING_LTJ_ALGORITHM_HPP
+#ifndef RING_LTJ_ALGORITHM_V2_HPP
+#define RING_LTJ_ALGORITHM_V2_HPP
 
 
 #include <triple_pattern.hpp>
@@ -43,7 +43,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace ring {
 
     template<class ring_t = ring<>, class var_t = uint8_t, class cons_t = uint64_t>
-    class ltj_algorithm {
+    class ltj_algorithm_v2 {
 
     public:
         typedef uint64_t value_type;
@@ -59,16 +59,16 @@ namespace ring {
 
     private:
         const std::vector<triple_pattern>* m_ptr_triple_patterns;
-        const std::vector<var_type>* m_ptr_gao;
+        std::vector<var_type> m_gao;
         ring_type* m_ptr_ring;
         std::vector<ltj_iter_type> m_iterators;
         var_to_iterators_type m_var_to_iterators;
         bool m_is_empty = false;
 
 
-        void copy(const ltj_algorithm &o) {
+        void copy(const ltj_algorithm_v2 &o) {
             m_ptr_triple_patterns = o.m_ptr_triple_patterns;
-            m_ptr_gao = o.m_ptr_gao;
+            m_gao = o.m_gao;
             m_ptr_ring = o.m_ptr_ring;
             m_iterators = o.m_iterators;
             m_var_to_iterators = o.m_var_to_iterators;
@@ -90,14 +90,14 @@ namespace ring {
     public:
 
 
-        ltj_algorithm() = default;
+        ltj_algorithm_v2() = default;
 
-        ltj_algorithm(const std::vector<triple_pattern>* triple_patterns,
+        ltj_algorithm_v2(const std::vector<triple_pattern>* triple_patterns,
                       const std::vector<var_type>* gao,
                       ring_type* ring){
 
             m_ptr_triple_patterns = triple_patterns;
-            m_ptr_gao = gao;
+            m_gao = gao;
             m_ptr_ring = ring;
 
             size_type i = 0;
@@ -123,20 +123,21 @@ namespace ring {
                 ++i;
             }
             //TODO: escoger aqui el GAO
+
         }
 
         //! Copy constructor
-        ltj_algorithm(const ltj_algorithm &o) {
+        ltj_algorithm_v2(const ltj_algorithm_v2 &o) {
             copy(o);
         }
 
         //! Move constructor
-        ltj_algorithm(ltj_algorithm &&o) {
+        ltj_algorithm_v2(ltj_algorithm_v2 &&o) {
             *this = std::move(o);
         }
 
         //! Copy Operator=
-        ltj_algorithm &operator=(const ltj_algorithm &o) {
+        ltj_algorithm_v2 &operator=(const ltj_algorithm_v2 &o) {
             if (this != &o) {
                 copy(o);
             }
@@ -144,10 +145,10 @@ namespace ring {
         }
 
         //! Move Operator=
-        ltj_algorithm &operator=(ltj_algorithm &&o) {
+        ltj_algorithm_v2 &operator=(ltj_algorithm_v2 &&o) {
             if (this != &o) {
                 m_ptr_triple_patterns = std::move(o.m_ptr_triple_patterns);
-                m_ptr_gao = std::move(o.m_ptr_gao);
+                m_gao = std::move(o.m_gao);
                 m_ptr_ring = std::move(o.m_ptr_ring);
                 m_iterators = std::move(o.m_iterators);
                 m_var_to_iterators = std::move(o.m_var_to_iterators);
@@ -156,9 +157,9 @@ namespace ring {
             return *this;
         }
 
-        void swap(ltj_algorithm &o) {
+        void swap(ltj_algorithm_v2 &o) {
             std::swap(m_ptr_triple_patterns, o.m_ptr_triple_patterns);
-            std::swap(m_ptr_gao, o.m_ptr_gao);
+            std::swap(m_gao, o.m_gao);
             std::swap(m_ptr_ring, o.m_ptr_ring);
             std::swap(m_iterators, o.m_iterators);
             std::swap(m_var_to_iterators, o.m_var_to_iterators);
@@ -175,7 +176,7 @@ namespace ring {
                   const size_type limit_results = 0, const size_type timeout_seconds = 0){
             if(m_is_empty) return;
             time_point_type start = std::chrono::high_resolution_clock::now();
-            tuple_type t(m_ptr_gao->size());
+            tuple_type t(m_gao.size());
             search(0, t, res, start, limit_results, timeout_seconds);
         };
 
@@ -189,7 +190,7 @@ namespace ring {
                   const size_type limit_results = 0, const size_type timeout_seconds = 0){
             if(m_is_empty) return;
             time_point_type start = std::chrono::high_resolution_clock::now();
-            tuple_type t(m_ptr_gao->size());
+            tuple_type t(m_gao.size());
             search_opt(0, t, res, start, limit_results, timeout_seconds);
         };
 
@@ -216,11 +217,11 @@ namespace ring {
             //(Optional) Check limit
             if(limit_results > 0 && res.size() == limit_results) return;
 
-            if(j == m_ptr_gao->size()){
+            if(j == m_gao.size()){
                 //Report results
                 res.emplace_back(tuple);
             }else{
-                var_type x_j = m_ptr_gao->at(j);
+                var_type x_j = m_gao[j];
                 std::vector<ltj_iter_type*>& itrs = m_var_to_iterators[x_j];
                 value_type c = seek(x_j);
                 while(c != 0){ //If empty c=0
@@ -265,11 +266,11 @@ namespace ring {
             //(Optional) Check limit
             if(limit_results > 0 && res.size() == limit_results) return false;
 
-            if(j == m_ptr_gao->size()){
+            if(j == m_gao.size()){
                 //Report results
                 res.emplace_back(tuple);
             }else{
-                var_type x_j = m_ptr_gao->at(j);
+                var_type x_j = m_gao.[j];
                 std::vector<ltj_iter_type*>& itrs = m_var_to_iterators[x_j];
                 bool ok;
                 if(itrs.size() == 1) {//Lonely variables
@@ -369,4 +370,4 @@ namespace ring {
     };
 }
 
-#endif //RING_LTJ_ALGORITHM_HPP
+#endif //RING_LTJ_ALGORITHM_V2_HPP
