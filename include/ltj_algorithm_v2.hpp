@@ -59,7 +59,7 @@ namespace ring {
 
     private:
         const std::vector<triple_pattern>* m_ptr_triple_patterns;
-        std::vector<var_type> m_gao;
+        std::vector<var_type> m_gao; //TODO: deberia ser una clase gao en la cual obtener las variables
         ring_type* m_ptr_ring;
         std::vector<ltj_iter_type> m_iterators;
         var_to_iterators_type m_var_to_iterators;
@@ -76,7 +76,6 @@ namespace ring {
         }
 
 
-        //TODO: repasar o que pasa aqui
         inline void add_var_to_iterator(const var_type var, ltj_iter_type* ptr_iterator){
             auto it =  m_var_to_iterators.find(var);
             if(it != m_var_to_iterators.end()){
@@ -92,12 +91,9 @@ namespace ring {
 
         ltj_algorithm_v2() = default;
 
-        ltj_algorithm_v2(const std::vector<triple_pattern>* triple_patterns,
-                      const std::vector<var_type>* gao,
-                      ring_type* ring){
+        ltj_algorithm_v2(const std::vector<triple_pattern>* triple_patterns, ring_type* ring){
 
             m_ptr_triple_patterns = triple_patterns;
-            m_gao = gao;
             m_ptr_ring = ring;
 
             size_type i = 0;
@@ -122,7 +118,9 @@ namespace ring {
                 }
                 ++i;
             }
-            //TODO: escoger aqui el GAO
+
+            gao::gao_size_v2<ring_type> gao_sv2(m_ptr_triple_patterns, &m_iterators, m_ptr_ring);
+            m_gao = gao_sv2.gao;
 
         }
 
@@ -270,10 +268,10 @@ namespace ring {
                 //Report results
                 res.emplace_back(tuple);
             }else{
-                var_type x_j = m_gao.[j];
+                var_type x_j = m_gao[j];
                 std::vector<ltj_iter_type*>& itrs = m_var_to_iterators[x_j];
                 bool ok;
-                if(itrs.size() == 1) {//Lonely variables
+                if(itrs.size() == 1 && itrs[0]->in_last_level()) {//Lonely variables
                     auto results = itrs[0]->seek_all(x_j);
                     //std::cout << "Results: " << results.size() << std::endl;
                     for (const auto &c : results) {

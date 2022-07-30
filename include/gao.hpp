@@ -309,7 +309,7 @@ namespace ring {
 
 
             gao_size_v2(const std::vector<triple_pattern>* triple_patterns,
-                        std::vector<ltj_iter_type>* iterators,
+                        const std::vector<ltj_iter_type>* iterators,
                         ring_type* r){
                 m_ptr_triple_patterns = triple_patterns;
                 m_ptr_iterators = iterators;
@@ -320,8 +320,9 @@ namespace ring {
                 //std::cout << "Filling... " << std::flush;
                 std::vector<info_var_type> var_info;
                 std::unordered_map<var_type, size_type> hash_table_position;
+                size_type i = 0;
                 for (const triple_pattern& triple_pattern : *m_ptr_triple_patterns) {
-                    size_type size = util::get_size_interval(triple_pattern, m_ptr_ring);
+                    size_type size = util::get_size_interval(m_ptr_iterators->at(i));
                     bool s = false, p = false, o = false;
                     var_type var_s, var_p, var_o;
                     if(triple_pattern.s_is_variable()){
@@ -356,7 +357,7 @@ namespace ring {
                 //std::cout << "Sorting... " << std::flush;
                 std::sort(var_info.begin(), var_info.end(), compare_var_info());
                 size_type lonely_start = var_info.size();
-                for(size_type i = 0; i < var_info.size(); ++i){
+                for(i = 0; i < var_info.size(); ++i){
                     hash_table_position[var_info[i].name] = i;
                     if(var_info[i].n_triples == 1 && i < lonely_start){
                         lonely_start = i;
@@ -365,7 +366,7 @@ namespace ring {
                 //std::cout << "Done. " << std::endl;
 
                 //3. Choosing the variables
-                size_type i = 0;
+                i = 0;
                 //std::cout << "Choosing GAO ... " << std::flush;
                 std::vector<bool> checked(var_info.size(), false);
                 m_gao.reserve(var_info.size());

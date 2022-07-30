@@ -18,7 +18,7 @@
 #include "ring.hpp"
 #include <chrono>
 #include <triple_pattern.hpp>
-#include <ltj_algorithm.hpp>
+#include <ltj_algorithm_v2.hpp>
 #include "utils.hpp"
 
 using namespace std;
@@ -170,9 +170,10 @@ int main(int argc, char* argv[])
             
             //vector<uint8_t> gao = get_gao_min_gen(query, graph);
 
-            ring::gao::gao_size<ring_type> m_gao(&query, &graph);
+            //ring::gao::gao_size<ring_type> m_gao(&query, &graph);
 
-            ring::ltj_algorithm<ring_type> ltj(&query, &m_gao.gao, &graph);
+            //ring::ltj_algorithm<ring_type> ltj(&query, &m_gao.gao, &graph);
+            ring::ltj_algorithm_v2<ring_type> ltj(&query, &graph);
 
             /*
             cout << "Query Details:" << endl;
@@ -182,7 +183,8 @@ int main(int argc, char* argv[])
             cout << "##########" << endl;
             */
 
-            typedef std::vector<typename ring::ltj_algorithm<>::tuple_type> results_type;
+//            typedef std::vector<typename ring::ltj_algorithm<>::tuple_type> results_type;
+            typedef std::vector<typename ring::ltj_algorithm_v2<>::tuple_type> results_type;
             results_type res;
 
             std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();

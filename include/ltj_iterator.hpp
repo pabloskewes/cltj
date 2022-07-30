@@ -594,6 +594,7 @@ namespace ring {
                     || (m_cur_o !=-1 && m_cur_s != -1);
         }
 
+        //Solo funciona en último nivel, en otro caso habría que reajustar
         std::vector<uint64_t> seek_all(var_type var){
             if (is_variable_subject(var)){
                 return m_ptr_ring->all_S_in_range(m_i_s);

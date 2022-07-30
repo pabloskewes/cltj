@@ -124,7 +124,7 @@ namespace ring {
             return r;
         }
 
-        inline uint64_t size() {
+        inline uint64_t size() const {
             return r - l + 1;
         }
     };
