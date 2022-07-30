@@ -102,7 +102,7 @@ namespace ring {
         template<class Iterator>
         uint64_t get_size_interval(const Iterator &iter) {
             if(iter.cur_s == -1 && iter.cur_p == -1 && iter.cur_o == -1){
-                return iter.i_s.size();
+                return iter.i_s.size(); //open
             } else if (iter.cur_s == -1 && iter.cur_p != -1 && iter.cur_o == -1) {
                 return iter.i_s.size(); //i_s = i_o
             } else if (iter.cur_s == -1 && iter.cur_p == -1 && iter.cur_o != -1) {

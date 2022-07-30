@@ -119,8 +119,7 @@ namespace ring {
                 ++i;
             }
 
-            gao::gao_size_v2<ring_type> gao_sv2(m_ptr_triple_patterns, &m_iterators, m_ptr_ring);
-            m_gao = gao_sv2.gao;
+            gao::gao_size_v2<ring_type> gao_sv2(m_ptr_triple_patterns, &m_iterators, m_ptr_ring, m_gao);
 
         }
 

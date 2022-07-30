@@ -239,7 +239,6 @@ namespace ring {
             const std::vector<triple_pattern>* m_ptr_triple_patterns;
             const std::vector<ltj_iter_type>* m_ptr_iterators;
             ring_type* m_ptr_ring;
-            std::vector<var_type> m_gao;
 
 
             void var_to_vector(const var_type var, const size_type size,
@@ -305,12 +304,11 @@ namespace ring {
 
         public:
 
-            const std::vector<var_type> &gao = m_gao;
-
 
             gao_size_v2(const std::vector<triple_pattern>* triple_patterns,
                         const std::vector<ltj_iter_type>* iterators,
-                        ring_type* r){
+                        ring_type* r,
+                        std::vector<var_type> &gao){
                 m_ptr_triple_patterns = triple_patterns;
                 m_ptr_iterators = iterators;
                 m_ptr_ring = r;
@@ -350,6 +348,7 @@ namespace ring {
                     if(p && o){
                         var_to_related(var_p, var_o, hash_table_position, var_info);
                     }
+                    ++i;
                 }
                 //std::cout << "Done. " << std::endl;
 
@@ -369,10 +368,10 @@ namespace ring {
                 i = 0;
                 //std::cout << "Choosing GAO ... " << std::flush;
                 std::vector<bool> checked(var_info.size(), false);
-                m_gao.reserve(var_info.size());
+                gao.reserve(var_info.size());
                 while(i < lonely_start){ //Related variables
                     if(!checked[i]){
-                        m_gao.push_back(var_info[i].name); //Adding var to gao
+                        gao.push_back(var_info[i].name); //Adding var to gao
                         checked[i] = true;
                         min_heap_type heap; //Stores the related variables that are related with the chosen ones
                         auto var_name = var_info[i].name;
@@ -380,14 +379,14 @@ namespace ring {
                         while(!heap.empty()){
                             var_name = heap.top().second;
                             heap.pop();
-                            m_gao.push_back(var_name);
+                            gao.push_back(var_name);
                             fill_heap(var_name, hash_table_position, var_info, checked, heap);
                         }
                     }
                     ++i;
                 }
                 while(i < var_info.size()){ //Lonely variables
-                    m_gao.push_back(var_info[i].name); //Adding var to gao
+                    gao.push_back(var_info[i].name); //Adding var to gao
                     ++i;
                 }
                 //std::cout << "Done. " << std::endl;
