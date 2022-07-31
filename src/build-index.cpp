@@ -35,6 +35,7 @@ int main(int argc, char **argv)
     memory_monitor::stop();
     cout << "  Index built  " << sdsl::size_in_bytes(A) << " bytes" << endl;
 
+    std::string index_name = std::string(argv[1]) + ".ring";
     sdsl::store_to_file(A, string(argv[1]));
     cout << "Index saved" << endl;
     cout << duration_cast<seconds>(stop-start).count() << " seconds." << endl;

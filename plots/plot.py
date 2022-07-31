@@ -2,15 +2,15 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-df_data = pd.read_csv('refactoring.csv', sep=';')
+df_data = pd.read_csv('bgps.comp.csv', sep=';')
 print(df_data.describe())
 #print(df_data.head())
-axes = df_data.boxplot(column=['Orig', 'V1', 'V2', 'V3', 'V4'], grid=False, return_type='axes')
+axes = df_data.boxplot(column=['Comp'], grid=False, return_type='axes')
 #axes = df_data.boxplot(column=['Intersection'], grid=False, return_type='axes')
 
-plt.ylim(0, 65000000)
-plt.ylabel("Time (ns)")
-#plt.ylabel("Ratio")
+plt.ylim(0, 30)
+#plt.ylabel("Time (ns)")
+plt.ylabel("Ratio")
 plt.xlabel("")
 plt.show()
 
