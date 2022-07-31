@@ -9,16 +9,11 @@ using namespace std;
 using namespace std::chrono;
 using timer = std::chrono::high_resolution_clock;
 
-
-int main(int argc, char **argv)
-{
-
-    typedef ring::ring<> ring_type;
-    //typedef ring::c_ring ring_type;
-
+template<class ring>
+void build_index(const std::string &dataset, const std::string &output){
     vector<spo_triple> D, E;
 
-    std::ifstream ifs(argv[1]);
+    std::ifstream ifs(dataset);
     uint64_t s, p , o;
     do {
         ifs >> s >> p >> o;
@@ -30,16 +25,38 @@ int main(int argc, char **argv)
     memory_monitor::start();
     auto start = timer::now();
 
-    ring_type A(D);
+    ring A(D);
     auto stop = timer::now();
     memory_monitor::stop();
     cout << "  Index built  " << sdsl::size_in_bytes(A) << " bytes" << endl;
 
-    std::string index_name = std::string(argv[1]) + ".ring";
-    sdsl::store_to_file(A, index_name);
+    sdsl::store_to_file(A, output);
     cout << "Index saved" << endl;
     cout << duration_cast<seconds>(stop-start).count() << " seconds." << endl;
     cout << memory_monitor::peak() << " bytes." << endl;
+
+}
+
+int main(int argc, char **argv)
+{
+
+    if(argc != 3){
+        std::cout << "Usage: " << argv[0] << "<dataset> [ring|c-ring]" << std::endl;
+        return 0;
+    }
+
+    std::string dataset = argv[1];
+    std::string type    = argv[2];
+    if(type == "ring"){
+        std::string index_name = dataset + ".ring";
+        build_index<ring::ring<>>(dataset, index_name);
+    }else if (type == "c-ring"){
+        std::string index_name = dataset + ".c-ring";
+        build_index<ring::c_ring>(dataset, index_name);
+    }else{
+        std::cout << "Usage: " << argv[0] << "<dataset> [ring|c-ring]" << std::endl;
+    }
+
     return 0;
 }
 

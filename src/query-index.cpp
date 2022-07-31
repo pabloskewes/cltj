@@ -120,22 +120,21 @@ ring::triple_pattern get_triple(string & s, std::unordered_map<std::string, uint
     return triple;
 }
 
+std::string get_type(const std::string &file){
+    auto p = file.find_last_of('.');
+    return file.substr(p);
+}
 
 
-int main(int argc, char* argv[])
-{
-
-    typedef ring::ring<> ring_type;
-    //typedef ring::c_ring ring_type;
-
-
+template<class ring_type>
+void query(const std::string &file, const std::string &queries){
     vector<string> dummy_queries;
-    bool result = get_file_content(argv[2], dummy_queries);
+    bool result = get_file_content(queries, dummy_queries);
 
     ring_type graph;
 
     cout << " Loading the index..."; fflush(stdout);
-    sdsl::load_from_file(graph, string(argv[1]));
+    sdsl::load_from_file(graph, file);
 
     cout << endl << " Index loaded " << sdsl::size_in_bytes(graph) << " bytes" << endl;
 
@@ -167,7 +166,7 @@ int main(int argc, char* argv[])
             // cout << gao [0] << " - " << gao [1] << " - " << gao[2] << endl;
 
             start = high_resolution_clock::now();
-            
+
             //vector<uint8_t> gao = get_gao_min_gen(query, graph);
 
             //ring::gao::gao_size<ring_type> m_gao(&query, &graph);
@@ -202,10 +201,36 @@ int main(int argc, char* argv[])
             // cout << std::chrono::duration_cast<std::chrono::nanoseconds> (end - begin).count() << std::endl;
 
             //cout << "RESULTS QUERY " << count << ": " << number_of_results << endl;
-        count += 1;
+            count += 1;
         }
 
     }
+}
+
+
+int main(int argc, char* argv[])
+{
+
+    typedef ring::ring<> ring_type;
+    //typedef ring::c_ring ring_type;
+    if(argc != 3){
+        std::cout << "Usage: " << argv[0] << "<index> <queries>" << std::endl;
+        return 0;
+    }
+
+    std::string index = argv[1];
+    std::string queries = argv[2];
+    std::string type = get_type(index);
+
+    if(type == "ring"){
+        query<ring::ring<>>(index, queries);
+    }else if (type == "c-ring"){
+        query<ring::c_ring>(index, queries);
+    }else{
+        std::cout << "Type of index: " << type << " is not supported." << std::endl;
+    }
+
+
 
 	return 0;
 }
