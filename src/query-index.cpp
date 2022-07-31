@@ -122,7 +122,7 @@ ring::triple_pattern get_triple(string & s, std::unordered_map<std::string, uint
 
 std::string get_type(const std::string &file){
     auto p = file.find_last_of('.');
-    return file.substr(p);
+    return file.substr(p+1);
 }
 
 
