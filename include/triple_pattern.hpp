@@ -94,9 +94,9 @@ namespace ring {
             }
 
             if(o_is_variable()){
-                std::cout << ht[term_o.value] << " ";
+                std::cout << ht[term_o.value];
             }else{
-                std::cout << term_o.value << " ";
+                std::cout << term_o.value;
             }
         }
     };
