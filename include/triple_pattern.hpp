@@ -80,7 +80,7 @@ namespace ring {
         }
 
 
-        void print(std::unordered_map<uint8_t, std::string> &ht){
+        void print(std::unordered_map<uint8_t, std::string> &ht) const {
             if(s_is_variable()){
                 std::cout << ht[term_s.value] << " ";
             }else{

@@ -281,7 +281,7 @@ namespace ring {
             for(size_type i = 0; i <  m_ptr_triple_patterns->size(); ++i){
                 m_ptr_triple_patterns->at(i).print(ht);
                 if(i < m_ptr_triple_patterns->size()-1){
-                    std::cout << ". "
+                    std::cout << " . ";
                 }
             }
             std::cout << std::endl;
