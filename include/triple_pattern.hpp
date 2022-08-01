@@ -82,19 +82,19 @@ namespace ring {
 
         void print(std::unordered_map<uint8_t, std::string> &ht) const {
             if(s_is_variable()){
-                std::cout << ht[term_s.value] << " ";
+                std::cout << "?" << ht[term_s.value] << " ";
             }else{
                 std::cout << term_s.value << " ";
             }
 
             if(p_is_variable()){
-                std::cout << ht[term_p.value] << " ";
+                std::cout << "?" << ht[term_p.value] << " ";
             }else{
                 std::cout << term_p.value << " ";
             }
 
             if(o_is_variable()){
-                std::cout << ht[term_o.value];
+                std::cout << "?" << ht[term_o.value];
             }else{
                 std::cout << term_o.value;
             }
