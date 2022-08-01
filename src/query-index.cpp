@@ -216,6 +216,8 @@ int main(int argc, char* argv[])
         query<ring::ring<>>(index, queries);
     }else if (type == "c-ring"){
         query<ring::c_ring>(index, queries);
+    }else if (type == "fast-ring"){
+        query<ring::fast_ring>(index, queries);
     }else{
         std::cout << "Type of index: " << type << " is not supported." << std::endl;
     }

@@ -29,18 +29,19 @@
 
 namespace ring {
 
-    template <class bwt_t = bwt<>>
+    template <class bwt_so_t = bwt<>, class bwt_p_t = bwt_plain>
     class ring {
     public:
         typedef uint64_t size_type;
         typedef uint64_t value_type;
-        typedef bwt_t bwt_type;
+        typedef bwt_so_t bwt_so_type;
+        typedef bwt_p_t bwt_p_type;
         typedef std::tuple<uint32_t, uint32_t, uint32_t> spo_triple_type;
 
     private:
-        bwt_type m_bwt_s; //POS
-        bwt_type m_bwt_p; //OSP
-        bwt_type m_bwt_o; //SPO
+        bwt_so_type m_bwt_s; //POS
+        bwt_p_type m_bwt_p; //OSP
+        bwt_so_type m_bwt_o; //SPO
 
         size_type m_max_s;
         size_type m_max_p;
@@ -62,174 +63,137 @@ namespace ring {
 
         // Assumes the triples have been stored in a vector<spo_triple>
         ring(vector<spo_triple_type> &D) {
-            typedef typename vector<spo_triple_type>::iterator triple_iterator;
-            size_type i, pos_c;
-            triple_iterator it, triple_begin = D.begin(), triple_end = D.end();
-            size_type n = m_n_triples = triple_end - triple_begin;
-            int_vector<32> bwt_aux(3 * n);
+            uint64_t i, pos_c;
+            vector<spo_triple>::iterator it, triple_begin = D.begin(), triple_end = D.end();
+            uint64_t U, n = m_n_triples = D.size();
 
-            //cout << "  > Determining alphabets of S; P; O..."; fflush(stdout);
             {
-                set<uint64_t> alphabet_S, alphabet_P, alphabet_O;
-                for (it = triple_begin, i = 0; i < n; i++, it++) {
-                    alphabet_S.insert(std::get<0>(*it));
-                    alphabet_P.insert(std::get<1>(*it));
-                    alphabet_O.insert(std::get<2>(*it));
+                m_max_p = std::get<1>(D[0]), U = std::get<0>(D[0]);
+                if (std::get<2>(D[0]) > U)
+                    U = std::get<2>(D[0]);
+
+                for (uint64_t i = 1; i < n; i++) {
+                    if (std::get<1>(D[i]) > m_max_p)
+                        m_max_p = std::get<1>(D[i]);
+
+                    if (std::get<0>(D[i]) > U)
+                        U = std::get<0>(D[i]);
+
+                    if (std::get<2>(D[i]) > U)
+                        U = std::get<2>(D[i]);
                 }
 
-                //cout << "Done" << endl; fflush(stdout);
-                m_max_s = *alphabet_S.rbegin();
-                m_max_p = *alphabet_P.rbegin();
-                m_max_o = *alphabet_O.rbegin();
-                alphabet_S.clear();
-                alphabet_P.clear();
-                alphabet_O.clear();
             }
-            //cout << "sigma S = " << sigma_S << endl;
-            //cout << "sigma P = " << m_sigma_p << endl;
-            //cout << "sigma O = " << sigma_O << endl;
-            //cout << "  > Determining number of elements per symbol..."; fflush(stdout);
-            uint64_t alphabet_SO = (m_max_s < m_max_o) ? m_max_o : m_max_s;
+            uint64_t alphabet_SO = U;
+            m_max_s = m_max_o = alphabet_SO;
 
-            std::map<uint64_t, uint64_t> M_O, M_S, M_P;
+            std::vector<uint32_t> M_O, M_S, M_P;
 
-            for (i = 1; i <= alphabet_SO; i++) {
-                M_O[i] = 0;
-                M_S[i] = 0;
-            }
+            for (i = 1; i <= alphabet_SO; i++)
+                M_S.push_back(0);
+            M_S.shrink_to_fit();
 
-            for (i = 1; i <= m_max_p; i++)
-                M_P[i] = 0;
+            for (it = triple_begin, i=0; i<n; i++, it++)
+                M_S[std::get<0>(*it)]++;
 
-            for (it = triple_begin, i = 0; i < n; i++, it++) {
-                M_O[std::get<2>(*it)] = M_O[std::get<2>(*it)] + 1;
-                M_S[std::get<0>(*it)] = M_S[std::get<0>(*it)] + 1;
-                M_P[std::get<1>(*it)] = M_P[std::get<1>(*it)] + 1;
-            }
-            //cout << "Done" << endl; fflush(stdout);
-            //cout << "  > Sorting out triples..."; fflush(stdout);
             // Sorts the triples lexycographically
             sort(triple_begin, triple_end);
-            //cout << "Done" << endl; fflush(stdout);
-            {
-                int_vector<> t(3 * n + 2);
-                //cout << "  > Generating int vector of the triples..."; fflush(stdout);
-                for (i = 0, it = triple_begin; it != triple_end; it++, i++) {
-                    t[3 * i] = std::get<0>(*it);
-                    t[3 * i + 1] = std::get<1>(*it) + m_max_s;
-                    t[3 * i + 2] = std::get<2>(*it) + m_max_s + m_max_p;
-                }
-                t[3 * n] = m_max_s + m_max_p + m_max_o + 1;
-                t[3 * n + 1] = 0;
-                D.clear();
-                D.shrink_to_fit();
-                util::bit_compress(t);
 
-                {
-                    int_vector<> sa;
-                    qsufsort::construct_sa(sa, t);
-
-                    //cout << "  > Suffix array built " << size_in_bytes(sa) << " bytes" <<  endl;
-                    //cout << "  > Building the global BWT" << endl;
-
-                    size_type j;
-                    for (j = i = 0; i < sa.size(); i++) {
-                        if (sa[i] >= 3 * n) continue;
-                        if (sa[i] == 0)
-                            bwt_aux[j] = t[t.size() - 3];
-                        else bwt_aux[j] = t[sa[i] - 1];
-                        j++;
-                    }
-                }
-            }
-            //cout << "  > Building m_bwt_o" << endl; fflush(stdout);
             // First O
             {
-                int_vector<> O(n + 1);
-                uint64_t j = 1, c, c_aux;
-                vector<uint64_t> C_O;
-                O[0] = 0;
-                for (i = 1; i < n; i++)
-                    O[j++] = bwt_aux[i] - (m_max_s + m_max_p);
-
-                // This is for making the bwt of triples circular
-                O[j] = bwt_aux[0] - (m_max_s + m_max_p);
-                util::bit_compress(O);
-
+                uint64_t i, c;
+                vector<uint64_t> new_C_O;
                 uint64_t cur_pos = 1;
-
-                C_O.push_back(0); // Dummy value
-                C_O.push_back(cur_pos);
+                new_C_O.push_back(0); // Dummy value
+                new_C_O.push_back(cur_pos);
                 for (c = 2; c <= alphabet_SO; c++) {
-                    cur_pos += M_S[c - 1];
-                    C_O.push_back(cur_pos);
+                    cur_pos += M_S[c-1];
+                    new_C_O.push_back(cur_pos);
                 }
-                C_O.push_back(n + 1);
-                C_O.shrink_to_fit();
+                new_C_O.push_back(n+1);
+                new_C_O.shrink_to_fit();
 
                 M_S.clear();
+                M_S.shrink_to_fit();
 
+                int_vector<> new_O(n+1);
+                new_O[0] = 0;
+                for (i=1; i<=n; i++)
+                    new_O[i] = std::get<2>(D[i-1]);
+
+                util::bit_compress(new_O);
                 // builds the WT for BWT(O)
-                m_bwt_o = bwt_type(O, C_O);
+                m_bwt_o = bwt_so_type(new_O, new_C_O);
             }
 
-            //cout << "  > Building m_bwt_s" << endl; fflush(stdout);
-            // Then S
-            {
-                int_vector<> S(n + 1);
-                uint64_t j = 1, c;
-                vector<uint64_t> C_S;
+            M_O.resize(alphabet_SO+1, 0);
+            M_O.shrink_to_fit();
 
-                S[0] = 0;
-                while (i < 2 * n) {
-                    S[j++] = bwt_aux[i++];
-                }
-                util::bit_compress(S);
+            for (it = triple_begin, i=0; i<n; i++, it++)
+                M_O[std::get<2>(*it)]++;
+
+            stable_sort(D.begin(), D.end(), [](const spo_triple& a,
+                    const spo_triple& b) {return std::get<2>(a) < std::get<2>(b);});
+            {
+                uint64_t c, i;
+                vector<uint64_t> new_C_P;
 
                 uint64_t cur_pos = 1;
-                C_S.push_back(0);  // Dummy value
-                C_S.push_back(cur_pos);
-                for (c = 2; c <= m_max_p; c++) {
-                    cur_pos += M_P[c - 1];
-                    C_S.push_back(cur_pos);
-                }
-                C_S.push_back(n + 1);
-                C_S.shrink_to_fit();
-
-                M_P.clear();
-
-                m_bwt_s = bwt_type(S, C_S);
-            }
-
-            //cout << "  > Building m_bwt_p" << endl; fflush(stdout);
-            // Then P
-            {
-                int_vector<> P(n + 1);
-                uint64_t j = 1, c;
-                vector<uint64_t> C_P;
-
-                P[0] = 0;
-                while (i < 3 * n) {
-                    P[j++] = bwt_aux[i++] - m_max_s;
-                }
-                util::bit_compress(P);
-
-                uint64_t cur_pos = 1;
-                C_P.push_back(0);  // Dummy value
-                C_P.push_back(cur_pos);
+                new_C_P.push_back(0);  // Dummy value
+                new_C_P.push_back(cur_pos);
                 for (c = 2; c <= alphabet_SO; c++) {
-                    cur_pos += M_O[c - 1];
-                    C_P.push_back(cur_pos);
+                    cur_pos += M_O[c-1];
+                    new_C_P.push_back(cur_pos);
                 }
-                C_P.push_back(n + 1);
-                C_P.shrink_to_fit();
+                new_C_P.push_back(n+1);
+                new_C_P.shrink_to_fit();
 
                 M_O.clear();
 
-                m_bwt_p = bwt_type(P, C_P);
+                int_vector<> new_P(n+1);
+                new_P[0] = 0;
+                for (i=1; i<=n; i++)
+                    new_P[i] = std::get<1>(D[i-1]);
+
+                util::bit_compress(new_P);
+                m_bwt_p = bwt_p_type(new_P, new_C_P);
             }
-            cout << "-- Index constructed successfully" << endl;
-            fflush(stdout);
+
+            M_P.resize(m_max_p+1, 0);
+            M_P.shrink_to_fit();
+
+            for (it = triple_begin, i=0; i<n; i++, it++)
+                M_P[std::get<1>(*it)]++;
+
+            stable_sort(D.begin(), D.end(), [](const spo_triple& a,
+                    const spo_triple& b) {return std::get<1>(a) < std::get<1>(b); });
+            // Builds BWT_S
+            {
+                uint64_t i, c;
+                vector<uint64_t> new_C_S;
+
+                uint64_t cur_pos = 1;
+                new_C_S.push_back(0);  // Dummy value
+                new_C_S.push_back(cur_pos);
+                for (c = 2; c <= m_max_p; c++) {
+                    cur_pos += M_P[c-1];
+                    new_C_S.push_back(cur_pos);
+                }
+                new_C_S.push_back(n+1);
+                new_C_S.shrink_to_fit();
+
+                M_P.clear();
+
+                int_vector<> new_S(n+1);
+                new_S[0] = 0;
+                for (i=1; i<=n; i++)
+                    new_S[i] = std::get<0>(D[i-1]);
+                util::bit_compress(new_S);
+
+                m_bwt_s = bwt_so_type(new_S, new_C_S);
+            }
+
+            cout << "-- Index constructed successfully" << endl; fflush(stdout);
         };
 
 
@@ -570,28 +534,10 @@ namespace ring {
             return bwt_interval(s_int.left() + start, s_int.left() + start + nE - 1);
         }
 
-        uint64_t min_P_in_S(bwt_interval &I, uint64_t s_value) {
-            std::pair<uint64_t, uint64_t> q;
-            q = m_bwt_s.select_next(1, s_value, m_bwt_o.nElems(s_value));
-            uint64_t b = m_bwt_s.bsearch_C(q.first) - 1;
-            I.set_stored_values(b, q.second);
-            return b;
-        }
+        uint64_t min_P_in_S(bwt_interval &I, uint64_t s_value);
 
-        uint64_t next_P_in_S(bwt_interval &I, uint64_t s_value, uint64_t p_value) {
-            if (p_value > m_max_p) return 0;
 
-            std::pair<uint64_t, uint64_t> q;
-            q = m_bwt_s.select_next(p_value, s_value, m_bwt_o.nElems(s_value));
-            if (q.first == 0 && q.second == 0) {
-                return 0;
-            }
-
-            uint64_t b = m_bwt_s.bsearch_C(q.first) - 1;
-            I.set_stored_values(b, q.second);
-            return b;
-        }
-
+        uint64_t next_P_in_S(bwt_interval &I, uint64_t s_value, uint64_t p_value);
 
         uint64_t min_O_in_SP(bwt_interval &I) {
             return I.begin(m_bwt_o);
@@ -736,26 +682,9 @@ namespace ring {
             return bwt_interval(o_int.left() + start, o_int.left() + start + nE - 1);
         }
 
-        uint64_t min_S_in_O(bwt_interval &o_int, uint64_t o_value) {
-            std::pair<uint64_t, uint64_t> q;
-            q = m_bwt_o.select_next(1, o_value, m_bwt_p.nElems(o_value));
-            uint64_t b = m_bwt_o.bsearch_C(q.first) - 1;
-            o_int.set_stored_values(b, q.second);
-            return b;
-        }
+        uint64_t min_S_in_O(bwt_interval &o_int, uint64_t o_value);
 
-        uint64_t next_S_in_O(bwt_interval &I, uint64_t o_value, uint64_t s_value) {
-            if (s_value > m_max_s) return 0;
-
-            std::pair<uint64_t, uint64_t> q;
-            q = m_bwt_o.select_next(s_value, o_value, m_bwt_p.nElems(o_value));
-            if (q.first == 0 && q.second == 0)
-                return 0;
-
-            uint64_t b = m_bwt_o.bsearch_C(q.first) - 1;
-            I.set_stored_values(b, q.second);
-            return b;
-        }
+        uint64_t next_S_in_O(bwt_interval &I, uint64_t o_value, uint64_t s_value);
 
         uint64_t min_P_in_OS(bwt_interval &I) {
             return I.begin(m_bwt_p);
@@ -777,7 +706,156 @@ namespace ring {
 
     };
 
-    typedef ring<bwt<rrr_vector<15>>> c_ring;
+
+    template <class bwt_so_t, class bwt_sp_t> //Select in BWT
+    uint64_t ring<bwt_so_t, bwt_sp_t>::min_P_in_S(bwt_interval &I, uint64_t s_value) {
+        std::pair<uint64_t, uint64_t> q;
+        q = m_bwt_s.select_next(1, s_value, m_bwt_o.nElems(s_value));
+        uint64_t b = m_bwt_s.bsearch_C(q.first) - 1;
+        I.set_stored_values(b, q.second);
+        return b;
+    }
+
+    template<> //No select in BWT
+    uint64_t ring<bwt<>>::min_P_in_S(bwt_interval &I, uint64_t s_value) {
+        uint64_t s_aux = I.left();
+        std::pair<uint64_t, uint64_t> o_r = m_bwt_o.inverse_select(s_aux);
+        uint64_t p = m_bwt_p[m_bwt_p.get_C(o_r.second) + o_r.first];
+        I.set_stored_values(p, 0);
+        return p;
+    }
+
+
+    template<> //No select in BWT
+    uint64_t ring<bwt_rrr>::min_P_in_S(bwt_interval &I, uint64_t s_value) {
+        uint64_t s_aux = I.left();
+        std::pair<uint64_t, uint64_t> o_r = m_bwt_o.inverse_select(s_aux);
+        uint64_t p = m_bwt_p[m_bwt_p.get_C(o_r.second) + o_r.first];
+        I.set_stored_values(p, 0);
+        return p;
+    }
+
+    template <class bwt_so_t, class bwt_sp_t> //Select in BWT
+    uint64_t ring<bwt_so_t, bwt_sp_t>::next_P_in_S(bwt_interval &I, uint64_t s_value, uint64_t p_value) {
+        if (p_value > m_max_p) return 0;
+
+        std::pair<uint64_t, uint64_t> q;
+        q = m_bwt_s.select_next(p_value, s_value, m_bwt_o.nElems(s_value));
+        if (q.first == 0 && q.second == 0) {
+            return 0;
+        }
+
+        uint64_t b = m_bwt_s.bsearch_C(q.first) - 1;
+        I.set_stored_values(b, q.second);
+        return b;
+    }
+
+    template <> //NO Select in BWT
+    uint64_t ring<bwt<>>::next_P_in_S(bwt_interval &I, uint64_t s_value, uint64_t p_value) {
+        if (p_value > m_max_p) return 0;
+
+        uint64_t nValues = I.right()-I.left() + 1;
+        uint64_t r_aux = m_bwt_s.rank(p_value, s_value);
+        if (r_aux >= nValues)
+            return 0;
+        uint64_t p_aux = I.left();
+        std::pair<uint64_t, uint64_t> o_r = m_bwt_o.inverse_select(p_aux+r_aux);
+        uint64_t p = m_bwt_p[m_bwt_p.get_C(o_r.second)+o_r.first];
+        I.set_stored_values(p, r_aux);
+        return p;
+    }
+
+    template <> //NO Select in BWT
+    uint64_t ring<bwt_rrr>::next_P_in_S(bwt_interval &I, uint64_t s_value, uint64_t p_value) {
+        if (p_value > m_max_p) return 0;
+
+        uint64_t nValues = I.right()-I.left() + 1;
+        uint64_t r_aux = m_bwt_s.rank(p_value, s_value);
+        if (r_aux >= nValues)
+            return 0;
+        uint64_t p_aux = I.left();
+        std::pair<uint64_t, uint64_t> o_r = m_bwt_o.inverse_select(p_aux+r_aux);
+        uint64_t p = m_bwt_p[m_bwt_p.get_C(o_r.second)+o_r.first];
+        I.set_stored_values(p, r_aux);
+        return p;
+    }
+
+    template <class bwt_so_t, class bwt_sp_t> //Select in BWT
+    uint64_t ring<bwt_so_t, bwt_sp_t>::min_S_in_O(bwt_interval &o_int, uint64_t o_value) {
+        std::pair<uint64_t, uint64_t> q;
+        q = m_bwt_o.select_next(1, o_value, m_bwt_p.nElems(o_value));
+        uint64_t b = m_bwt_o.bsearch_C(q.first) - 1;
+        o_int.set_stored_values(b, q.second);
+        return b;
+    }
+
+    template <> //NO Select in BWT
+    uint64_t ring<bwt<>>::min_S_in_O(bwt_interval &o_int, uint64_t o_value) {
+        uint64_t o_aux = o_int.left();
+        std::pair<uint64_t, uint64_t> p_r = m_bwt_p.inverse_select(o_aux);
+        uint64_t s = m_bwt_s[m_bwt_s.get_C(p_r.second/*s_value*/) + p_r.first/*r*/];
+        o_int.set_stored_values(s, 0);
+        return s;
+    }
+
+    template <> //NO Select in BWT
+    uint64_t ring<bwt_rrr>::min_S_in_O(bwt_interval &o_int, uint64_t o_value) {
+        uint64_t o_aux = o_int.left();
+        std::pair<uint64_t, uint64_t> p_r = m_bwt_p.inverse_select(o_aux);
+        uint64_t s = m_bwt_s[m_bwt_s.get_C(p_r.second/*s_value*/) + p_r.first/*r*/];
+        o_int.set_stored_values(s, 0);
+        return s;
+    }
+
+    template <class bwt_so_t, class bwt_sp_t> //Select in BWT
+    uint64_t ring<bwt_so_t, bwt_sp_t>::next_S_in_O(bwt_interval &I, uint64_t o_value, uint64_t s_value) {
+        if (s_value > m_max_s) return 0;
+
+        std::pair<uint64_t, uint64_t> q;
+        q = m_bwt_o.select_next(s_value, o_value, m_bwt_p.nElems(o_value));
+        if (q.first == 0 && q.second == 0)
+            return 0;
+
+        uint64_t b = m_bwt_o.bsearch_C(q.first) - 1;
+        I.set_stored_values(b, q.second);
+        return b;
+    }
+
+    template <> //NO Select in BWT
+    uint64_t ring<bwt<>>::next_S_in_O(bwt_interval &I, uint64_t o_value, uint64_t s_value) {
+        if (s_value > m_max_s) return 0;
+
+        uint64_t nValues = I.right()-I.left() + 1;
+        uint64_t r_aux = m_bwt_o.rank(s_value, o_value);
+        if (r_aux >= nValues)
+            return 0;
+        uint64_t o_aux = I.left();
+        std::pair<uint64_t, uint64_t> p_r = m_bwt_p.inverse_select(o_aux+r_aux);
+        uint64_t s = m_bwt_s[m_bwt_s.get_C(p_r.second)+p_r.first];
+        I.set_stored_values(s, r_aux);
+        return s;
+    }
+
+
+
+    template <> //NO Select in BWT
+    uint64_t ring<bwt_rrr>::next_S_in_O(bwt_interval &I, uint64_t o_value, uint64_t s_value) {
+        if (s_value > m_max_s) return 0;
+
+        uint64_t nValues = I.right()-I.left() + 1;
+        uint64_t r_aux = m_bwt_o.rank(s_value, o_value);
+        if (r_aux >= nValues)
+            return 0;
+        uint64_t o_aux = I.left();
+        std::pair<uint64_t, uint64_t> p_r = m_bwt_p.inverse_select(o_aux+r_aux);
+        uint64_t s = m_bwt_s[m_bwt_s.get_C(p_r.second)+p_r.first];
+        I.set_stored_values(s, r_aux);
+        return s;
+    }
+
+
+    typedef ring<bwt_rrr> c_ring;
+    typedef ring<bwt_plain> fast_ring; //with select
 
 }
 
