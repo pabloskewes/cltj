@@ -1,5 +1,5 @@
 /*
- * Config.hpp
+ * configuration.hpp
  * Copyright (C) 2020 Author removed for double-blind evaluation
  * 
  * This is free software: you can redistribute it and/or modify it

@@ -1,7 +1,8 @@
 /*
- * triple_bwt.hpp
- * Copyright (C) 2020 Author name removed for double blind evaluation
- * 
+ * ring.hpp
+ * Copyright (C) 2020 Author removed for double-blind evaluation
+ *
+ *
  * This is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or

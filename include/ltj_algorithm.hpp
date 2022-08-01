@@ -1,35 +1,23 @@
-/***
-BSD 2-Clause License
-
-Copyright (c) 2018, Adrián
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
-
-* Redistributions of source code must retain the above copyright notice, this
-  list of conditions and the following disclaimer.
-
-* Redistributions in binary form must reproduce the above copyright notice,
-  this list of conditions and the following disclaimer in the documentation
-  and/or other materials provided with the distribution.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-**/
+/*
+ * ltj_algorithm.hpp
+ * Copyright (C) 2020 Author removed for double-blind evaluation
+ *
+ *
+ * This is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 
-//
-// Created by Adrián on 19/7/22.
-//
 
 #ifndef RING_LTJ_ALGORITHM_HPP
 #define RING_LTJ_ALGORITHM_HPP
@@ -53,13 +41,12 @@ namespace ring {
         typedef cons_t const_type;
         typedef ltj_iterator<ring_type, var_type, const_type> ltj_iter_type;
         typedef std::unordered_map<var_type, std::vector<ltj_iter_type*>> var_to_iterators_type;
-        //TODO: darlle unha volta a esto
         typedef std::vector<std::pair<var_type, value_type>> tuple_type;
         typedef std::chrono::high_resolution_clock::time_point time_point_type;
 
     private:
         const std::vector<triple_pattern>* m_ptr_triple_patterns;
-        const std::vector<var_type>* m_ptr_gao;
+        std::vector<var_type> m_gao; //TODO: should be a class
         ring_type* m_ptr_ring;
         std::vector<ltj_iter_type> m_iterators;
         var_to_iterators_type m_var_to_iterators;
@@ -68,7 +55,7 @@ namespace ring {
 
         void copy(const ltj_algorithm &o) {
             m_ptr_triple_patterns = o.m_ptr_triple_patterns;
-            m_ptr_gao = o.m_ptr_gao;
+            m_gao = o.m_gao;
             m_ptr_ring = o.m_ptr_ring;
             m_iterators = o.m_iterators;
             m_var_to_iterators = o.m_var_to_iterators;
@@ -76,7 +63,6 @@ namespace ring {
         }
 
 
-        //TODO: repasar o que pasa aqui
         inline void add_var_to_iterator(const var_type var, ltj_iter_type* ptr_iterator){
             auto it =  m_var_to_iterators.find(var);
             if(it != m_var_to_iterators.end()){
@@ -92,12 +78,9 @@ namespace ring {
 
         ltj_algorithm() = default;
 
-        ltj_algorithm(const std::vector<triple_pattern>* triple_patterns,
-                      const std::vector<var_type>* gao,
-                      ring_type* ring){
+        ltj_algorithm(const std::vector<triple_pattern>* triple_patterns, ring_type* ring){
 
             m_ptr_triple_patterns = triple_patterns;
-            m_ptr_gao = gao;
             m_ptr_ring = ring;
 
             size_type i = 0;
@@ -122,7 +105,9 @@ namespace ring {
                 }
                 ++i;
             }
-            //TODO: escoger aqui el GAO
+
+            gao::gao_size<ring_type> gao_sv2(m_ptr_triple_patterns, &m_iterators, m_ptr_ring, m_gao);
+
         }
 
         //! Copy constructor
@@ -147,7 +132,7 @@ namespace ring {
         ltj_algorithm &operator=(ltj_algorithm &&o) {
             if (this != &o) {
                 m_ptr_triple_patterns = std::move(o.m_ptr_triple_patterns);
-                m_ptr_gao = std::move(o.m_ptr_gao);
+                m_gao = std::move(o.m_gao);
                 m_ptr_ring = std::move(o.m_ptr_ring);
                 m_iterators = std::move(o.m_iterators);
                 m_var_to_iterators = std::move(o.m_var_to_iterators);
@@ -158,26 +143,13 @@ namespace ring {
 
         void swap(ltj_algorithm &o) {
             std::swap(m_ptr_triple_patterns, o.m_ptr_triple_patterns);
-            std::swap(m_ptr_gao, o.m_ptr_gao);
+            std::swap(m_gao, o.m_gao);
             std::swap(m_ptr_ring, o.m_ptr_ring);
             std::swap(m_iterators, o.m_iterators);
             std::swap(m_var_to_iterators, o.m_var_to_iterators);
             std::swap(m_is_empty, o.m_is_empty);
         }
 
-        /**
-         *
-         * @param res               Results
-         * @param limit_results     Limit of results
-         * @param timeout_seconds   Timeout in seconds
-         */
-        void join(std::vector<tuple_type> &res,
-                  const size_type limit_results = 0, const size_type timeout_seconds = 0){
-            if(m_is_empty) return;
-            time_point_type start = std::chrono::high_resolution_clock::now();
-            tuple_type t(m_ptr_gao->size());
-            search(0, t, res, start, limit_results, timeout_seconds);
-        };
 
         /**
         *
@@ -185,13 +157,14 @@ namespace ring {
         * @param limit_results     Limit of results
         * @param timeout_seconds   Timeout in seconds
         */
-        void join_opt(std::vector<tuple_type> &res,
+        void join(std::vector<tuple_type> &res,
                   const size_type limit_results = 0, const size_type timeout_seconds = 0){
             if(m_is_empty) return;
             time_point_type start = std::chrono::high_resolution_clock::now();
-            tuple_type t(m_ptr_gao->size());
-            search_opt(0, t, res, start, limit_results, timeout_seconds);
+            tuple_type t(m_gao.size());
+            search(0, t, res, start, limit_results, timeout_seconds);
         };
+
 
         /**
          *
@@ -202,56 +175,7 @@ namespace ring {
          * @param limit_results     Limit of results
          * @param timeout_seconds   Timeout in seconds
          */
-        void search(const size_type j, tuple_type &tuple, std::vector<tuple_type> &res,
-                        const time_point_type start,
-                        const size_type limit_results = 0, const size_type timeout_seconds = 0){
-
-            //(Optional) Check timeout
-            if(timeout_seconds > 0){
-                time_point_type stop = std::chrono::high_resolution_clock::now();
-                auto sec = std::chrono::duration_cast<std::chrono::seconds>(stop-start).count();
-                if(sec > timeout_seconds) return;
-            }
-
-            //(Optional) Check limit
-            if(limit_results > 0 && res.size() == limit_results) return;
-
-            if(j == m_ptr_gao->size()){
-                //Report results
-                res.emplace_back(tuple);
-            }else{
-                var_type x_j = m_ptr_gao->at(j);
-                std::vector<ltj_iter_type*>& itrs = m_var_to_iterators[x_j];
-                value_type c = seek(x_j);
-                while(c != 0){ //If empty c=0
-                    //1. Adding result to tuple
-                    tuple[j] = {x_j, c};
-                    //2. Going down in the tries by setting x_j = c (\mu(t_i) in paper)
-                    for(ltj_iter_type* iter : itrs){
-                        iter->down(x_j, c);
-                    }
-                    //4. Search with the next variable x_{j+1}
-                    search(j+1, tuple, res, start, limit_results, timeout_seconds);
-                    //3. Going up in the tries by removing x_j = c
-                    for(ltj_iter_type* iter : itrs){
-                        iter->up(x_j);
-                    }
-                    //5. Next constant for x_j
-                    c = seek(x_j, c+1);
-                }
-            }
-        };
-
-        /**
-         *
-         * @param j                 Index of the variable
-         * @param tuple             Tuple of the current search
-         * @param res               Results
-         * @param start             Initial time to check timeout
-         * @param limit_results     Limit of results
-         * @param timeout_seconds   Timeout in seconds
-         */
-        bool search_opt(const size_type j, tuple_type &tuple, std::vector<tuple_type> &res,
+        bool search(const size_type j, tuple_type &tuple, std::vector<tuple_type> &res,
                     const time_point_type start,
                     const size_type limit_results = 0, const size_type timeout_seconds = 0){
 
@@ -265,14 +189,13 @@ namespace ring {
             //(Optional) Check limit
             if(limit_results > 0 && res.size() == limit_results) return false;
 
-            if(j == m_ptr_gao->size()){
+            if(j == m_gao.size()){
                 //Report results
                 res.emplace_back(tuple);
             }else{
-                var_type x_j = m_ptr_gao->at(j);
+                var_type x_j = m_gao[j];
                 std::vector<ltj_iter_type*>& itrs = m_var_to_iterators[x_j];
                 bool ok;
-                //TODO: quitar in_last_level
                 if(itrs.size() == 1 && itrs[0]->in_last_level()) {//Lonely variables
                     auto results = itrs[0]->seek_all(x_j);
                     //std::cout << "Results: " << results.size() << std::endl;
@@ -321,28 +244,6 @@ namespace ring {
          * @return      The next constant that matches the intersection between the triples of x_j.
          *              If the intersection is empty, it returns 0.
          */
-        value_type seek_base(const var_type x_j, value_type c=-1){
-            while (true){
-                value_type c_i, c_min = UINT64_MAX, c_max = 0;
-                //Compute leap for each triple that contains x_j
-                std::vector<ltj_iter_type*>& itrs = m_var_to_iterators[x_j];
-                for(ltj_iter_type* iter : itrs){
-                    if(c == -1){
-                        c_i = iter->leap(x_j);
-                    }else{
-                        c_i = iter->leap(x_j, c);
-                    }
-                    if(c_i == 0) {
-                        return 0; //Empty intersection
-                    }
-                    if(c_i > c_max) c_max = c_i;
-                    if(c_i < c_min) c_min = c_i;
-                }
-                if(c_min == c_max) return c_min;
-                c = c_max;
-            }
-        }
-
 
         value_type seek(const var_type x_j, value_type c=-1){
             value_type c_i, c_min = UINT64_MAX, c_max = 0;

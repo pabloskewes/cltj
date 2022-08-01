@@ -1,4 +1,8 @@
 /*
+ * query-index.cpp
+ * Copyright (C) 2020 Author removed for double-blind evaluation
+ *
+ *
  * This is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -18,7 +22,7 @@
 #include "ring.hpp"
 #include <chrono>
 #include <triple_pattern.hpp>
-#include <ltj_algorithm_v2.hpp>
+#include <ltj_algorithm.hpp>
 #include "utils.hpp"
 
 using namespace std;
@@ -167,28 +171,14 @@ void query(const std::string &file, const std::string &queries){
 
             start = high_resolution_clock::now();
 
-            //vector<uint8_t> gao = get_gao_min_gen(query, graph);
+            ring::ltj_algorithm<ring_type> ltj(&query, &graph);
 
-            //ring::gao::gao_size<ring_type> m_gao(&query, &graph);
-
-            //ring::ltj_algorithm<ring_type> ltj(&query, &m_gao.gao, &graph);
-            ring::ltj_algorithm_v2<ring_type> ltj(&query, &graph);
-
-            /*
-            cout << "Query Details:" << endl;
-            lf.print_query();
-            lf.print_gao();
-            lf.serialize();
-            cout << "##########" << endl;
-            */
-
-//            typedef std::vector<typename ring::ltj_algorithm<>::tuple_type> results_type;
-            typedef std::vector<typename ring::ltj_algorithm_v2<>::tuple_type> results_type;
+            typedef std::vector<typename ring::ltj_algorithm<>::tuple_type> results_type;
             results_type res;
 
             std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
-            ltj.join_opt(res, 1000, 600);
+            ltj.join(res, 1000, 600);
             //std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 
             stop = high_resolution_clock::now();
