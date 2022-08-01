@@ -165,6 +165,7 @@ void query(const std::string &file, const std::string &queries){
                 query.push_back(triple_pattern);
             }
 
+
             // vector<string> gao = get_gao(query);
             // vector<string> gao = get_gao_min_opt(query, graph);
             // cout << gao [0] << " - " << gao [1] << " - " << gao[2] << endl;
@@ -185,6 +186,16 @@ void query(const std::string &file, const std::string &queries){
             time_span = duration_cast<microseconds>(stop - start);
             total_time = time_span.count();
 
+            std::unordered_map<uint8_t, std::string> ht;
+            for(const auto &p : hash_table_vars){
+                ht.insert({p.second, p.first});
+            }
+
+            cout << "Query Details:" << endl;
+            ltj.print_query(ht);
+            ltj.print_gao(ht);
+            cout << "##########" << endl;
+
             cout << nQ <<  ";" << res.size() << ";" << (unsigned long long)(total_time*1000000000ULL) << endl;
             nQ++;
 
@@ -204,7 +215,7 @@ int main(int argc, char* argv[])
     typedef ring::ring<> ring_type;
     //typedef ring::c_ring ring_type;
     if(argc != 3){
-        std::cout << "Usage: " << argv[0] << "<index> <queries>" << std::endl;
+        std::cout << "Usage: " << argv[0] << " <index> <queries>" << std::endl;
         return 0;
     }
 

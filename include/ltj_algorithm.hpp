@@ -268,6 +268,26 @@ namespace ring {
             }
         }
 
+        void print_gao(std::unordered_map<uint8_t, std::string> &ht){
+            std::cout << "GAO: " << std::endl;
+            for(const auto& var : m_gao){
+                std::cout << ht[var] << " ";
+            }
+            std::cout << std::endl;
+        }
+
+        void print_query(std::unordered_map<uint8_t, std::string> &ht){
+            std::cout << "Query: " << std::endl;
+            for(size_type i = 0; i <  m_ptr_triple_patterns->size(); ++i){
+                m_ptr_triple_patterns->at(i).print(ht);
+                if(i < m_ptr_triple_patterns->size()-1){
+                    std::cout << ". "
+                }
+            }
+            std::cout << std::endl;
+        }
+
+
     };
 }
 
