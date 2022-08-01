@@ -205,7 +205,7 @@ namespace ring {
                         //2. Going down in the trie by setting x_j = c (\mu(t_i) in paper)
                         itrs[0]->down(x_j, c);
                         //2. Search with the next variable x_{j+1}
-                        ok = search_opt(j + 1, tuple, res, start, limit_results, timeout_seconds);
+                        ok = search(j + 1, tuple, res, start, limit_results, timeout_seconds);
                         if(!ok) return false;
                         //4. Going up in the trie by removing x_j = c
                         itrs[0]->up(x_j);
@@ -221,7 +221,7 @@ namespace ring {
                             iter->down(x_j, c);
                         }
                         //3. Search with the next variable x_{j+1}
-                        ok = search_opt(j + 1, tuple, res, start, limit_results, timeout_seconds);
+                        ok = search(j + 1, tuple, res, start, limit_results, timeout_seconds);
                         if(!ok) return false;
                         //4. Going up in the tries by removing x_j = c
                         for (ltj_iter_type *iter : itrs) {

@@ -120,7 +120,7 @@ namespace ring {
         public:
 
 
-            gao_size_v2(const std::vector<triple_pattern>* triple_patterns,
+            gao_size(const std::vector<triple_pattern>* triple_patterns,
                         const std::vector<ltj_iter_type>* iterators,
                         ring_type* r,
                         std::vector<var_type> &gao){
