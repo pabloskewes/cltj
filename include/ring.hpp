@@ -46,9 +46,6 @@ namespace ring {
         size_type m_max_p;
         size_type m_max_o;
         size_type m_n_triples;  // number of triples
-        size_type m_sigma_s;
-        size_type m_sigma_p;
-        size_type m_sigma_o;
 
         void copy(const ring &o) {
             m_bwt_s = o.m_bwt_s;
@@ -58,9 +55,6 @@ namespace ring {
             m_max_p = o.m_max_p;
             m_max_o = o.m_max_o;
             m_n_triples = o.m_n_triples;
-            m_sigma_s = o.m_sigma_s;
-            m_sigma_p = o.m_sigma_p;
-            m_sigma_o = o.m_sigma_o;
         }
 
     public:
@@ -84,9 +78,6 @@ namespace ring {
                 }
 
                 //cout << "Done" << endl; fflush(stdout);
-                m_sigma_s = alphabet_S.size();
-                m_sigma_p = alphabet_P.size();
-                m_sigma_o = alphabet_O.size();
                 m_max_s = *alphabet_S.rbegin();
                 m_max_p = *alphabet_P.rbegin();
                 m_max_o = *alphabet_O.rbegin();
@@ -270,9 +261,6 @@ namespace ring {
                 m_max_p = o.m_max_p;
                 m_max_o = o.m_max_o;
                 m_n_triples = o.m_n_triples;
-                m_sigma_s = o.m_sigma_s;
-                m_sigma_p = o.m_sigma_p;
-                m_sigma_o = o.m_sigma_o;
             }
             return *this;
         }
@@ -286,9 +274,6 @@ namespace ring {
             std::swap(m_max_p, o.m_max_p);
             std::swap(m_max_o, o.m_max_o);
             std::swap(m_n_triples, o.m_n_triples);
-            std::swap(m_sigma_s, o.m_sigma_s);
-            std::swap(m_sigma_p, o.m_sigma_p);
-            std::swap(m_sigma_o, o.m_sigma_o);
         }
 
         //! Serializes the data structure into the given ostream
@@ -302,9 +287,6 @@ namespace ring {
             written_bytes += sdsl::write_member(m_max_p, out, child, "max_p");
             written_bytes += sdsl::write_member(m_max_o, out, child, "max_o");
             written_bytes += sdsl::write_member(m_n_triples, out, child, "n_triples");
-            written_bytes += sdsl::write_member(m_sigma_s, out, child, "sigma_s");
-            written_bytes += sdsl::write_member(m_sigma_p, out, child, "sigma_p");
-            written_bytes += sdsl::write_member(m_sigma_o, out, child, "sigma_o");
             sdsl::structure_tree::add_size(child, written_bytes);
             return written_bytes;
         }
@@ -317,16 +299,8 @@ namespace ring {
             sdsl::read_member(m_max_p, in);
             sdsl::read_member(m_max_o, in);
             sdsl::read_member(m_n_triples, in);
-            sdsl::read_member(m_sigma_s, in);
-            sdsl::read_member(m_sigma_p, in);
-            sdsl::read_member(m_sigma_o, in);
         }
 
-        // The following init funtions work with suffix array positions
-        // (i.e., positions in the global interval [1, 3*m_n_triples] )
-        pair<uint64_t, uint64_t> init_no_constants() const {
-            return {1, 3 * m_n_triples};
-        }
 
         //Given a Suffix returns its range in BWT O
         pair<uint64_t, uint64_t> init_S(uint64_t S) const {
