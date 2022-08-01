@@ -239,6 +239,7 @@ namespace ring {
                 typename bit_vector::rank_1_type,
                 typename bit_vector::select_1_type,
                 typename bit_vector::select_0_type> bwt_plain;
+
     typedef bwt<rrr_vector<15>,
             typename rrr_vector<15>::rank_1_type,
             typename rrr_vector<15>::select_1_type,
