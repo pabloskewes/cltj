@@ -271,7 +271,7 @@ namespace ring {
         void print_gao(std::unordered_map<uint8_t, std::string> &ht){
             std::cout << "GAO: " << std::endl;
             for(const auto& var : m_gao){
-                std::cout << ht[var] << " ";
+                std::cout << "?" << ht[var] << " ";
             }
             std::cout << std::endl;
         }

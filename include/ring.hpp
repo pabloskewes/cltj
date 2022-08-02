@@ -855,7 +855,7 @@ namespace ring {
 
 
     typedef ring<bwt_rrr, bwt_rrr> c_ring;
-    typedef ring<bwt_plain, bwt_plain> fast_ring; //with select
+    typedef ring<bwt_plain, bwt_plain> ring_sel; //with select
 
 }
 
