@@ -32,7 +32,7 @@ Now put the .dat file inside a folder.
 ```
 
 `<type-ring>` can take two values: ring or c-ring.
-This will generate the index in the folder where the `.dat` file is located. The index is suffixed with `.ring` or `.cring` according to the second argument. 
+This will generate the index in the folder where the `.dat` file is located. The index is suffixed with `.ring` or `.c-ring` according to the second argument. 
 
 4. We are ready to run the code! We should have another executable file called `query-index`, then we should run:
 
