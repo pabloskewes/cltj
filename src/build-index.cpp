@@ -61,7 +61,7 @@ int main(int argc, char **argv)
 {
 
     if(argc != 3){
-        std::cout << "Usage: " << argv[0] << "<dataset> [ring|c-ring]" << std::endl;
+        std::cout << "Usage: " << argv[0] << " <dataset> [ring|c-ring|ring-sel]" << std::endl;
         return 0;
     }
 
@@ -73,8 +73,11 @@ int main(int argc, char **argv)
     }else if (type == "c-ring"){
         std::string index_name = dataset + ".c-ring";
         build_index<ring::c_ring>(dataset, index_name);
+    }else if (type == "ring-sel"){
+        std::string index_name = dataset + ".ring-sel";
+        build_index<ring::ring_sel>(dataset, index_name);
     }else{
-        std::cout << "Usage: " << argv[0] << "<dataset> [ring|c-ring]" << std::endl;
+        std::cout << "Usage: " << argv[0] << " <dataset> [ring|c-ring|ring-sel]" << std::endl;
     }
 
     return 0;

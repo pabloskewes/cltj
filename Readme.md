@@ -1,6 +1,6 @@
 # Ring
 
-Repository for the source code of the engine presented at the paper Worst-case Optimal Graph Joins in Almost No Space.
+Repository for the source code of the engine presented in the paper Worst-case Optimal Graph Joins in Almost No Space.
 
 ## Instructions
 
@@ -8,7 +8,7 @@ To run our code, **we have to install an extended version of the library SDSL**.
 
 After the extended version of SDSL is installed, we have to clone this repository and follow these steps:
 
-1. First we have to compile the code in our **build** folder:
+1. Create our `build` folder and compile the code:
 ```Bash
 mkdir build
 cd build
@@ -16,38 +16,39 @@ cmake ..
 make
 ```
 
-Check that we do not have any errors.
+Check that there is no errors.
 
-2. Download the version of Wikidata that we want to use:
+2. Download the version of Wikidata that you want to use:
 
 - [Wikidata Filtered (about 80M triples)](http://compact-leapfrog.tk/files/wikidata-filtered-enumerated.dat).
-- [Wikidata (about 1000M triples)](http://compact-leapfrog.tk/files/wikidata-enumerated.dat.gz). Note that we have to decompress this file.
+- [Wikidata (about 1000M triples)](http://compact-leapfrog.tk/files/wikidata-enumerated.dat.gz). Note that this file is compressed.
 
 Now put the .dat file inside a folder.
 
-3. Now we have to create the index. After compiling the code we should have an executable called `build-index` in `build`. Now run:
+3. Building the index. After compiling the code we should have an executable called `build-index` in `build`. Now run:
 
 ```Bash
 ./build-index <absolute-path-to-the-.dat-file> <type-ring>
 ```
 
-`<type-ring>` can take two values: ring or c-ring.
-This will generate the index in the folder where the `.dat` file is located. The index is suffixed with `.ring` or `.cring` according to the second argument. 
+`<type-ring>` can take two values: `ring` or `c-ring`. Both are implementations of our ring index but using plain and compressed bitvectors, respectively.
+This will generate the index in the folder where the `.dat` file is located. The index is suffixed with `.ring` or `.c-ring` according to the second argument.
 
-4. We are ready to run the code! We should have another executable file called `query-index`, then we should run:
+4. Querying the index. In `build` folder, you should find another executable file called `query-index`. To solve the queries you should run:
 
 ```Bash
 ./query-index <absoulute-path-to-the-index-file> <absolute-path-to-the-query-file>
 ```
 
-Here we need to give the path of the the file that contains all the queries. A folder called `Queries` contains two files of queries. We have to give the path of one of the files within it:
+Note that the second argument is the path to a file that contains all the queries. The queries of our benchmark are in `Queries`:
 
-- If we selected the file `wikidata-filtered-enumerated.dat` we have to give the absolute path of the file called `Queries-wikidata-benchmark.txt`.
-- If we selected the file `wikidata-enumerated.dat` we have to select the absolute path of the file called `Queries-wikidata-benchmark.txt`.
+- The file `Queries-wikidata-benchmark.txt` can be run with `wikidata-filtered-enumerated.dat`.
+- The file `Queries-bgps-limit1000.txt` contains the queries of `wikidata-enumerated.dat`.
 
-Now we are finished! After running this step we will execute the queries. In console we should see the number of the query, the number of results and the time taken by each one of the queries.
-
-
+After running that command, you should see the number of the query, the number of results, and the elapsed time of each one of the queries with the following format:
+```Bash
+<query number>;<number of results>;<elapsed time>
+```
 ---
 
 At the moment, we can find the rest of the complementary material at [this webpage](http://compact-leapfrog.tk/). Note that we will find instructions to run the code there, and although the instructions are different from the ones in this repository, they should work too.

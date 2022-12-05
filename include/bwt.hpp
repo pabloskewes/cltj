@@ -28,7 +28,10 @@ using namespace std;
 
 namespace ring {
 
-    template <class bwt_bit_vector_t = bit_vector>
+    template <class bwt_bit_vector_t = bit_vector,
+            class bwt_rank_1_t = typename bit_vector::rank_1_type,
+            class bwt_select_1_t = select_support_scan<1>,
+            class bwt_select_0_t = select_support_scan<0>>
     class bwt {
 
     public:
@@ -38,7 +41,7 @@ namespace ring {
         typedef sdsl::rank_support_v<> c_rank_type;
         typedef sdsl::select_support_mcl<1> c_select_1_type;
         typedef sdsl::select_support_mcl<0> c_select_0_type;
-        typedef sdsl::wm_int<bwt_bit_vector_t> bwt_type;
+        typedef sdsl::wm_int<bwt_bit_vector_t, bwt_rank_1_t, bwt_select_1_t, bwt_select_0_t> bwt_type;
 
     private:
         bwt_type m_L;
@@ -219,8 +222,28 @@ namespace ring {
             return {m_L.rank(c + I.first, S), m_L.rank(c + I.second, S)};
         }
 
+        inline std::pair<uint64_t, uint64_t> inverse_select(uint64_t pos)
+        {
+            return m_L.inverse_select(pos);
+        }
+
+        inline uint64_t operator[](uint64_t i)
+        {
+            return m_L[i];
+        }
+
     };
 
+    typedef bwt<> bwt_no_select;
+    typedef bwt<bit_vector,
+                typename bit_vector::rank_1_type,
+                typename bit_vector::select_1_type,
+                typename bit_vector::select_0_type> bwt_plain;
+
+    typedef bwt<rrr_vector<15>,
+            typename rrr_vector<15>::rank_1_type,
+            typename rrr_vector<15>::select_1_type,
+            typename rrr_vector<15>::select_0_type> bwt_rrr;
 }
 
 #endif
