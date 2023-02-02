@@ -26,11 +26,14 @@
 #include <triple_pattern.hpp>
 #include <ring.hpp>
 #include <ltj_iterator.hpp>
-#include <gao.hpp>
+#include <gao_simple.hpp>
+#include <gao_adaptive.hpp>
 
 namespace ring {
 
-    template<class ring_t = ring<>, class var_t = uint8_t, class cons_t = uint64_t>
+    template<class ring_t = ring<>,
+            class var_t = uint8_t, class cons_t = uint64_t,
+            class gao_t = gao::gao_adaptive<ring_t, var_t, cons_t, util::trait_size> >
     class ltj_algorithm {
 
     public:
@@ -39,6 +42,7 @@ namespace ring {
         typedef var_t var_type;
         typedef ring_t ring_type;
         typedef cons_t const_type;
+        typedef gao_t gao_type;
         typedef ltj_iterator<ring_type, var_type, const_type> ltj_iter_type;
         typedef std::unordered_map<var_type, std::vector<ltj_iter_type*>> var_to_iterators_type;
         typedef std::vector<std::pair<var_type, value_type>> tuple_type;
@@ -46,7 +50,7 @@ namespace ring {
 
     private:
         const std::vector<triple_pattern>* m_ptr_triple_patterns;
-        std::vector<var_type> m_gao; //TODO: should be a class
+        gao_type m_gao;
         ring_type* m_ptr_ring;
         std::vector<ltj_iter_type> m_iterators;
         var_to_iterators_type m_var_to_iterators;
@@ -84,11 +88,11 @@ namespace ring {
             m_ptr_ring = ring;
 
             size_type i = 0;
-            m_iterators.resize(m_ptr_triple_patterns->size());
+            m_iterators.reserve(m_ptr_triple_patterns->size());
             for(const auto& triple : *m_ptr_triple_patterns){
                 //Bulding iterators
-                m_iterators[i] = ltj_iter_type(&triple, m_ptr_ring);
-                if(m_iterators[i].is_empty){
+                m_iterators.emplace_back(ltj_iter_type(&triple, m_ptr_ring));
+                if(m_iterators[i].is_empty()){
                     m_is_empty = true;
                     return;
                 }
@@ -106,7 +110,7 @@ namespace ring {
                 ++i;
             }
 
-            gao::gao_size<ring_type> gao_sv2(m_ptr_triple_patterns, &m_iterators, m_ptr_ring, m_gao);
+            m_gao = gao_type(m_ptr_triple_patterns, &m_iterators, &m_var_to_iterators, m_ptr_ring);
 
         }
 
@@ -193,7 +197,7 @@ namespace ring {
                 //Report results
                 res.emplace_back(tuple);
             }else{
-                var_type x_j = m_gao[j];
+                var_type x_j = m_gao.next();
                 std::vector<ltj_iter_type*>& itrs = m_var_to_iterators[x_j];
                 bool ok;
                 if(itrs.size() == 1 && itrs[0]->in_last_level()) {//Lonely variables
@@ -204,11 +208,13 @@ namespace ring {
                         tuple[j] = {x_j, c};
                         //2. Going down in the trie by setting x_j = c (\mu(t_i) in paper)
                         itrs[0]->down(x_j, c);
+                        m_gao.down();
                         //2. Search with the next variable x_{j+1}
                         ok = search(j + 1, tuple, res, start, limit_results, timeout_seconds);
                         if(!ok) return false;
                         //4. Going up in the trie by removing x_j = c
                         itrs[0]->up(x_j);
+                        m_gao.up();
                     }
                 }else {
                     value_type c = seek(x_j);
@@ -220,6 +226,7 @@ namespace ring {
                         for (ltj_iter_type* iter : itrs) {
                             iter->down(x_j, c);
                         }
+                        m_gao.down();
                         //3. Search with the next variable x_{j+1}
                         ok = search(j + 1, tuple, res, start, limit_results, timeout_seconds);
                         if(!ok) return false;
@@ -227,11 +234,13 @@ namespace ring {
                         for (ltj_iter_type *iter : itrs) {
                             iter->up(x_j);
                         }
+                        m_gao.up();
                         //5. Next constant for x_j
                         c = seek(x_j, c + 1);
                         //std::cout << "Seek (bucle): (" << (uint64_t) x_j << ": " << c << ")" <<std::endl;
                     }
                 }
+                m_gao.done();
             }
             return true;
         };
@@ -256,7 +265,7 @@ namespace ring {
                     c_i = itrs[i]->leap(x_j, c);
                 }
                 if(c_i == 0) return 0; //Empty intersection
-                n_ok = (c_i == c_prev) ? n_ok + 1 : 1; 
+                n_ok = (c_i == c_prev) ? n_ok + 1 : 1;
                 if(n_ok == itrs.size()) return c_i;
                 c = c_prev = c_i;
                 i = (i+1 == itrs.size()) ? 0 : i+1;
@@ -265,8 +274,8 @@ namespace ring {
 
         void print_gao(std::unordered_map<uint8_t, std::string> &ht){
             std::cout << "GAO: " << std::endl;
-            for(const auto& var : m_gao){
-                std::cout << "?" << ht[var] << " ";
+            for(uint64_t j = 0; j < m_gao.size(); ++j){
+                std::cout << "?" << ht[m_gao.next()] << " ";
             }
             std::cout << std::endl;
         }
@@ -280,6 +289,19 @@ namespace ring {
                 }
             }
             std::cout << std::endl;
+        }
+
+        void print_results(std::vector<tuple_type> &res, std::unordered_map<uint8_t, std::string> &ht){
+            std::cout << "Results: " << std::endl;
+            uint64_t i = 1;
+            for(tuple_type &tuple :  res){
+                std::cout << "[" << i << "]: ";
+                for(std::pair<var_type, value_type> &pair : tuple){
+                    std::cout << "?" << ht[pair.first] << "=" << pair.second << " ";
+                }
+                std::cout << std::endl;
+                ++i;
+            }
         }
 
 

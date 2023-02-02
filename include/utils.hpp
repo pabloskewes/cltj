@@ -31,8 +31,8 @@ namespace ring {
     namespace util {
 
 
-        template<class Iterator>
-        uint64_t get_size_interval(const Iterator &iter) {
+        /*template<class Iterator, class Ring>
+        uint64_t get_size_interval(Ring* ptr_ring, const Iterator &iter) {
             if(iter.cur_s == -1 && iter.cur_p == -1 && iter.cur_o == -1){
                 return iter.i_s.size(); //open
             } else if (iter.cur_s == -1 && iter.cur_p != -1 && iter.cur_o == -1) {
@@ -49,11 +49,72 @@ namespace ring {
                 return iter.i_s.size();
             }
             return 0;
-        }
+        }*/
+
+
+        struct trait_size {
+
+            template<class Iterator, class Ring>
+            static uint64_t subject(Ring* ptr_ring, Iterator &iter){
+                return iter.i_s.size();
+            }
+
+            template<class Iterator, class Ring>
+            static uint64_t predicate(Ring* ptr_ring, Iterator &iter){
+                return iter.i_p.size();
+            }
+
+            template<class Iterator, class Ring>
+            static uint64_t object(Ring* ptr_ring, Iterator &iter){
+                return iter.i_o.size();
+            }
+
+        };
+
+        struct trait_distinct {
+
+            template<class Iterator, class Ring>
+            static uint64_t subject(Ring* ptr_ring, Iterator &iter){
+                if (iter.cur_p != -1 && iter.cur_o == -1) {
+                    return ptr_ring->distinct_PO_S(iter.i_s); //i_s = i_o
+                } else if (iter.cur_p == -1 && iter.cur_o != -1) {
+                    return ptr_ring->distinct_OP_S(iter.i_s);
+                } else if ( iter.cur_p != -1 && iter.cur_o != -1) {
+                    return ptr_ring->distinct_PO_S(iter.i_s);
+                }
+                return ptr_ring->max_s;
+            }
+
+            template<class Iterator, class Ring>
+            static uint64_t predicate(Ring* ptr_ring, Iterator &iter){
+                if (iter.cur_o != -1 && iter.cur_s == -1) {
+                    return ptr_ring->distinct_OS_P(iter.i_p); //i_s = i_o
+                } else if (iter.cur_o == -1 && iter.cur_s != -1) {
+                    return ptr_ring->distinct_SO_P(iter.i_p);
+                } else if ( iter.cur_o != -1 && iter.cur_s != -1) {
+                    return ptr_ring->distinct_SO_P(iter.i_p);
+                }
+                return ptr_ring->max_p;
+            }
+
+            template<class Iterator, class Ring>
+            static uint64_t object(Ring* ptr_ring, Iterator &iter){
+                if (iter.cur_p != -1 && iter.cur_s == -1) {
+                    return ptr_ring->distinct_PS_O(iter.i_o); //i_s = i_o
+                } else if (iter.cur_p == -1 && iter.cur_s != -1) {
+                    return ptr_ring->distinct_SP_O(iter.i_o);
+                } else if ( iter.cur_p != -1 && iter.cur_s != -1) {
+                    return ptr_ring->distinct_PS_O(iter.i_o);
+                }
+                return ptr_ring->max_o;
+            }
+
+
+        };
     }
 
 }
 
 
 
-#endif 
+#endif

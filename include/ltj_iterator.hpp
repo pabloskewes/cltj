@@ -22,10 +22,12 @@
 
 #define VERBOSE 0
 
+#include <ltj_iterator_base.hpp>
+
 namespace ring {
 
     template<class ring_t, class var_t, class cons_t>
-    class ltj_iterator {
+    class ltj_iterator : public ltj_iterator_base< var_t, cons_t>{
 
     public:
         typedef cons_t value_type;
@@ -45,11 +47,11 @@ namespace ring {
         value_type m_cur_p;
         value_type m_cur_o;
         bool m_is_empty = false;
-        //TODO: ao mellor hai que meter o nivel para saber cando parar de facer down
         //std::stack<state_type> m_states;
 
 
         void copy(const ltj_iterator &o) {
+            m_is_empty = o.m_is_empty;
             m_ptr_triple_pattern = o.m_ptr_triple_pattern;
             m_ptr_ring = o.m_ptr_ring;
             m_i_s = o.m_i_s;
@@ -58,23 +60,10 @@ namespace ring {
             m_cur_s = o.m_cur_s;
             m_cur_p = o.m_cur_p;
             m_cur_o = o.m_cur_o;
-            m_is_empty = o.m_is_empty;
-        }
-
-        inline bool is_variable_subject(var_type var) {
-            return m_ptr_triple_pattern->term_s.is_variable && var == m_ptr_triple_pattern->term_s.value;
-        }
-
-        inline bool is_variable_predicate(var_type var) {
-            return m_ptr_triple_pattern->term_p.is_variable && var == m_ptr_triple_pattern->term_p.value;
-        }
-
-        inline bool is_variable_object(var_type var) {
-            return m_ptr_triple_pattern->term_o.is_variable && var == m_ptr_triple_pattern->term_o.value;
         }
 
     public:
-        const bool &is_empty = m_is_empty;
+        //const bool &is_empty = m_is_empty;
         const bwt_interval &i_s = m_i_s;
         const bwt_interval &i_p = m_i_p;
         const bwt_interval &i_o = m_i_o;
@@ -150,6 +139,7 @@ namespace ring {
                 m_cur_s = s_aux;
 
                 //Interval in O
+
                 m_i_o = m_ptr_ring->down_P_S(m_i_s, s_aux);
 
             } else if (!m_ptr_triple_pattern->p_is_variable() && !m_ptr_triple_pattern->o_is_variable()) {
@@ -291,6 +281,24 @@ namespace ring {
             std::swap(m_is_empty, o.m_is_empty);
         }
 
+
+        inline bool is_variable_subject(var_type var) {
+            return m_ptr_triple_pattern->term_s.is_variable && var == m_ptr_triple_pattern->term_s.value;
+        }
+
+        inline bool is_variable_predicate(var_type var) {
+            return m_ptr_triple_pattern->term_p.is_variable && var == m_ptr_triple_pattern->term_p.value;
+        }
+
+        inline bool is_variable_object(var_type var) {
+            return m_ptr_triple_pattern->term_o.is_variable && var == m_ptr_triple_pattern->term_o.value;
+        }
+
+
+        inline bool is_empty(){
+            return m_is_empty;
+        }
+
         void down(var_type var, size_type c) { //Go down in the trie
             if (is_variable_subject(var)) {
                 if (m_cur_o != -1 && m_cur_p != -1){
@@ -380,19 +388,45 @@ namespace ring {
 
         };
 
+        void down(var_type var, size_type c, size_type k){
+            down(var, c);
+        };
+
 
         void up(var_type var) { //Go up in the trie
             if (is_variable_subject(var)) {
+                if (m_cur_o != -1 && m_cur_p == -1) {
+                    m_i_p = m_i_s;
+                } else if (m_cur_p != -1 && m_cur_o == -1){
+                    m_i_o = m_i_s;
+                } else if (m_cur_p == -1 && m_cur_o == -1){
+                    m_i_o = m_i_p = m_ptr_ring->open_POS();
+                }
                 m_cur_s = -1;
 #if VERBOSE
                 std::cout << "Up in S" << std::endl;
 #endif
             } else if (is_variable_predicate(var)) {
+                if (m_cur_o != -1 && m_cur_s == -1) {
+                    m_i_s = m_i_p;
+                } else if (m_cur_s != -1 && m_cur_o == -1){
+                    m_i_o = m_i_p;
+                } else if (m_cur_s == -1 && m_cur_o == -1){
+                    m_i_s = m_i_o = m_ptr_ring->open_POS();
+                }
                 m_cur_p = -1;
 #if VERBOSE
                 std::cout << "Up in P" << std::endl;
 #endif
             } else if (is_variable_object(var)) {
+
+                if (m_cur_s != -1 && m_cur_p == -1) {
+                    m_i_p = m_i_o;
+                } else if (m_cur_p != -1 && m_cur_s == -1){
+                    m_i_s = m_i_o;
+                } else if (m_cur_p == -1 && m_cur_s == -1){
+                    m_i_s = m_i_p = m_ptr_ring->open_POS();
+                }
                 m_cur_o = -1;
 #if VERBOSE
                 std::cout << "Up in O" << std::endl;
@@ -401,7 +435,8 @@ namespace ring {
 
         };
 
-        value_type leap(var_type var) { //Return the minimum in the range
+        value_type
+        leap(var_type var) { //Return the minimum in the range
             //0. Which term of our triple pattern is var
             if (is_variable_subject(var)) {
                 //1. We have to go down through s
@@ -577,7 +612,7 @@ namespace ring {
 
         bool in_last_level(){
             return (m_cur_o !=-1 && m_cur_p != -1) || (m_cur_s !=-1 && m_cur_p != -1)
-                    || (m_cur_o !=-1 && m_cur_s != -1);
+                   || (m_cur_o !=-1 && m_cur_s != -1);
         }
 
         //Solo funciona en último nivel, en otro caso habría que reajustar
@@ -589,8 +624,10 @@ namespace ring {
             }else if (is_variable_object(var)){
                 return m_ptr_ring->all_O_in_range(m_i_o);
             }
-            return std::vector<uint64_t>();
+            return {};
         }
+
+
     };
 
 }
