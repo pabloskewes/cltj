@@ -473,19 +473,19 @@ namespace ring {
                     if (is_variable_predicate(var)) {
                         return wm_data_type{&(m_ptr_ring->p_ops.get_wm()), range};
                     } else {
-                        return wm_data_type{&(m_ptr_ring->p_spo.get_wm()), range};
+                        return wm_data_type{&(m_ptr_ring->o_spo.get_wm()), range};
                     }
                 } else if (m_state[0] == p) {
                     if (is_variable_subject(var)) {
                         return wm_data_type{&(m_ptr_ring->s_spo.get_wm()), range};
                     } else {
-                        return wm_data_type{&(m_ptr_ring->s_ops.get_wm()), range};
+                        return wm_data_type{&(m_ptr_ring->o_ops.get_wm()), range};
                     }
                 } else {
                     if (is_variable_subject(var)) {
-                        return wm_data_type{&(m_ptr_ring->o_ops.get_wm()), range};
+                        return wm_data_type{&(m_ptr_ring->s_ops.get_wm()), range};
                     } else {
-                        return wm_data_type{&(m_ptr_ring->o_spo.get_wm()), range};
+                        return wm_data_type{&(m_ptr_ring->p_spo.get_wm()), range};
                     }
                 }
             }else{
