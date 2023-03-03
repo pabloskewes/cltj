@@ -19,23 +19,23 @@
 
 
 
-#ifndef RING_LTJ_ALGORITHM_HPP
-#define RING_LTJ_ALGORITHM_HPP
+#ifndef RING_LTJ_ALGORITHM_UNIDIRECTIONAL_HPP
+#define RING_LTJ_ALGORITHM_UNIDIRECTIONAL_HPP
 
 
 #include <triple_pattern.hpp>
-#include <ring.hpp>
-#include <ltj_iterator.hpp>
+#include <uring.hpp>
 #include <ltj_iterator_unidirectional.hpp>
 #include <gao_simple.hpp>
-#include <gao_adaptive.hpp>
+#include <gao_adaptive_v2.hpp>
+#include <wt_intersection_iterator.hpp>
 
 namespace ring {
 
-    template<class ring_t = ring<>,
+    template<class ring_t = uring<>,
             class var_t = uint8_t, class cons_t = uint64_t,
-            class gao_t = gao::gao_adaptive<ring_t, var_t, cons_t, util::trait_size> >
-    class ltj_algorithm {
+            class gao_t = gao::gao_adaptive_v2<ring_t, var_t, cons_t, util::trait_size_v2> >
+    class ltj_algorithm_unidirectional {
 
     public:
         typedef uint64_t value_type;
@@ -44,10 +44,11 @@ namespace ring {
         typedef ring_t ring_type;
         typedef cons_t const_type;
         typedef gao_t gao_type;
-        typedef ltj_iterator<ring_type, var_type, const_type> ltj_iter_type;
+        typedef ltj_iterator_unidirectional<ring_type, var_type, const_type> ltj_iter_type;
         typedef std::unordered_map<var_type, std::vector<ltj_iter_type*>> var_to_iterators_type;
         typedef std::vector<std::pair<var_type, value_type>> tuple_type;
         typedef std::chrono::high_resolution_clock::time_point time_point_type;
+        typedef typename ring_type::bwt_type::wm_type wm_type;
 
     private:
         const std::vector<triple_pattern>* m_ptr_triple_patterns;
@@ -58,7 +59,7 @@ namespace ring {
         bool m_is_empty = false;
 
 
-        void copy(const ltj_algorithm &o) {
+        void copy(const ltj_algorithm_unidirectional &o) {
             m_ptr_triple_patterns = o.m_ptr_triple_patterns;
             m_gao = o.m_gao;
             m_ptr_ring = o.m_ptr_ring;
@@ -81,9 +82,9 @@ namespace ring {
     public:
 
 
-        ltj_algorithm() = default;
+        ltj_algorithm_unidirectional() = default;
 
-        ltj_algorithm(const std::vector<triple_pattern>* triple_patterns, ring_type* ring){
+        ltj_algorithm_unidirectional(const std::vector<triple_pattern>* triple_patterns, ring_type* ring){
 
             m_ptr_triple_patterns = triple_patterns;
             m_ptr_ring = ring;
@@ -116,17 +117,17 @@ namespace ring {
         }
 
         //! Copy constructor
-        ltj_algorithm(const ltj_algorithm &o) {
+        ltj_algorithm_unidirectional(const ltj_algorithm_unidirectional &o) {
             copy(o);
         }
 
         //! Move constructor
-        ltj_algorithm(ltj_algorithm &&o) {
+        ltj_algorithm_unidirectional(ltj_algorithm_unidirectional &&o) {
             *this = std::move(o);
         }
 
         //! Copy Operator=
-        ltj_algorithm &operator=(const ltj_algorithm &o) {
+        ltj_algorithm_unidirectional &operator=(const ltj_algorithm_unidirectional &o) {
             if (this != &o) {
                 copy(o);
             }
@@ -134,7 +135,7 @@ namespace ring {
         }
 
         //! Move Operator=
-        ltj_algorithm &operator=(ltj_algorithm &&o) {
+        ltj_algorithm_unidirectional &operator=(ltj_algorithm_unidirectional &&o) {
             if (this != &o) {
                 m_ptr_triple_patterns = std::move(o.m_ptr_triple_patterns);
                 m_gao = std::move(o.m_gao);
@@ -146,7 +147,7 @@ namespace ring {
             return *this;
         }
 
-        void swap(ltj_algorithm &o) {
+        void swap(ltj_algorithm_unidirectional &o) {
             std::swap(m_ptr_triple_patterns, o.m_ptr_triple_patterns);
             std::swap(m_gao, o.m_gao);
             std::swap(m_ptr_ring, o.m_ptr_ring);
@@ -218,7 +219,16 @@ namespace ring {
                         m_gao.up();
                     }
                 }else {
-                    value_type c = seek(x_j);
+                    //value_type c = seek(x_j);
+                    std::vector<const wm_type*> wm_ptrs;
+                    std::vector<range_type> ranges;
+                    for(ltj_iter_type* iter : itrs){
+                        auto wm_data = iter->get_wm_data(x_j);
+                        wm_ptrs.emplace_back(wm_data.wm_ptr);
+                        ranges.emplace_back(wm_data.range);
+                    }
+                    wt_intersection_iterator<wm_type> wts_iterator(wm_ptrs, ranges);
+                    value_type c = wts_iterator.next();
                     //std::cout << "Seek (init): (" << (uint64_t) x_j << ": " << c << ")" <<std::endl;
                     while (c != 0) { //If empty c=0
                         //1. Adding result to tuple
@@ -237,7 +247,7 @@ namespace ring {
                         }
                         m_gao.up();
                         //5. Next constant for x_j
-                        c = seek(x_j, c + 1);
+                        c = wts_iterator.next();
                         //std::cout << "Seek (bucle): (" << (uint64_t) x_j << ": " << c << ")" <<std::endl;
                     }
                 }
@@ -247,31 +257,6 @@ namespace ring {
         };
 
 
-        /**
-         *
-         * @param x_j   Variable
-         * @param c     Constant. If it is unknown the value is -1
-         * @return      The next constant that matches the intersection between the triples of x_j.
-         *              If the intersection is empty, it returns 0.
-         */
-
-        value_type seek(const var_type x_j, value_type c=-1){
-            std::vector<ltj_iter_type*>& itrs = m_var_to_iterators[x_j];
-            value_type c_i, c_prev = 0, i = 0, n_ok = 0;
-            while (true){
-                //Compute leap for each triple that contains x_j
-                if(c == -1){
-                    c_i = itrs[i]->leap(x_j);
-                }else{
-                    c_i = itrs[i]->leap(x_j, c);
-                }
-                if(c_i == 0) return 0; //Empty intersection
-                n_ok = (c_i == c_prev) ? n_ok + 1 : 1;
-                if(n_ok == itrs.size()) return c_i;
-                c = c_prev = c_i;
-                i = (i+1 == itrs.size()) ? 0 : i+1;
-            }
-        }
 
         void print_gao(std::unordered_map<uint8_t, std::string> &ht){
             std::cout << "GAO: " << std::endl;

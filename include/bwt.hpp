@@ -41,10 +41,10 @@ namespace ring {
         typedef sdsl::rank_support_v<> c_rank_type;
         typedef sdsl::select_support_mcl<1> c_select_1_type;
         typedef sdsl::select_support_mcl<0> c_select_0_type;
-        typedef sdsl::wm_int<bwt_bit_vector_t, bwt_rank_1_t, bwt_select_1_t, bwt_select_0_t> bwt_type;
+        typedef sdsl::wm_int<bwt_bit_vector_t, bwt_rank_1_t, bwt_select_1_t, bwt_select_0_t> wm_type;
 
     private:
-        bwt_type m_L;
+        wm_type m_L;
         c_type m_C;
         c_rank_type m_C_rank;
         c_select_1_type m_C_select1;
@@ -62,7 +62,6 @@ namespace ring {
         }
 
     public:
-
 
         bwt() = default;
 
@@ -230,6 +229,10 @@ namespace ring {
         inline uint64_t operator[](uint64_t i)
         {
             return m_L[i];
+        }
+
+        inline const wm_type& get_wm() const{
+            return m_L;
         }
 
     };

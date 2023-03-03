@@ -22,7 +22,7 @@
 #define RING_GAO_ADAPTIVE_HPP
 
 #include <ring.hpp>
-#include <ltj_iterator.hpp>
+#include <ltj_iterator_unidirectional.hpp>
 #include <triple_pattern.hpp>
 #include <unordered_map>
 #include <vector>
@@ -35,15 +35,15 @@ namespace ring {
 
 
         template<class ring_t = ring<>, class var_t = uint8_t,
-                class cons_t = uint64_t, class gao_trait_t = util::trait_size>
-        class gao_adaptive {
+                class cons_t = uint64_t, class gao_trait_t = util::trait_size_v2>
+        class gao_adaptive_v2 {
 
         public:
             typedef var_t var_type;
             typedef cons_t cons_type;
             typedef uint64_t size_type;
             typedef ring_t ring_type;
-            typedef ltj_iterator <ring_type, var_type, cons_type> ltj_iter_type;
+            typedef ltj_iterator_unidirectional <ring_type, var_type, cons_type> ltj_iter_type;
 
 
             /*enum spo_type {subject, predicate, object};
@@ -93,7 +93,7 @@ namespace ring {
 
 
 
-            void copy(const gao_adaptive &o) {
+            void copy(const gao_adaptive_v2 &o) {
                 m_ptr_triple_patterns = o.m_ptr_triple_patterns;
                 m_ptr_iterators = o.m_ptr_iterators;
                 m_ptr_var_iterators = o.m_ptr_var_iterators;
@@ -148,9 +148,9 @@ namespace ring {
 
         public:
 
-            gao_adaptive() = default;
+            gao_adaptive_v2() = default;
 
-            gao_adaptive(const std::vector<triple_pattern> *triple_patterns,
+            gao_adaptive_v2(const std::vector<triple_pattern> *triple_patterns,
                        const std::vector<ltj_iter_type> *iterators,
                        const var_to_iterators_type *var_iterators,
                        ring_type *r) {
@@ -201,17 +201,17 @@ namespace ring {
             }
 
             //! Copy constructor
-            gao_adaptive(const gao_adaptive &o) {
+            gao_adaptive_v2(const gao_adaptive_v2 &o) {
                 copy(o);
             }
 
             //! Move constructor
-            gao_adaptive(gao_adaptive &&o) {
+            gao_adaptive_v2(gao_adaptive_v2 &&o) {
                 *this = std::move(o);
             }
 
             //! Copy Operator=
-            gao_adaptive &operator=(const gao_adaptive &o) {
+            gao_adaptive_v2 &operator=(const gao_adaptive_v2 &o) {
                 if (this != &o) {
                     copy(o);
                 }
@@ -219,7 +219,7 @@ namespace ring {
             }
 
             //! Move Operator=
-            gao_adaptive &operator=(gao_adaptive &&o) {
+            gao_adaptive_v2 &operator=(gao_adaptive_v2 &&o) {
                 if (this != &o) {
                     m_ptr_triple_patterns = std::move(o.m_ptr_triple_patterns);
                     m_ptr_iterators = std::move(o.m_ptr_iterators);
@@ -236,7 +236,7 @@ namespace ring {
                 return *this;
             }
 
-            void swap(gao_adaptive &o) {
+            void swap(gao_adaptive_v2 &o) {
                 std::swap(m_ptr_triple_patterns, o.m_ptr_triple_patterns);
                 std::swap(m_ptr_iterators, o.m_ptr_iterators);
                 std::swap(m_ptr_var_iterators, o.m_ptr_var_iterators);

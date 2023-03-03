@@ -17,8 +17,8 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef TRIPLE_BWT
-#define TRIPLE_BWT
+#ifndef RING_RING
+#define RING_RING
 
 #include <cstdint>
 #include "bwt.hpp"
@@ -692,7 +692,6 @@ namespace ring {
 
         uint64_t next_P_in_OS(bwt_interval &I, uint64_t p_value) {
             if (p_value > m_max_p) return 0;
-
             uint64_t nextv = I.next_value(p_value, m_bwt_p);
             if (nextv == 0)
                 return 0;

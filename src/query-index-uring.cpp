@@ -19,10 +19,10 @@
 
 #include <iostream>
 #include <utility>
-#include "ring.hpp"
+#include "uring.hpp"
 #include <chrono>
 #include <triple_pattern.hpp>
-#include <ltj_algorithm.hpp>
+#include <ltj_algorithm_unidirectional.hpp>
 #include "utils.hpp"
 
 using namespace std;
@@ -171,9 +171,9 @@ void query(const std::string &file, const std::string &queries){
 
             start = high_resolution_clock::now();
 
-            ring::ltj_algorithm<ring_type> ltj(&query, &graph);
+            ring::ltj_algorithm_unidirectional<ring_type> ltj(&query, &graph);
 
-            typedef std::vector<typename ring::ltj_algorithm<>::tuple_type> results_type;
+            typedef std::vector<typename ring::ltj_algorithm_unidirectional<>::tuple_type> results_type;
             results_type res;
 
             std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
@@ -222,18 +222,13 @@ int main(int argc, char* argv[])
     std::string queries = argv[2];
     std::string type = get_type(index);
 
-    if(type == "ring"){
-        query<ring::ring<>>(index, queries);
-    }else if (type == "c-ring"){
-        query<ring::c_ring>(index, queries);
-    }else if (type == "ring-sel"){
-        query<ring::ring_sel>(index, queries);
+    if(type == "uring"){
+        query<ring::uring<>>(index, queries);
+    }else if (type == "c-uring"){
+        query<ring::c_uring>(index, queries);
     }else{
         std::cout << "Type of index: " << type << " is not supported." << std::endl;
     }
-
-
-
 	return 0;
 }
 

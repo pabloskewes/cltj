@@ -71,6 +71,25 @@ namespace ring {
 
         };
 
+        struct trait_size_v2 {
+
+            template<class Iterator, class Ring>
+            static uint64_t subject(Ring* ptr_ring, Iterator &iter){
+                return iter.interval_length();
+            }
+
+            template<class Iterator, class Ring>
+            static uint64_t predicate(Ring* ptr_ring, Iterator &iter){
+                return iter.interval_length();
+            }
+
+            template<class Iterator, class Ring>
+            static uint64_t object(Ring* ptr_ring, Iterator &iter){
+                return iter.interval_length();
+            }
+
+        };
+
         struct trait_distinct {
 
             template<class Iterator, class Ring>

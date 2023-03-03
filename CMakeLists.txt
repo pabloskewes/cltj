@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 2.8.7)
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules")
 include(AppendCompilerFlags)
+set(CMAKE_OSX_ARCHITECTURES x86_64)
+
 project(Ring)
 set(CMAKE_PROJECT_NAME "Ring")
 
@@ -52,3 +54,10 @@ target_link_libraries(build-index sdsl divsufsort divsufsort64)
 
 add_executable(query-index src/query-index.cpp)
 target_link_libraries(query-index sdsl divsufsort divsufsort64)
+
+
+add_executable(build-index-uring src/build-index-uring.cpp)
+target_link_libraries(build-index-uring sdsl divsufsort divsufsort64)
+
+add_executable(query-index-uring src/query-index-uring.cpp)
+target_link_libraries(query-index-uring sdsl divsufsort divsufsort64)
