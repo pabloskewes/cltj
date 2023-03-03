@@ -121,8 +121,9 @@ namespace ring {
                 M_P[std::get<1>(*it)]++;
 
             // Sorts the triples lexycographically
-            sort(triple_begin, triple_end);
 
+            sort(triple_begin, triple_end);
+            cout << "-- Sorted by SPO" << endl;
             // First O
             {
                 uint64_t c;
@@ -146,10 +147,11 @@ namespace ring {
                 // builds the WT for BWT(O)
                 m_bwt_o_spo = bwt_type(new_O, new_C_O);
             }
-
+            cout << "-- BWT_O of SPO constructed successfully" << endl;
 
             stable_sort(D.begin(), D.end(), [](const spo_triple& a,
                     const spo_triple& b) {return std::get<2>(a) < std::get<2>(b);});
+            cout << "-- Sorted by OSP" << endl;
             {
                 uint64_t c;
                 vector<uint64_t> new_C_P;
@@ -172,10 +174,12 @@ namespace ring {
                 util::bit_compress(new_P);
                 m_bwt_p_spo = bwt_type(new_P, new_C_P);
             }
+            cout << "-- BWT_P of SPO constructed successfully" << endl;
 
 
             stable_sort(D.begin(), D.end(), [](const spo_triple& a,
                     const spo_triple& b) {return std::get<1>(a) < std::get<1>(b); });
+            cout << "-- Sorted by POS" << endl;
             // Builds BWT_S
             {
                 uint64_t c;
@@ -198,11 +202,13 @@ namespace ring {
                 util::bit_compress(new_S);
                 m_bwt_s_spo = bwt_type(new_S, new_C_S);
             }
+            cout << "-- BWT_S of SPO constructed successfully" << endl;
+
 
             sort(D.begin(), D.end(), [](const spo_triple& a,
                                         const spo_triple& b) { return std::tie(std::get<2>(a), std::get<1>(a), std::get<0>(a))
                                                                       < std::tie(std::get<2>(b), std::get<1>(b), std::get<0>(b));});
-
+            cout << "-- Sorted by OPS" << endl;
             // First S
             {
                 uint64_t c;
@@ -220,16 +226,17 @@ namespace ring {
                 int_vector<> new_S(n+1);
                 new_S[0] = 0;
                 for (i=1; i<=n; i++)
-                new_S[i] = std::get<0>(D[i-1]);
+                    new_S[i] = std::get<0>(D[i-1]);
 
                 util::bit_compress(new_S);
                 // builds the WT for BWT(S)
                 m_bwt_s_ops = bwt_type(new_S, new_C_S);
             }
+            cout << "-- BWT_S of OPS constructed successfully" << endl;
 
             stable_sort(D.begin(), D.end(), [](const spo_triple& a,
                                                const spo_triple& b) {return std::get<0>(a) < std::get<0>(b);});
-
+            cout << "-- Sorted by SOP" << endl;
             {
                 uint64_t c;
                 vector<uint64_t> new_C_P;
@@ -252,10 +259,11 @@ namespace ring {
                 // builds the WT for BWT(P)
                 m_bwt_p_ops = bwt_type(new_P, new_C_P);
             }
+            cout << "-- BWT_P of OPS constructed successfully" << endl;
 
             stable_sort(D.begin(), D.end(), [](const spo_triple& a,
                                                const spo_triple& b) {return std::get<1>(a) < std::get<1>(b);});
-
+            cout << "-- Sorted by PSO" << endl;
             {
                 uint64_t c;
                 vector<uint64_t> new_C_O;
@@ -279,7 +287,7 @@ namespace ring {
                 m_bwt_p_ops = bwt_type(new_O, new_C_O);
             }
 
-            cout << "-- Index constructed successfully" << endl; fflush(stdout);
+            cout << "-- Index constructed successfully" << endl;
         };
 
 
