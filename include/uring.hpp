@@ -224,7 +224,7 @@ namespace ring {
                 int_vector<> new_S(n+1);
                 new_S[0] = 0;
                 for (i=1; i<=n; i++)
-                new_S[i] = std::get<1>(D[i-1]);
+                new_S[i] = std::get<0>(D[i-1]);
 
                 util::bit_compress(new_S);
                 // builds the WT for BWT(S)
@@ -250,7 +250,7 @@ namespace ring {
                 int_vector<> new_P(n+1);
                 new_P[0] = 0;
                 for (i=1; i<=n; i++)
-                    new_P[i] = std::get<2>(D[i-1]);
+                    new_P[i] = std::get<1>(D[i-1]);
 
                 util::bit_compress(new_P);
                 // builds the WT for BWT(P)
