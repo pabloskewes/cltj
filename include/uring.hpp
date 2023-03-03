@@ -270,7 +270,7 @@ namespace ring {
                 uint64_t cur_pos = 1;
                 new_C_O.push_back(0); // Dummy value
                 new_C_O.push_back(cur_pos);
-                for (c = 2; c <= alphabet_SO; c++) {
+                for (c = 2; c <= m_max_p; c++) {
                     cur_pos += M_P[c-1];
                     new_C_O.push_back(cur_pos);
                 }
