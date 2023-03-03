@@ -164,8 +164,6 @@ namespace ring {
                 new_C_P.push_back(n+1);
                 new_C_P.shrink_to_fit();
 
-                M_O.clear();
-
                 int_vector<> new_P(n+1);
                 new_P[0] = 0;
                 for (i=1; i<=n; i++)
@@ -192,8 +190,6 @@ namespace ring {
                 }
                 new_C_S.push_back(n+1);
                 new_C_S.shrink_to_fit();
-
-                M_P.clear();
 
                 int_vector<> new_S(n+1);
                 new_S[0] = 0;
