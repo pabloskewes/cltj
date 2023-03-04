@@ -519,14 +519,25 @@ namespace ring {
 
         //Solo funciona en último nivel, en otro caso habría que reajustar
         std::vector<uint64_t> seek_all(var_type var){
-            if (is_variable_subject(var)){
-                return m_ptr_ring->all_S_in_range(m_intervals[2]);
-            }else if (is_variable_predicate(var)){
-                return m_ptr_ring->all_P_in_range(m_intervals[2]);
-            }else if (is_variable_object(var)){
-                return m_ptr_ring->all_O_in_range(m_intervals[2]);
+            if(m_state[0] == s){
+                if(m_state[1] == p){
+                    return m_ptr_ring->all_O_OPS_in_range(m_intervals[2]);
+                }else{// m_state[1] == o
+                    return m_ptr_ring->all_P_SPO_in_range(m_intervals[2]);
+                }
+            }else if (m_state[0] == p){
+                if(m_state[1] == s){
+                    return m_ptr_ring->all_O_SPO_in_range(m_intervals[2]);
+                }else{//m_state[1] == o
+                    return m_ptr_ring->all_S_OPS_in_range(m_intervals[2]);
+                }
+            }else{ //m_state[0] == o
+                if(m_state[1] == s){
+                    return m_ptr_ring->all_P_OPS_in_range(m_intervals[2]);
+                }else{//m_state[1] == p
+                    return m_ptr_ring->all_S_SPO_in_range(m_intervals[2]);
+                }
             }
-            return {};
         }
 
     };

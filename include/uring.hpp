@@ -465,8 +465,13 @@ namespace ring {
         }
 
         std::vector<uint64_t>
-        all_O_in_range(bwt_interval &I) {
+        all_O_SPO_in_range(bwt_interval &I) {
             return m_bwt_o_spo.values_in_range(I.left(), I.right());
+        }
+
+        std::vector<uint64_t>
+        all_O_OPS_in_range(bwt_interval &I) {
+            return m_bwt_o_ops.values_in_range(I.left(), I.right());
         }
 
         /**********************************/
@@ -514,10 +519,14 @@ namespace ring {
         }
 
         std::vector<uint64_t>
-        all_S_in_range(bwt_interval &I) {
+        all_S_SPO_in_range(bwt_interval &I) {
             return m_bwt_s_spo.values_in_range(I.left(), I.right());
         }
 
+        std::vector<uint64_t>
+        all_S_OPS_in_range(bwt_interval &I) {
+            return m_bwt_s_ops.values_in_range(I.left(), I.right());
+        }
 
         /**********************************/
         // Function for SOP
@@ -565,8 +574,13 @@ namespace ring {
         }
 
         std::vector<uint64_t>
-        all_P_in_range(bwt_interval &I) {
+        all_P_SPO_in_range(bwt_interval &I) {
             return m_bwt_p_spo.values_in_range(I.left(), I.right());
+        }
+
+        std::vector<uint64_t>
+        all_P_OPS_in_range(bwt_interval &I) {
+            return m_bwt_p_ops.values_in_range(I.left(), I.right());
         }
 
 
