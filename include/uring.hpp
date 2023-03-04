@@ -284,7 +284,7 @@ namespace ring {
 
                 util::bit_compress(new_O);
                 // builds the WT for BWT(P)
-                m_bwt_p_ops = bwt_type(new_O, new_C_O);
+                m_bwt_o_ops = bwt_type(new_O, new_C_O);
             }
 
             cout << "-- Index constructed successfully" << endl;
