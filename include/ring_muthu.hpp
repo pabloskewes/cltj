@@ -17,12 +17,13 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef RING_RING
-#define RING_RING
+#ifndef RING_RING_MUTTHU
+#define RING_RING_MUTTHU
 
 #include <cstdint>
-#include "bwt.hpp"
-#include "bwt_interval.hpp"
+#include <bwt.hpp>
+#include <bwt_interval.hpp>
+#include <muthu.hpp>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,25 +31,32 @@
 namespace ring {
 
     template <class bwt_so_t = bwt<>, class bwt_p_t = bwt_plain>
-    class ring {
+    class ring_muthu {
     public:
         typedef uint64_t size_type;
         typedef uint64_t value_type;
-        typedef bwt_so_t bwt_type;
+        typedef bwt_so_t bwt_so_type;
         typedef bwt_p_t bwt_p_type;
         typedef std::tuple<uint32_t, uint32_t, uint32_t> spo_triple_type;
 
     private:
-        bwt_type m_bwt_s; //POS
+        bwt_so_type m_bwt_s; //POS
         bwt_p_type m_bwt_p; //OSP
-        bwt_type m_bwt_o; //SPO
+        bwt_so_type m_bwt_o; //SPO
+
+        muthu m_muthu_sp_o; //S->O, SP->O
+        muthu m_muthu_os_p; //O->P, OS->P
+        muthu m_muthu_po_s; //P->S, PO->S
+        muthu m_muthu_op_s; //O->S, OP->S
+        muthu m_muthu_so_p; //S->P, SO->P
+        muthu m_muthu_ps_o; //P->O, PS->O
 
         size_type m_max_s;
         size_type m_max_p;
         size_type m_max_o;
         size_type m_n_triples;  // number of triples
 
-        void copy(const ring &o) {
+        void copy(const ring_muthu &o) {
             m_bwt_s = o.m_bwt_s;
             m_bwt_p = o.m_bwt_p;
             m_bwt_o = o.m_bwt_o;
@@ -56,13 +64,24 @@ namespace ring {
             m_max_p = o.m_max_p;
             m_max_o = o.m_max_o;
             m_n_triples = o.m_n_triples;
+            m_muthu_sp_o = o.m_muthu_sp_o;
+            m_muthu_os_p = o.m_muthu_os_p;
+            m_muthu_po_s = o.m_muthu_po_s;
+            m_muthu_ps_o = o.m_muthu_ps_o;
+            m_muthu_so_p = o.m_muthu_so_p;
+            m_muthu_op_s = o.m_muthu_op_s;
         }
 
     public:
-        ring() = default;
+
+        const size_type &max_s = m_max_s;
+        const size_type &max_p = m_max_p;
+        const size_type &max_o = m_max_o;
+
+        ring_muthu() = default;
 
         // Assumes the triples have been stored in a vector<spo_triple>
-        ring(vector<spo_triple_type> &D) {
+        ring_muthu(vector<spo_triple_type> &D) {
             uint64_t i, pos_c;
             vector<spo_triple>::iterator it, triple_begin = D.begin(), triple_end = D.end();
             uint64_t U, n = m_n_triples = D.size();
@@ -120,10 +139,10 @@ namespace ring {
                 new_O[0] = 0;
                 for (i=1; i<=n; i++)
                     new_O[i] = std::get<2>(D[i-1]);
-
-                util::bit_compress(new_O);
+                m_muthu_sp_o = muthu(new_O);
+                sdsl::util::bit_compress(new_O);
                 // builds the WT for BWT(O)
-                m_bwt_o = bwt_type(new_O, new_C_O);
+                m_bwt_o = bwt_so_type(new_O, new_C_O);
             }
 
             M_O.resize(alphabet_SO+1, 0);
@@ -155,7 +174,9 @@ namespace ring {
                 for (i=1; i<=n; i++)
                     new_P[i] = std::get<1>(D[i-1]);
 
-                util::bit_compress(new_P);
+
+                m_muthu_os_p = muthu(new_P);
+                sdsl::util::bit_compress(new_P);
                 m_bwt_p = bwt_p_type(new_P, new_C_P);
             }
 
@@ -188,27 +209,60 @@ namespace ring {
                 new_S[0] = 0;
                 for (i=1; i<=n; i++)
                     new_S[i] = std::get<0>(D[i-1]);
-                util::bit_compress(new_S);
-
-                m_bwt_s = bwt_type(new_S, new_C_S);
+                m_muthu_po_s = muthu(new_S);
+                sdsl::util::bit_compress(new_S);
+                m_bwt_s = bwt_so_type(new_S, new_C_S);
             }
+
+            sort(D.begin(), D.end(), [](const spo_triple& a,
+                    const spo_triple& b) { return std::tie(std::get<2>(a), std::get<1>(a), std::get<0>(a))
+                    < std::tie(std::get<2>(b), std::get<1>(b), std::get<0>(b));});
+            {
+                int_vector<> new_S(n+1);
+                new_S[0] = 0;
+                for (i=1; i<=n; i++)
+                    new_S[i] = std::get<0>(D[i-1]);
+                m_muthu_op_s = muthu(new_S);
+            }
+
+
+            stable_sort(D.begin(), D.end(), [](const spo_triple& a,
+                                        const spo_triple& b) {return std::get<0>(a) < std::get<0>(b);});
+            {
+                int_vector<> new_P(n+1);
+                new_P[0] = 0;
+                for (i=1; i<=n; i++)
+                    new_P[i] = std::get<1>(D[i-1]);
+                m_muthu_so_p = muthu(new_P);
+            }
+
+            stable_sort(D.begin(), D.end(), [](const spo_triple& a,
+                                               const spo_triple& b) {return std::get<1>(a) < std::get<1>(b);});
+            {
+                int_vector<> new_O(n+1);
+                new_O[0] = 0;
+                for (i=1; i<=n; i++)
+                    new_O[i] = std::get<2>(D[i-1]);
+                m_muthu_ps_o = muthu(new_O);
+            }
+
 
             cout << "-- Index constructed successfully" << endl; fflush(stdout);
         };
 
 
         //! Copy constructor
-        ring(const ring &o) {
+        ring_muthu(const ring_muthu &o) {
             copy(o);
         }
 
         //! Move constructor
-        ring(ring &&o) {
+        ring_muthu(ring_muthu &&o) {
             *this = std::move(o);
         }
 
         //! Copy Operator=
-        ring &operator=(const ring &o) {
+        ring_muthu &operator=(const ring_muthu &o) {
             if (this != &o) {
                 copy(o);
             }
@@ -216,7 +270,7 @@ namespace ring {
         }
 
         //! Move Operator=
-        ring &operator=(ring &&o) {
+        ring_muthu &operator=(ring_muthu &&o) {
             if (this != &o) {
                 m_bwt_s = std::move(o.m_bwt_s);
                 m_bwt_p = std::move(o.m_bwt_p);
@@ -225,11 +279,17 @@ namespace ring {
                 m_max_p = o.m_max_p;
                 m_max_o = o.m_max_o;
                 m_n_triples = o.m_n_triples;
+                m_muthu_sp_o = std::move(o.m_muthu_sp_o);
+                m_muthu_os_p = std::move(o.m_muthu_os_p);
+                m_muthu_po_s = std::move(o.m_muthu_po_s);
+                m_muthu_ps_o = std::move(o.m_muthu_ps_o);
+                m_muthu_so_p = std::move(o.m_muthu_so_p);
+                m_muthu_op_s = std::move(o.m_muthu_op_s);
             }
             return *this;
         }
 
-        void swap(ring &o) {
+        void swap(ring_muthu &o) {
             // m_bp.swap(bp_support.m_bp); use set_vector to set the supported bit_vector
             std::swap(m_bwt_s, o.m_bwt_s);
             std::swap(m_bwt_p, o.m_bwt_p);
@@ -238,6 +298,12 @@ namespace ring {
             std::swap(m_max_p, o.m_max_p);
             std::swap(m_max_o, o.m_max_o);
             std::swap(m_n_triples, o.m_n_triples);
+            m_muthu_sp_o.swap(o.m_muthu_sp_o);
+            m_muthu_os_p.swap(o.m_muthu_os_p);
+            m_muthu_po_s.swap(o.m_muthu_po_s);
+            m_muthu_ps_o.swap(o.m_muthu_ps_o);
+            m_muthu_so_p.swap(o.m_muthu_so_p);
+            m_muthu_op_s.swap(o.m_muthu_op_s);
         }
 
         //! Serializes the data structure into the given ostream
@@ -247,6 +313,12 @@ namespace ring {
             written_bytes += m_bwt_s.serialize(out, child, "bwt_s");
             written_bytes += m_bwt_p.serialize(out, child, "bwt_p");
             written_bytes += m_bwt_o.serialize(out, child, "bwt_o");
+            written_bytes += m_muthu_sp_o.serialize(out, child, "muthu_sp_o");
+            written_bytes += m_muthu_os_p.serialize(out, child, "muthu_os_p");
+            written_bytes += m_muthu_po_s.serialize(out, child, "muthu_po_s");
+            written_bytes += m_muthu_ps_o.serialize(out, child, "muthu_ps_o");
+            written_bytes += m_muthu_so_p.serialize(out, child, "muthu_so_p");
+            written_bytes += m_muthu_op_s.serialize(out, child, "muthu_op_s");
             written_bytes += sdsl::write_member(m_max_s, out, child, "max_s");
             written_bytes += sdsl::write_member(m_max_p, out, child, "max_p");
             written_bytes += sdsl::write_member(m_max_o, out, child, "max_o");
@@ -259,6 +331,12 @@ namespace ring {
             m_bwt_s.load(in);
             m_bwt_p.load(in);
             m_bwt_o.load(in);
+            m_muthu_sp_o.load(in);
+            m_muthu_os_p.load(in);
+            m_muthu_po_s.load(in);
+            m_muthu_ps_o.load(in);
+            m_muthu_so_p.load(in);
+            m_muthu_op_s.load(in);
             sdsl::read_member(m_max_s, in);
             sdsl::read_member(m_max_p, in);
             sdsl::read_member(m_max_o, in);
@@ -340,7 +418,12 @@ namespace ring {
 
         uint64_t next_O_in_S(bwt_interval &I, uint64_t O) {
             if (O > m_max_o) return 0;
-            return I.next_value(O, m_bwt_o);
+
+            uint64_t nextv = I.next_value(O, m_bwt_o);
+            if (nextv == 0)
+                return 0;
+            else
+                return nextv;
         }
 
         bool there_are_O_in_S(bwt_interval &I) {
@@ -353,7 +436,12 @@ namespace ring {
 
         uint64_t next_O_in_PS(bwt_interval &I, uint64_t O) {
             if (O > m_max_o) return 0;
-            return I.next_value(O, m_bwt_o);
+
+            uint64_t nextv = I.next_value(O, m_bwt_o);
+            if (nextv == 0)
+                return 0;
+            else
+                return nextv;
         }
 
         bool there_are_O_in_PS(bwt_interval &I) {
@@ -389,7 +477,12 @@ namespace ring {
 
         uint64_t next_S_in_OP(bwt_interval &I, uint64_t s_value) {
             if (s_value > m_max_s) return 0;
-            return I.next_value(s_value, m_bwt_s);
+
+            uint64_t nextv = I.next_value(s_value, m_bwt_s);
+            if (nextv == 0)
+                return 0;
+            else
+                return nextv;
         }
 
         bool there_are_S_in_OP(bwt_interval &I) {
@@ -402,7 +495,12 @@ namespace ring {
 
         uint64_t next_S_in_P(bwt_interval &I, uint64_t s_value) {
             if (s_value > m_max_s) return 0;
-            return I.next_value(s_value, m_bwt_s);
+
+            uint64_t nextv = I.next_value(s_value, m_bwt_s);
+            if (nextv == 0)
+                return 0;
+            else
+                return nextv;
         }
 
         bool there_are_S_in_P(bwt_interval &I) {
@@ -440,7 +538,12 @@ namespace ring {
 
         uint64_t next_P_in_SO(bwt_interval &I, uint64_t p_value) {
             if (p_value > m_max_p) return 0;
-            return I.next_value(p_value, m_bwt_p);
+
+            uint64_t nextv = I.next_value(p_value, m_bwt_p);
+            if (nextv == 0)
+                return 0;
+            else
+                return nextv;
         }
 
         bool there_are_P_in_SO(bwt_interval &I) {
@@ -453,7 +556,12 @@ namespace ring {
 
         uint64_t next_P_in_O(bwt_interval &I, uint64_t p_value) {
             if (p_value > m_max_p) return 0;
-            return I.next_value(p_value, m_bwt_p);
+
+            uint64_t nextv = I.next_value(p_value, m_bwt_p);
+            if (nextv == 0)
+                return 0;
+            else
+                return nextv;
         }
 
         bool there_are_P_in_O(bwt_interval &I) {
@@ -515,7 +623,12 @@ namespace ring {
 
         uint64_t next_O_in_SP(bwt_interval &I, uint64_t O) {
             if (O > m_max_o) return 0;
-            return I.next_value(O, m_bwt_o);
+
+            uint64_t next_v = I.next_value(O, m_bwt_o);
+            if (next_v == 0)
+                return 0;
+            else
+                return next_v;
         }
 
         bool there_are_O_in_SP(bwt_interval &I) {
@@ -597,6 +710,9 @@ namespace ring {
 
         uint64_t next_S_in_PO(bwt_interval &I, uint64_t s_value) {
             if (s_value > m_max_s) return 0;
+
+            //bwt_interval I_aux = bwt_interval(I.left() - m_n_triples, I.right() - m_n_triples);
+            //return I_aux.next_value(s_value, m_bwt_s);
             return I.next_value(s_value, m_bwt_s);
         }
 
@@ -654,18 +770,54 @@ namespace ring {
 
         uint64_t next_P_in_OS(bwt_interval &I, uint64_t p_value) {
             if (p_value > m_max_p) return 0;
-            return I.next_value(p_value, m_bwt_p);
+
+            uint64_t nextv = I.next_value(p_value, m_bwt_p);
+            if (nextv == 0)
+                return 0;
+            else
+                return nextv;
         }
 
         bool there_are_P_in_OS(bwt_interval &I) {
             return I.get_cur_value() != I.end();
         }
 
+        /**********************************/
+
+
+
+
+        size_type distinct_PO_S(const bwt_interval &I){
+            return m_muthu_po_s.count_distinct(I.left(), I.right());
+        }
+
+        size_type distinct_OP_S(const bwt_interval &I){
+            return m_muthu_op_s.count_distinct(I.left(), I.right());
+        }
+
+        size_type distinct_OS_P(const bwt_interval &I){
+            return m_muthu_os_p.count_distinct(I.left(), I.right());
+        }
+
+        size_type distinct_SO_P(const bwt_interval &I){
+            return m_muthu_so_p.count_distinct(I.left(), I.right());
+        }
+
+        size_type distinct_SP_O(const bwt_interval &I){
+            return m_muthu_sp_o.count_distinct(I.left(), I.right());
+        }
+
+        size_type distinct_PS_O(const bwt_interval &I){
+            return m_muthu_ps_o.count_distinct(I.left(), I.right());
+        }
+
+
+
     };
 
 
     template <class bwt_so_t, class bwt_sp_t> //Select in BWT
-    uint64_t ring<bwt_so_t, bwt_sp_t>::min_P_in_S(bwt_interval &I, uint64_t s_value) {
+    uint64_t ring_muthu<bwt_so_t, bwt_sp_t>::min_P_in_S(bwt_interval &I, uint64_t s_value) {
         std::pair<uint64_t, uint64_t> q;
         q = m_bwt_s.select_next(1, s_value, m_bwt_o.nElems(s_value));
         uint64_t b = m_bwt_s.bsearch_C(q.first) - 1;
@@ -674,7 +826,7 @@ namespace ring {
     }
 
     template<> //No select in BWT
-    uint64_t ring<bwt<>>::min_P_in_S(bwt_interval &I, uint64_t s_value) {
+    uint64_t ring_muthu<bwt<>>::min_P_in_S(bwt_interval &I, uint64_t s_value) {
         uint64_t s_aux = I.left();
         std::pair<uint64_t, uint64_t> o_r = m_bwt_o.inverse_select(s_aux);
         uint64_t p = m_bwt_p[m_bwt_p.get_C(o_r.second) + o_r.first];
@@ -684,7 +836,7 @@ namespace ring {
 
 
     template<> //No select in BWT
-    uint64_t ring<bwt_rrr>::min_P_in_S(bwt_interval &I, uint64_t s_value) {
+    uint64_t ring_muthu<bwt_rrr>::min_P_in_S(bwt_interval &I, uint64_t s_value) {
         uint64_t s_aux = I.left();
         std::pair<uint64_t, uint64_t> o_r = m_bwt_o.inverse_select(s_aux);
         uint64_t p = m_bwt_p[m_bwt_p.get_C(o_r.second) + o_r.first];
@@ -693,7 +845,7 @@ namespace ring {
     }
 
     template <class bwt_so_t, class bwt_sp_t> //Select in BWT
-    uint64_t ring<bwt_so_t, bwt_sp_t>::next_P_in_S(bwt_interval &I, uint64_t s_value, uint64_t p_value) {
+    uint64_t ring_muthu<bwt_so_t, bwt_sp_t>::next_P_in_S(bwt_interval &I, uint64_t s_value, uint64_t p_value) {
         if (p_value > m_max_p) return 0;
 
         std::pair<uint64_t, uint64_t> q;
@@ -708,7 +860,7 @@ namespace ring {
     }
 
     template <> //NO Select in BWT
-    uint64_t ring<bwt<>>::next_P_in_S(bwt_interval &I, uint64_t s_value, uint64_t p_value) {
+    uint64_t ring_muthu<bwt<>>::next_P_in_S(bwt_interval &I, uint64_t s_value, uint64_t p_value) {
         if (p_value > m_max_p) return 0;
 
         uint64_t nValues = I.right()-I.left() + 1;
@@ -723,7 +875,7 @@ namespace ring {
     }
 
     template <> //NO Select in BWT
-    uint64_t ring<bwt_rrr>::next_P_in_S(bwt_interval &I, uint64_t s_value, uint64_t p_value) {
+    uint64_t ring_muthu<bwt_rrr>::next_P_in_S(bwt_interval &I, uint64_t s_value, uint64_t p_value) {
         if (p_value > m_max_p) return 0;
 
         uint64_t nValues = I.right()-I.left() + 1;
@@ -738,7 +890,7 @@ namespace ring {
     }
 
     template <class bwt_so_t, class bwt_sp_t> //Select in BWT
-    uint64_t ring<bwt_so_t, bwt_sp_t>::min_S_in_O(bwt_interval &o_int, uint64_t o_value) {
+    uint64_t ring_muthu<bwt_so_t, bwt_sp_t>::min_S_in_O(bwt_interval &o_int, uint64_t o_value) {
         std::pair<uint64_t, uint64_t> q;
         q = m_bwt_o.select_next(1, o_value, m_bwt_p.nElems(o_value));
         uint64_t b = m_bwt_o.bsearch_C(q.first) - 1;
@@ -747,7 +899,7 @@ namespace ring {
     }
 
     template <> //NO Select in BWT
-    uint64_t ring<bwt<>>::min_S_in_O(bwt_interval &o_int, uint64_t o_value) {
+    uint64_t ring_muthu<bwt<>>::min_S_in_O(bwt_interval &o_int, uint64_t o_value) {
         uint64_t o_aux = o_int.left();
         std::pair<uint64_t, uint64_t> p_r = m_bwt_p.inverse_select(o_aux);
         uint64_t s = m_bwt_s[m_bwt_s.get_C(p_r.second/*s_value*/) + p_r.first/*r*/];
@@ -756,7 +908,7 @@ namespace ring {
     }
 
     template <> //NO Select in BWT
-    uint64_t ring<bwt_rrr>::min_S_in_O(bwt_interval &o_int, uint64_t o_value) {
+    uint64_t ring_muthu<bwt_rrr>::min_S_in_O(bwt_interval &o_int, uint64_t o_value) {
         uint64_t o_aux = o_int.left();
         std::pair<uint64_t, uint64_t> p_r = m_bwt_p.inverse_select(o_aux);
         uint64_t s = m_bwt_s[m_bwt_s.get_C(p_r.second/*s_value*/) + p_r.first/*r*/];
@@ -765,7 +917,7 @@ namespace ring {
     }
 
     template <class bwt_so_t, class bwt_sp_t> //Select in BWT
-    uint64_t ring<bwt_so_t, bwt_sp_t>::next_S_in_O(bwt_interval &I, uint64_t o_value, uint64_t s_value) {
+    uint64_t ring_muthu<bwt_so_t, bwt_sp_t>::next_S_in_O(bwt_interval &I, uint64_t o_value, uint64_t s_value) {
         if (s_value > m_max_s) return 0;
 
         std::pair<uint64_t, uint64_t> q;
@@ -779,7 +931,7 @@ namespace ring {
     }
 
     template <> //NO Select in BWT
-    uint64_t ring<bwt<>>::next_S_in_O(bwt_interval &I, uint64_t o_value, uint64_t s_value) {
+    uint64_t ring_muthu<bwt<>>::next_S_in_O(bwt_interval &I, uint64_t o_value, uint64_t s_value) {
         if (s_value > m_max_s) return 0;
 
         uint64_t nValues = I.right()-I.left() + 1;
@@ -796,7 +948,7 @@ namespace ring {
 
 
     template <> //NO Select in BWT
-    uint64_t ring<bwt_rrr>::next_S_in_O(bwt_interval &I, uint64_t o_value, uint64_t s_value) {
+    uint64_t ring_muthu<bwt_rrr>::next_S_in_O(bwt_interval &I, uint64_t o_value, uint64_t s_value) {
         if (s_value > m_max_s) return 0;
 
         uint64_t nValues = I.right()-I.left() + 1;
@@ -811,8 +963,8 @@ namespace ring {
     }
 
 
-    typedef ring<bwt_rrr, bwt_rrr> c_ring;
-    typedef ring<bwt_plain, bwt_plain> ring_sel; //with select
+    typedef ring_muthu<bwt_rrr, bwt_rrr> c_ring_muthu;
+    typedef ring_muthu<bwt_plain, bwt_plain> ring_sel_muthu; //with select
 
 }
 

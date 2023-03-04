@@ -116,11 +116,11 @@ namespace ring {
         }
 
 
-        inline uint64_t left() {
+        inline uint64_t left() const {
             return l;
         }
 
-        inline uint64_t right() {
+        inline uint64_t right() const {
             return r;
         }
 

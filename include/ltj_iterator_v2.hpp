@@ -17,58 +17,53 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef RING_LTJ_ITERATOR_UNIDIRECTIONAL_HPP
-#define RING_LTJ_ITERATOR_UNIDIRECTIONAL_HPP
+#ifndef RING_LTJ_ITERATOR_HPP
+#define RING_LTJ_ITERATOR_HPP
 
 #define VERBOSE 0
 
-#include <triple_pattern.hpp>
-#include <bwt_interval.hpp>
 #include <ltj_iterator_base.hpp>
 
 namespace ring {
 
     template<class ring_t, class var_t, class cons_t>
-    class ltj_iterator_unidirectional : public ltj_iterator_base< var_t, cons_t>{
+    class ltj_iterator : public ltj_iterator_base< var_t, cons_t>{
 
     public:
         typedef cons_t value_type;
         typedef var_t var_type;
         typedef ring_t ring_type;
         typedef uint64_t size_type;
-        typedef typename ring_type::bwt_type::wm_type wm_type;
         enum state_type {s, p, o};
-        typedef struct {
-            const wm_type* wm_ptr;
-            range_type range;
-        } wm_data_type;
         //std::vector<value_type> leap_result_type;
 
     private:
         const triple_pattern *m_ptr_triple_pattern;
         ring_type *m_ptr_ring; //TODO: should be const
         std::array<bwt_interval, 3> m_intervals;
+        std::array<value_type, 3> m_consts;
         std::array<state_type, 3> m_state;
         size_type m_level = 0;
         bool m_is_empty = false;
         //std::stack<state_type> m_states;
 
 
-        void copy(const ltj_iterator_unidirectional &o) {
+        void copy(const ltj_iterator &o) {
             m_is_empty = o.m_is_empty;
             m_ptr_triple_pattern = o.m_ptr_triple_pattern;
             m_ptr_ring = o.m_ptr_ring;
             m_intervals = o.m_intervals;
             m_state = o.m_state;
             m_level = o.m_level;
+            m_consts = o.m_consts;
         }
 
     public:
         //const bool &is_empty = m_is_empty;
 
-        ltj_iterator_unidirectional() = default;
+        ltj_iterator() = default;
 
-        ltj_iterator_unidirectional(const triple_pattern *triple, ring_type *ring) {
+        ltj_iterator(const triple_pattern *triple, ring_type *ring) {
             m_ptr_triple_pattern = triple;
             m_ptr_ring = ring;
             m_intervals[0] = m_ptr_ring->open_POS();
@@ -85,6 +80,7 @@ namespace ring {
                     return;
                 }
                 m_state[0] = s;
+                m_consts[0] = s_aux;
 
                 //Interval in O
                 m_intervals[1] = m_ptr_ring->down_S(s_aux);
@@ -95,6 +91,7 @@ namespace ring {
                     return;
                 }
                 m_state[1] = o;
+                m_consts[1] = o_aux;
 
                 //Interval in P
                 m_intervals[2] = m_ptr_ring->down_S_O(m_intervals[1], o_aux);
@@ -105,6 +102,7 @@ namespace ring {
                     return;
                 }
                 m_state[2] = p;
+                m_consts[2] = p_aux;
 
                 m_level = 3;
 
@@ -119,6 +117,7 @@ namespace ring {
                     return;
                 }
                 m_state[0] = p;
+                m_consts[0] = p_aux;
 
                 //Interval in S
                 m_intervals[1] = m_ptr_ring->down_P(p_aux);
@@ -129,6 +128,7 @@ namespace ring {
                     return;
                 }
                 m_state[1] = s;
+                m_consts[1] = s_aux;
 
                 //Interval in O
                 m_intervals[2] = m_ptr_ring->down_P_S(m_intervals[1], s_aux);
@@ -145,6 +145,7 @@ namespace ring {
                     return;
                 }
                 m_state[0] = o;
+                m_consts[0] = o_aux;
 
                 //Interval in P
                 m_intervals[1] = m_ptr_ring->down_O(o_aux);
@@ -155,6 +156,7 @@ namespace ring {
                     return;
                 }
                 m_state[1] = p;
+                m_consts[1] = p_aux;
 
                 //Interval in S
                 m_intervals[2] = m_ptr_ring->down_O_P(m_intervals[1], p_aux);
@@ -171,6 +173,7 @@ namespace ring {
                     return;
                 }
                 m_state[0] = s;
+                m_consts[0] = s_aux;
 
                 //Interval in O
                 m_intervals[1] = m_ptr_ring->down_S(s_aux);
@@ -181,6 +184,7 @@ namespace ring {
                     return;
                 }
                 m_state[1] = o;
+                m_consts[1] = o_aux;
 
                 //Interval in O
                 m_intervals[2] = m_ptr_ring->down_S_O(m_intervals[1], o_aux);
@@ -196,6 +200,7 @@ namespace ring {
                     return;
                 }
                 m_state[0] = s;
+                m_consts[0] = s_aux;
 
                 m_intervals[1] = m_ptr_ring->down_S(s_aux);
                 m_level = 1;
@@ -210,6 +215,7 @@ namespace ring {
                     return;
                 }
                 m_state[0] = p;
+                m_consts[0] = p_aux;
 
                 m_intervals[1] = m_ptr_ring->down_P(p_aux);
                 m_level = 1;
@@ -224,6 +230,7 @@ namespace ring {
                     return;
                 }
                 m_state[0] = o;
+                m_consts[0] = o_aux;
 
                 m_intervals[1] = m_ptr_ring->down_O(o_aux);
                 m_level = 1;
@@ -233,17 +240,17 @@ namespace ring {
         }
 
         //! Copy constructor
-        ltj_iterator_unidirectional(const ltj_iterator_unidirectional &o) {
+        ltj_iterator(const ltj_iterator &o) {
             copy(o);
         }
 
         //! Move constructor
-        ltj_iterator_unidirectional(ltj_iterator_unidirectional &&o) {
+        ltj_iterator(ltj_iterator &&o) {
             *this = std::move(o);
         }
 
         //! Copy Operator=
-        ltj_iterator_unidirectional &operator=(const ltj_iterator_unidirectional &o) {
+        ltj_iterator &operator=(const ltj_iterator &o) {
             if (this != &o) {
                 copy(o);
             }
@@ -251,11 +258,12 @@ namespace ring {
         }
 
         //! Move Operator=
-        ltj_iterator_unidirectional &operator=(ltj_iterator_unidirectional &&o) {
+        ltj_iterator &operator=(ltj_iterator &&o) {
             if (this != &o) {
                 m_ptr_triple_pattern = std::move(o.m_ptr_triple_pattern);
                 m_ptr_ring = std::move(o.m_ptr_ring);
                 m_intervals = std::move(o.m_intervals);
+                m_consts = std::move(o.m_consts);
                 m_state = std::move(o.m_state);
                 m_level = o.m_level;
                 m_is_empty = o.m_is_empty;
@@ -263,11 +271,12 @@ namespace ring {
             return *this;
         }
 
-        void swap(ltj_iterator_unidirectional &o) {
+        void swap(ltj_iterator &o) {
             // m_bp.swap(bp_support.m_bp); use set_vector to set the supported bit_vector
             std::swap(m_ptr_triple_pattern, o.m_ptr_triple_pattern);
             std::swap(m_ptr_ring, o.m_ptr_ring);
             std::swap(m_intervals, o.m_intervals);
+            std::swap(m_consts, o.m_consts);
             std::swap(m_state, o.m_state);
             std::swap(m_level, o.m_level);
             std::swap(m_is_empty, o.m_is_empty);
@@ -307,7 +316,7 @@ namespace ring {
             } else if(m_level == 1) {//m_level = 1
                 if (m_state[0] == s) {
                     if (is_variable_predicate(var)) {
-                        m_intervals[2] = m_ptr_ring->down_S_P(m_intervals[1], c);
+                        m_intervals[2] = m_ptr_ring->down_S_P(m_intervals[1], m_consts[0], c);
                         m_state[m_level] = p;
                     } else {
                         m_intervals[2] = m_ptr_ring->down_S_O(m_intervals[1], c);
@@ -318,12 +327,12 @@ namespace ring {
                         m_intervals[2] = m_ptr_ring->down_P_S(m_intervals[1], c);
                         m_state[m_level] = s;
                     } else {
-                        m_intervals[2] = m_ptr_ring->down_P_O(m_intervals[1], c);
+                        m_intervals[2] = m_ptr_ring->down_P_O(m_intervals[1], m_consts[0], c);
                         m_state[m_level] = o;
                     }
                 } else {
                     if (is_variable_subject(var)) {
-                        m_intervals[2] = m_ptr_ring->down_O_S(m_intervals[1], c);
+                        m_intervals[2] = m_ptr_ring->down_O_S(m_intervals[1], m_consts[0], c);
                         m_state[m_level] = s;
                     } else {
                         m_intervals[2] = m_ptr_ring->down_O_P(m_intervals[1], c);
@@ -331,9 +340,9 @@ namespace ring {
                     }
                 }
             }
+            m_consts[m_level] = c;
             ++m_level;
-
-        }
+        };
 
         void down(var_type var, size_type c, size_type k){
             down(var, c);
@@ -345,8 +354,8 @@ namespace ring {
             --m_level;
         };
 
-        //TODO: para unidirectional no se necesitan (se podría usar todo esto en el iterator normal)
-        value_type leap(var_type var) { //Return the minimum in the range
+        value_type
+        leap(var_type var) { //Return the minimum in the range
             //0. Which term of our triple pattern is var
             if(m_level == 0){
                 if(is_variable_subject(var)){
@@ -359,7 +368,7 @@ namespace ring {
             }else if (m_level == 1){
                 if (m_state[0] == s) {
                     if (is_variable_predicate(var)) {
-                        return m_ptr_ring->min_P_in_S(m_intervals[1]);
+                        return m_ptr_ring->min_P_in_S(m_intervals[1], m_consts[0]);
                     } else {
                         return m_ptr_ring->min_O_in_S(m_intervals[1]);
                     }
@@ -367,11 +376,11 @@ namespace ring {
                     if (is_variable_subject(var)) {
                         return m_ptr_ring->min_S_in_P(m_intervals[1]);
                     } else {
-                        return m_ptr_ring->min_O_in_P(m_intervals[1]);
+                        return m_ptr_ring->min_O_in_P(m_intervals[1], m_consts[0]);
                     }
                 } else {
                     if (is_variable_subject(var)) {
-                        return m_ptr_ring->min_S_in_O(m_intervals[1]);
+                        return m_ptr_ring->min_S_in_O(m_intervals[1], m_consts[0]);
                     } else {
                         return m_ptr_ring->min_P_in_O(m_intervals[1]);
                     }
@@ -391,11 +400,10 @@ namespace ring {
                     return m_ptr_ring->min_P_in_SO(m_intervals[2]);
                 }
             }
+            return 0;
         };
 
-        //TODO: para unidirectional no se necesitan (se podría usar todo esto en el iterator normal)
-        value_type leap(var_type var, size_type c) { //Return the minimum in the range
-            //0. Which term of our triple pattern is var
+        value_type leap(var_type var, size_type c) { //Return the next value greater or equal than c in the range
             if(m_level == 0){
                 if(is_variable_subject(var)){
                     return m_ptr_ring->next_S(m_intervals[0], c);
@@ -407,7 +415,7 @@ namespace ring {
             }else if (m_level == 1){
                 if (m_state[0] == s) {
                     if (is_variable_predicate(var)) {
-                        return m_ptr_ring->next_P_in_S(m_intervals[1], c);
+                        return m_ptr_ring->next_P_in_S(m_intervals[1], m_consts[0], c);
                     } else {
                         return m_ptr_ring->next_O_in_S(m_intervals[1], c);
                     }
@@ -415,11 +423,11 @@ namespace ring {
                     if (is_variable_subject(var)) {
                         return m_ptr_ring->next_S_in_P(m_intervals[1], c);
                     } else {
-                        return m_ptr_ring->next_O_in_P(m_intervals[1], c);
+                        return m_ptr_ring->next_O_in_P(m_intervals[1], m_consts[0], c);
                     }
                 } else {
                     if (is_variable_subject(var)) {
-                        return m_ptr_ring->next_S_in_O(m_intervals[1], c);
+                        return m_ptr_ring->next_S_in_O(m_intervals[1], m_consts[0], c);
                     } else {
                         return m_ptr_ring->next_P_in_O(m_intervals[1], c);
                     }
@@ -439,53 +447,7 @@ namespace ring {
                     return m_ptr_ring->next_P_in_SO(m_intervals[2], c);
                 }
             }
-        };
-
-        inline wm_data_type get_wm_data(var_type var){
-            range_type range{m_intervals[m_level].left(), m_intervals[m_level].right()};
-            if(m_level == 0){
-                if(is_variable_subject(var)){
-                    return wm_data_type{&(m_ptr_ring->s_spo.get_wm()), range};
-                }else if (is_variable_predicate(var)){
-                    return wm_data_type{&(m_ptr_ring->p_spo.get_wm()), range};
-                }else{
-                    return wm_data_type{&(m_ptr_ring->o_spo.get_wm()), range};
-                }
-            }else if (m_level == 1){
-                if (m_state[0] == s) {
-                    if (is_variable_predicate(var)) {
-                        return wm_data_type{&(m_ptr_ring->p_ops.get_wm()), range};
-                    } else {
-                        return wm_data_type{&(m_ptr_ring->o_spo.get_wm()), range};
-                    }
-                } else if (m_state[0] == p) {
-                    if (is_variable_subject(var)) {
-                        return wm_data_type{&(m_ptr_ring->s_spo.get_wm()), range};
-                    } else {
-                        return wm_data_type{&(m_ptr_ring->o_ops.get_wm()), range};
-                    }
-                } else {
-                    if (is_variable_subject(var)) {
-                        return wm_data_type{&(m_ptr_ring->s_ops.get_wm()), range};
-                    } else {
-                        return wm_data_type{&(m_ptr_ring->p_spo.get_wm()), range};
-                    }
-                }
-            }else{
-                if (m_state[0] == s && m_state[1] == p) {
-                    return wm_data_type{&(m_ptr_ring->o_ops.get_wm()), range};
-                }else if(m_state[0] == p && m_state[1] == s){
-                    return wm_data_type{&(m_ptr_ring->o_spo.get_wm()), range};
-                }else if(m_state[0] == p && m_state[1] == o) {
-                    return wm_data_type{&(m_ptr_ring->s_ops.get_wm()), range};
-                }else if(m_state[0] == o && m_state[1] == p) {
-                    return wm_data_type{&(m_ptr_ring->s_spo.get_wm()), range};
-                }else if(m_state[0] == o && m_state[1] == s) {
-                    return wm_data_type{&(m_ptr_ring->p_ops.get_wm()), range};
-                }else{
-                    return wm_data_type{&(m_ptr_ring->p_spo.get_wm()), range};
-                }
-            }
+            return 0;
         }
 
         inline bool in_last_level(){
@@ -498,26 +460,16 @@ namespace ring {
 
         //Solo funciona en último nivel, en otro caso habría que reajustar
         std::vector<uint64_t> seek_all(var_type var){
-            if(m_state[0] == s){
-                if(m_state[1] == p){
-                    return m_ptr_ring->all_O_OPS_in_range(m_intervals[2]);
-                }else{// m_state[1] == o
-                    return m_ptr_ring->all_P_SPO_in_range(m_intervals[2]);
-                }
-            }else if (m_state[0] == p){
-                if(m_state[1] == s){
-                    return m_ptr_ring->all_O_SPO_in_range(m_intervals[2]);
-                }else{//m_state[1] == o
-                    return m_ptr_ring->all_S_OPS_in_range(m_intervals[2]);
-                }
-            }else{ //m_state[0] == o
-                if(m_state[1] == s){
-                    return m_ptr_ring->all_P_OPS_in_range(m_intervals[2]);
-                }else{//m_state[1] == p
-                    return m_ptr_ring->all_S_SPO_in_range(m_intervals[2]);
-                }
+            if (is_variable_subject(var)){
+                return m_ptr_ring->all_S_in_range(m_intervals[2]);
+            }else if (is_variable_predicate(var)){
+                return m_ptr_ring->all_P_in_range(m_intervals[2]);
+            }else if (is_variable_object(var)){
+                return m_ptr_ring->all_O_in_range(m_intervals[2]);
             }
+            return {};
         }
+
 
     };
 

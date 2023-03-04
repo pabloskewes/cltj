@@ -20,6 +20,7 @@
 
 #include <iostream>
 #include "uring.hpp"
+#include "uring_muthu.hpp"
 #include <fstream>
 #include <sdsl/construct.hpp>
 #include <ltj_algorithm.hpp>
@@ -61,7 +62,7 @@ int main(int argc, char **argv)
 {
 
     if(argc != 3){
-        std::cout << "Usage: " << argv[0] << " <dataset> [uring|c-uring]" << std::endl;
+        std::cout << "Usage: " << argv[0] << " <dataset> [uring|c-uring|uring-muthu|c-ring-muthu]" << std::endl;
         return 0;
     }
 
@@ -73,8 +74,14 @@ int main(int argc, char **argv)
     }else if (type == "c-uring"){
         std::string index_name = dataset + ".c-uring";
         build_index<ring::c_uring>(dataset, index_name);
+    }else if(type == "uring-muthu"){
+        std::string index_name = dataset + ".uring-muthu";
+        build_index<ring::uring_muthu<>>(dataset, index_name);
+    }else if (type == "c-uring-muthu"){
+        std::string index_name = dataset + ".c-uring-muthu";
+        build_index<ring::c_uring_muthu>(dataset, index_name);
     }else{
-        std::cout << "Usage: " << argv[0] << " <dataset> [uring|c-uring]" << std::endl;
+        std::cout << "Usage: " << argv[0] << " <dataset> [uring|c-uring|uring-muthu|c-ring-muthu]" << std::endl;
     }
 
     return 0;

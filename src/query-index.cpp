@@ -24,6 +24,7 @@
 #include <triple_pattern.hpp>
 #include <ltj_algorithm.hpp>
 #include "utils.hpp"
+#include <ring_muthu.hpp>
 
 using namespace std;
 
@@ -228,6 +229,12 @@ int main(int argc, char* argv[])
         query<ring::c_ring>(index, queries);
     }else if (type == "ring-sel"){
         query<ring::ring_sel>(index, queries);
+    }else if (type == "ring-muthu"){
+        query<ring::ring_muthu<>>(index, queries);
+    }else if (type == "c-ring-muthu"){
+        query<ring::c_ring_muthu>(index, queries);
+    }else if (type == "ring-sel-muthu"){
+        query<ring::ring_sel_muthu>(index, queries);
     }else{
         std::cout << "Type of index: " << type << " is not supported." << std::endl;
     }

@@ -35,7 +35,7 @@ namespace ring {
 
 
         template<class ring_t = ring<>, class var_t = uint8_t,
-                class cons_t = uint64_t, class gao_trait_t = util::trait_size>
+                class cons_t = uint64_t, class gao_trait_t = util::trait_size_v2>
         class gao_adaptive {
 
         public:

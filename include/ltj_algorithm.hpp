@@ -25,7 +25,7 @@
 
 #include <triple_pattern.hpp>
 #include <ring.hpp>
-#include <ltj_iterator.hpp>
+#include <ltj_iterator_v2.hpp>
 #include <ltj_iterator_unidirectional.hpp>
 #include <gao_simple.hpp>
 #include <gao_adaptive.hpp>
@@ -34,7 +34,7 @@ namespace ring {
 
     template<class ring_t = ring<>,
             class var_t = uint8_t, class cons_t = uint64_t,
-            class gao_t = gao::gao_adaptive<ring_t, var_t, cons_t, util::trait_size> >
+            class gao_t = gao::gao_adaptive<ring_t, var_t, cons_t, util::trait_size_v2> >
     class ltj_algorithm {
 
     public:

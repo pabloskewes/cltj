@@ -20,6 +20,7 @@
 
 #include <iostream>
 #include "ring.hpp"
+#include "ring_muthu.hpp"
 #include <fstream>
 #include <sdsl/construct.hpp>
 #include <ltj_algorithm.hpp>
@@ -61,7 +62,7 @@ int main(int argc, char **argv)
 {
 
     if(argc != 3){
-        std::cout << "Usage: " << argv[0] << " <dataset> [ring|c-ring|ring-sel]" << std::endl;
+        std::cout << "Usage: " << argv[0] << " <dataset> [ring|c-ring|ring-sel|ring-muthu|c-ring-muthu|ring-sel-muthu]" << std::endl;
         return 0;
     }
 
@@ -76,8 +77,17 @@ int main(int argc, char **argv)
     }else if (type == "ring-sel"){
         std::string index_name = dataset + ".ring-sel";
         build_index<ring::ring_sel>(dataset, index_name);
+    }else if (type == "ring-muthu"){
+        std::string index_name = dataset + ".ring-muthu";
+        build_index<ring::ring_muthu<>>(dataset, index_name);
+    }else if (type == "c-ring-muthu"){
+        std::string index_name = dataset + ".c-ring-muthu";
+        build_index<ring::c_ring_muthu>(dataset, index_name);
+    }else if (type == "ring-sel-muthu"){
+        std::string index_name = dataset + ".ring-sel-muthu";
+        build_index<ring::ring_sel_muthu>(dataset, index_name);
     }else{
-        std::cout << "Usage: " << argv[0] << " <dataset> [ring|c-ring|ring-sel]" << std::endl;
+        std::cout << "Usage: " << argv[0] << " <dataset> [ring|c-ring|ring-sel|ring-muthu|c-ring-muthu|ring-sel-muthu]" << std::endl;
     }
 
     return 0;

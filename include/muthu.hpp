@@ -34,7 +34,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef RING_MUTHU_HPP
 #define RING_MUTHU_HPP
 
-namespace ring_ltj {
+namespace ring {
 
     class muthu {
 

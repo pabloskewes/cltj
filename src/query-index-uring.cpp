@@ -20,6 +20,7 @@
 #include <iostream>
 #include <utility>
 #include "uring.hpp"
+#include "uring_muthu.hpp"
 #include <chrono>
 #include <triple_pattern.hpp>
 #include <ltj_algorithm_unidirectional.hpp>
@@ -228,6 +229,10 @@ int main(int argc, char* argv[])
         query<ring::uring<>>(index, queries);
     }else if (type == "c-uring"){
         query<ring::c_uring>(index, queries);
+    }else if(type == "uring-muthu"){
+        query<ring::uring_muthu<>>(index, queries);
+    }else if (type == "c-uring-muthu"){
+        query<ring::c_uring_muthu>(index, queries);
     }else{
         std::cout << "Type of index: " << type << " is not supported." << std::endl;
     }
