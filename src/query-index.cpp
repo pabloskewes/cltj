@@ -185,16 +185,16 @@ void query(const std::string &file, const std::string &queries){
             time_span = duration_cast<microseconds>(stop - start);
             total_time = time_span.count();
 
-            /*std::unordered_map<uint8_t, std::string> ht;
+            std::unordered_map<uint8_t, std::string> ht;
             for(const auto &p : hash_table_vars){
                 ht.insert({p.second, p.first});
             }
 
-            cout << "Query Details:" << endl;
-            ltj.print_query(ht);
-            ltj.print_gao(ht);
-            cout << "##########" << endl;*/
-
+            //cout << "Query Details:" << endl;
+            //ltj.print_query(ht);
+            //ltj.print_gao(ht);
+            //cout << "##########" << endl;
+            ltj.print_results(res, ht);
             cout << nQ <<  ";" << res.size() << ";" << (unsigned long long)(total_time*1000000000ULL) << endl;
             nQ++;
 
