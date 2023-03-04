@@ -22,7 +22,7 @@
 #define RING_GAO_SIMPLE_HPP
 
 #include <ring.hpp>
-#include <ltj_iterator.hpp>
+#include <ltj_iterator_v2.hpp>
 #include <triple_pattern.hpp>
 #include <unordered_map>
 #include <vector>
