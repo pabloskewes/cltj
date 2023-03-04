@@ -148,8 +148,7 @@ void query(const std::string &file, const std::string &queries){
     uint64_t nQ = 0;
 
     high_resolution_clock::time_point start, stop;
-    double total_time = 0.0;
-    duration<double> time_span;
+    uint64_t total_time;
 
     if(result)
     {
@@ -187,8 +186,7 @@ void query(const std::string &file, const std::string &queries){
             //std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 
             stop = high_resolution_clock::now();
-            time_span = duration_cast<nanoseconds>(stop - start);
-            total_time = time_span.count();
+            total_time = duration_cast<nanoseconds>(stop - start).count();
 
             /*std::unordered_map<uint8_t, std::string> ht;
             for(const auto &p : hash_table_vars){
