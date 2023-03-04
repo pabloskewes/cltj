@@ -22,7 +22,8 @@
 #define RING_GAO_ADAPTIVE_HPP
 
 #include <ring.hpp>
-#include <ltj_iterator_v2.hpp>
+#include <ltj_iterator.hpp>
+#include <ltj_iterator_unidirectional.hpp>
 #include <triple_pattern.hpp>
 #include <unordered_map>
 #include <vector>
@@ -34,16 +35,15 @@ namespace ring {
     namespace gao {
 
 
-        template<class ring_t = ring<>, class var_t = uint8_t,
-                class cons_t = uint64_t, class gao_trait_t = util::trait_size_v2>
+        template<class ltj_iterator_t = ltj_iterator <ring<>, uint8_t, uint64_t>,
+                class gao_trait_t = util::trait_size_v2>
         class gao_adaptive {
 
         public:
-            typedef var_t var_type;
-            typedef cons_t cons_type;
+            typedef ltj_iterator_t ltj_iter_type;
+            typedef typename ltj_iter_type::var_type var_type;
             typedef uint64_t size_type;
-            typedef ring_t ring_type;
-            typedef ltj_iterator <ring_type, var_type, cons_type> ltj_iter_type;
+            typedef typename ltj_iter_type::ring_type ring_type;
 
 
             /*enum spo_type {subject, predicate, object};

@@ -22,7 +22,8 @@
 #define RING_GAO_SIMPLE_HPP
 
 #include <ring.hpp>
-#include <ltj_iterator_v2.hpp>
+#include <ltj_iterator.hpp>
+#include <ltj_iterator_unidirectional.hpp>
 #include <triple_pattern.hpp>
 #include <unordered_map>
 #include <vector>
@@ -34,15 +35,15 @@ namespace ring {
     namespace gao {
 
 
-        template<class ring_t = ring<>,  class var_t = uint8_t,
-                class cons_t = uint64_t, class gao_trait_t = util::trait_size>
+        template<class ltj_iterator_t = ltj_iterator <ring<>, uint8_t, uint64_t>,
+                class gao_trait_t = util::trait_size_v2>
         class gao_simple {
 
         public:
-            typedef var_t var_type;
-            typedef cons_t cons_type;
+            typedef ltj_iterator_t ltj_iter_type;
+            typedef typename ltj_iter_type::var_type var_type;
             typedef uint64_t size_type;
-            typedef ring_t ring_type;
+            typedef typename ltj_iter_type::ring_type ring_type;
             typedef struct {
                 var_type name;
                 size_type weight;
@@ -50,7 +51,6 @@ namespace ring {
                 std::unordered_set<var_type> related;
             } info_var_type;
 
-            typedef ltj_iterator <ring_type, var_type, cons_type> ltj_iter_type;
             typedef std::pair<size_type, var_type> pair_type;
             typedef gao_trait_t gao_trait_type;
             typedef std::priority_queue<pair_type, std::vector<pair_type>, greater<pair_type>> min_heap_type;

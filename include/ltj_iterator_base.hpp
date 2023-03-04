@@ -22,6 +22,8 @@
 
 #define VERBOSE 0
 
+#include <bwt_interval.hpp>
+#include <triple_pattern.hpp>
 #include <vector>
 
 namespace ring {

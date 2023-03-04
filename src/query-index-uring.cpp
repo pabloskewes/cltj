@@ -131,7 +131,7 @@ std::string get_type(const std::string &file){
 }
 
 
-template<class ring_type>
+template<class ring_type, class trait_type>
 void query(const std::string &file, const std::string &queries){
     vector<string> dummy_queries;
     bool result = get_file_content(queries, dummy_queries);
@@ -172,9 +172,12 @@ void query(const std::string &file, const std::string &queries){
 
             start = high_resolution_clock::now();
 
-            ring::ltj_algorithm_unidirectional<ring_type> ltj(&query, &graph);
+            typedef ring::ltj_iterator_unidirectional<ring_type, uint8_t, uint64_t> iterator_type;
+            typedef ring::ltj_algorithm_unidirectional<iterator_type,
+                    ring::gao::gao_adaptive<iterator_type, ring::util::trait_size_v2>> algorithm_type;
+            algorithm_type ltj(&query, &graph);
 
-            typedef std::vector<typename ring::ltj_algorithm_unidirectional<>::tuple_type> results_type;
+            typedef std::vector<typename algorithm_type::tuple_type> results_type;
             results_type res;
 
             std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
@@ -183,7 +186,7 @@ void query(const std::string &file, const std::string &queries){
             //std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 
             stop = high_resolution_clock::now();
-            time_span = duration_cast<microseconds>(stop - start);
+            time_span = duration_cast<nanoseconds>(stop - start);
             total_time = time_span.count();
 
             /*std::unordered_map<uint8_t, std::string> ht;
@@ -198,7 +201,7 @@ void query(const std::string &file, const std::string &queries){
 
             //ltj.print_results(res, ht);
 
-            cout << nQ <<  ";" << res.size() << ";" << (unsigned long long)(total_time*1000000000ULL) << endl;
+            cout << nQ <<  ";" << res.size() << ";" << total_time << endl;
             nQ++;
 
             // cout << std::chrono::duration_cast<std::chrono::nanoseconds> (end - begin).count() << std::endl;
@@ -226,13 +229,13 @@ int main(int argc, char* argv[])
     std::string type = get_type(index);
 
     if(type == "uring"){
-        query<ring::uring<>>(index, queries);
+        query<ring::uring<>, ring::util::trait_size_v2>(index, queries);
     }else if (type == "c-uring"){
-        query<ring::c_uring>(index, queries);
+        query<ring::c_uring, ring::util::trait_size_v2>(index, queries);
     }else if(type == "uring-muthu"){
-        query<ring::uring_muthu<>>(index, queries);
+        query<ring::uring_muthu<>, ring::util::trait_size_v2>(index, queries);
     }else if (type == "c-uring-muthu"){
-        query<ring::c_uring_muthu>(index, queries);
+        query<ring::c_uring_muthu, ring::util::trait_size_v2>(index, queries);
     }else{
         std::cout << "Type of index: " << type << " is not supported." << std::endl;
     }

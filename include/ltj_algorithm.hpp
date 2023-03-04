@@ -25,26 +25,25 @@
 
 #include <triple_pattern.hpp>
 #include <ring.hpp>
-#include <ltj_iterator_v2.hpp>
+#include <ltj_iterator.hpp>
 #include <ltj_iterator_unidirectional.hpp>
 #include <gao_simple.hpp>
 #include <gao_adaptive.hpp>
 
 namespace ring {
 
-    template<class ring_t = ring<>,
-            class var_t = uint8_t, class cons_t = uint64_t,
-            class gao_t = gao::gao_adaptive<ring_t, var_t, cons_t, util::trait_size_v2> >
+    template<class iterator_t = ltj_iterator<ring<>, uint8_t, uint64_t>,
+             class gao_t = gao::gao_adaptive<iterator_t, util::trait_size_v2> >
     class ltj_algorithm {
 
     public:
         typedef uint64_t value_type;
         typedef uint64_t size_type;
-        typedef var_t var_type;
-        typedef ring_t ring_type;
-        typedef cons_t const_type;
+        typedef iterator_t ltj_iter_type;
+        typedef typename ltj_iter_type::var_type var_type;
+        typedef typename ltj_iter_type::ring_type ring_type;
+        typedef typename ltj_iter_type::value_type const_type;
         typedef gao_t gao_type;
-        typedef ltj_iterator<ring_type, var_type, const_type> ltj_iter_type;
         typedef std::unordered_map<var_type, std::vector<ltj_iter_type*>> var_to_iterators_type;
         typedef std::vector<std::pair<var_type, value_type>> tuple_type;
         typedef std::chrono::high_resolution_clock::time_point time_point_type;
