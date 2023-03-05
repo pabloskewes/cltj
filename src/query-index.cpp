@@ -166,26 +166,18 @@ void query(const std::string &file, const std::string &queries){
                 query.push_back(triple_pattern);
             }
 
-            // vector<string> gao = get_gao(query);
-            // vector<string> gao = get_gao_min_opt(query, graph);
-            // cout << gao [0] << " - " << gao [1] << " - " << gao[2] << endl;
-
-            start = high_resolution_clock::now();
 
             typedef ring::ltj_iterator<ring_type, uint8_t, uint64_t> iterator_type;
             typedef ring::ltj_algorithm<iterator_type,
                     ring::gao::gao_adaptive<iterator_type, trait_type>> algorithm_type;
-            algorithm_type ltj(&query, &graph);
-
             typedef std::vector<typename algorithm_type::tuple_type> results_type;
             results_type res;
 
-            std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-
+            start = high_resolution_clock::now();
+            algorithm_type ltj(&query, &graph);
             ltj.join(res, 1000, 600);
-            //std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-
             stop = high_resolution_clock::now();
+
             total_time = duration_cast<nanoseconds>(stop - start).count();
 
             /*std::unordered_map<uint8_t, std::string> ht;

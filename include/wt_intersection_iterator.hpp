@@ -117,10 +117,10 @@ namespace sdsl {
                     }
                     m_stack.pop();
                     if(right_nodes.size() == m_size){
-                        m_stack.emplace(right_nodes, right_ranges);
+                        m_stack.emplace(std::move(right_nodes), std::move(right_ranges));
                     }
                     if(left_nodes.size() == m_size){
-                        m_stack.emplace(left_nodes, left_ranges);
+                        m_stack.emplace(std::move(left_nodes), std::move(left_ranges));
                     }
                 }
             }

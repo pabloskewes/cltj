@@ -138,8 +138,6 @@ namespace ring {
             }
 
             void var_to_related(const var_type var, const var_type rel) {
-
-
                 auto pos_var = m_hash_table_position[var];
                 m_var_info[pos_var].related.insert(rel);
                 auto pos_rel = m_hash_table_position[rel];
