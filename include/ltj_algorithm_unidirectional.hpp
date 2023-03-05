@@ -218,9 +218,9 @@ namespace ring {
                         m_gao.up();
                     }
                 }else {
-                    //value_type c = seek(x_j);
-                    wt_intersection_iterator<wm_type> wts_iterator(itrs, x_j);
-                    value_type c = wts_iterator.next();
+                    //wt_intersection_iterator<wm_type> wts_iterator(itrs, x_j);
+                    //value_type c = wts_iterator.next();
+                    value_type c = seek(x_j);
                     //std::cout << "Seek (init): (" << (uint64_t) x_j << ": " << c << ")" <<std::endl;
                     while (c != 0) { //If empty c=0
                         //1. Adding result to tuple
@@ -239,7 +239,8 @@ namespace ring {
                         }
                         m_gao.up();
                         //5. Next constant for x_j
-                        c = wts_iterator.next();
+                        //c = wts_iterator.next();
+                        c = seek(x_j, c + 1);
                         //std::cout << "Seek (bucle): (" << (uint64_t) x_j << ": " << c << ")" <<std::endl;
                     }
                 }
@@ -248,6 +249,31 @@ namespace ring {
             return true;
         };
 
+        /**
+         *
+         * @param x_j   Variable
+         * @param c     Constant. If it is unknown the value is -1
+         * @return      The next constant that matches the intersection between the triples of x_j.
+         *              If the intersection is empty, it returns 0.
+         */
+
+        value_type seek(const var_type x_j, value_type c=-1){
+            std::vector<ltj_iter_type*>& itrs = m_var_to_iterators[x_j];
+            value_type c_i, c_prev = 0, i = 0, n_ok = 0;
+            while (true){
+                //Compute leap for each triple that contains x_j
+                if(c == -1){
+                    c_i = itrs[i]->leap(x_j);
+                }else{
+                    c_i = itrs[i]->leap(x_j, c);
+                }
+                if(c_i == 0) return 0; //Empty intersection
+                n_ok = (c_i == c_prev) ? n_ok + 1 : 1;
+                if(n_ok == itrs.size()) return c_i;
+                c = c_prev = c_i;
+                i = (i+1 == itrs.size()) ? 0 : i+1;
+            }
+        }
 
 
         void print_gao(std::unordered_map<uint8_t, std::string> &ht){

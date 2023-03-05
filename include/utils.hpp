@@ -230,7 +230,7 @@ namespace ring {
                     }
                 }
             }
-            
+
             template<class Iterator, class Ring>
             static uint64_t subject(Ring* ptr_ring, Iterator &iter){
                 if(iter.level == 0) return ptr_ring->max_s;
