@@ -52,47 +52,33 @@ namespace sdsl {
         typedef std::vector<node_type> node_vec_type;
         typedef std::pair<node_vec_type, range_vec_type> pnvr_type;
         typedef std::stack<pnvr_type> stack_type;
-        typedef struct {
-            value_type value;
-            std::vector<size_type> positions;
-        } val_pos_type;
 
     private:
         std::vector<const wt_type*> m_wt_ptrs;
-        std::vector<range_type>  m_ranges;
         stack_type m_stack;
         size_type m_size = 0;
-        size_type m_max_level;
-
-        inline value_type c_sym(value_type c, size_type level){
-                return (c >> (m_max_level - level));
-        }
 
         void copy(const wt_intersection_iterator &o) {
             m_wt_ptrs = o.m_wt_ptrs;
-            m_ranges = o.m_ranges;
             m_stack = o.m_stack;
             m_size = o.m_size;
-            m_max_level = o.m_max_level;
         }
 
     public:
 
-        const  std::vector<range_type>& ranges = m_ranges;
-
         wt_intersection_iterator() = default;
 
-        wt_intersection_iterator(std::vector<const wt_type*> &wt_ptrs, std::vector<range_type>& r){
-            m_wt_ptrs = std::move(wt_ptrs);
-            m_ranges = std::move(r);
-            m_size = m_ranges.size();
-            m_max_level = m_wt_ptrs[0]->max_level;
-            node_vec_type nodes;
+        template<class Iterator>
+        wt_intersection_iterator(const std::vector<Iterator*>& iterators, const uint64_t x_j){
+            m_size = iterators.size();
+            pnvr_type element;
             for(size_type i = 0; i < m_size; ++i){
-                nodes.emplace_back(m_wt_ptrs[i]->root());
+                auto wm_data = iterators[i]->get_wm_data(x_j);
+                m_wt_ptrs.emplace_back(wm_data.wm_ptr);
+                element.first.emplace_back(m_wt_ptrs[i]->root());
+                element.second.emplace_back(wm_data.range);
             }
-            //TODO: ojo con esto
-            m_stack.emplace(pnvr_type(std::move(nodes), m_ranges));
+            m_stack.emplace(element);
         }
 
         /***
@@ -141,156 +127,6 @@ namespace sdsl {
             return 0; //No intersection
         }
 
-        /***
-        * Next value of an intersection between WTs on the same alphabet
-        */
-        /*val_pos_type next_with_pos(){
-
-            while (!m_stack.empty()) {
-                pnvr_type x = m_stack.top(); m_stack.pop();
-                if (m_ptr_wts->at(0).is_leaf(x.first[0])) {
-                    if (m_size == x.second.size()) {
-                        for(size_type i = 0; i < m_size; ++i){
-                            m_ptr_wts->at(i).i
-
-                        }
-                        return value_type(x.first[0].sym);
-
-                    }
-                }else{
-                    node_vec_type left_nodes, right_nodes;
-                    range_vec_type left_ranges, right_ranges;
-                    std::array<range_type, 2> child_ranges;
-                    size_type rnk;
-                    bool stop = false;
-                    for(size_type i = 0; !stop && i < m_size; ++i){
-                        auto child =  m_ptr_wts->at(i).my_expand(x.first[i], x.second[i],
-                                                                 child_ranges[0], child_ranges[1], rnk);
-
-                        if(!empty(child_ranges[0])){
-                            left_nodes.emplace_back(child[0]);
-                            left_ranges.emplace_back(child_ranges[0]);
-                        }
-
-                        if(!empty(child_ranges[1])){
-                            left_nodes.emplace_back(child[1]);
-                            left_ranges.emplace_back(child_ranges[1]);
-                        }
-
-                        stop = !(right_nodes.size() == i+1 || left_nodes.size() == i+1);
-                    }
-                    if(right_nodes.size() == m_size){
-                        m_stack.emplace(pnvr_type(right_nodes, right_ranges));
-                    }
-                    if(left_nodes.size() == m_size){
-                        m_stack.emplace(pnvr_type(left_nodes, left_ranges));
-                    }
-                }
-            }
-            return 0; //No intersection
-        }*/
-
-
-
-        /***
-         * Next value of an intersection between WTs on the same alphabet greater than
-         * a given value c.
-         * @param A given value c.
-         * @pre In each iteration c has to be greater or equal than the previous c.
-         * @return
-         */
-        value_type next(value_type c){
-            while (!m_stack.empty()) {
-                const pnvr_type &x = m_stack.top();
-                if (m_wt_ptrs[0]->is_leaf(x.first[0])) {
-                    auto r = value_type(x.first[0].sym);
-                    m_stack.pop();
-                    return r;
-                }else{
-                    node_vec_type left_nodes, right_nodes;
-                    range_vec_type left_ranges, right_ranges;
-                    std::array<range_type, 2> child_ranges;
-                    size_type rnk;
-                    bool stop = false;
-                    auto c_sym_l = c_sym(c, x.first[0].level + 1); //+1 because we check next level nodes
-                    for(size_type i = 0; !stop && i < m_size; ++i){
-                        auto child =  m_wt_ptrs[i]->my_expand(x.first[i], x.second[i],
-                                                                 child_ranges[0], child_ranges[1], rnk);
-
-                        if(!empty(child_ranges[0]) && child[0].sym >= c_sym_l){
-                            left_nodes.emplace_back(child[0]);
-                            left_ranges.emplace_back(child_ranges[0]);
-                        }
-
-                        if(!empty(child_ranges[1]) && child[1].sym >= c_sym_l){
-                            right_nodes.emplace_back(child[1]);
-                            right_ranges.emplace_back(child_ranges[1]);
-                        }
-
-                        stop = !(right_nodes.size() == i+1 || left_nodes.size() == i+1);
-                    }
-                    m_stack.pop();
-                    if(right_nodes.size() == m_size){
-                        m_stack.emplace(pnvr_type(right_nodes, right_ranges));
-                    }
-                    if(left_nodes.size() == m_size){
-                        m_stack.emplace(pnvr_type(left_nodes, left_ranges));
-                    }
-                }
-            }
-            return 0; //No intersection
-        }
-
-        /***
-         * Computes all the elements in the intersection of both wavelet trees
-         * @return
-         */
-        std::vector<value_type> all(){
-            std::vector<value_type> res;
-            while (!m_stack.empty()) {
-                pnvr_type x = m_stack.top(); m_stack.pop();
-                if (m_wt_ptrs[0]->is_leaf(x.first[0])) {
-                    if (m_size == x.second.size()) {
-                        res.emplace_back(value_type(x.first[0].sym));
-                    }
-                }else{
-                    node_vec_type left_nodes, right_nodes;
-                    range_vec_type left_ranges, right_ranges;
-                    std::array<range_type, 2> child_ranges;
-                    size_type rnk;
-                    bool stop = false;
-                    for(size_type i = 0; !stop && i < m_size; ++i){
-                        auto child =  m_wt_ptrs[i]->my_expand(x.first[i], x.second[i],
-                                                                 child_ranges[0], child_ranges[1], rnk);
-
-                        if(!empty(child_ranges[0])){
-                            left_nodes.emplace_back(child[0]);
-                            left_ranges.emplace_back(child_ranges[0]);
-                        }
-
-                        if(!empty(child_ranges[1])){
-                            right_nodes.emplace_back(child[1]);
-                            right_ranges.emplace_back(child_ranges[1]);
-                        }
-
-                        stop = !(right_nodes.size() == i+1 || left_nodes.size() == i+1);
-                    }
-                    if(right_nodes.size() == m_size){
-                        m_stack.emplace(pnvr_type(right_nodes, right_ranges));
-                    }
-                    if(left_nodes.size() == m_size){
-                        m_stack.emplace(pnvr_type(left_nodes, left_ranges));
-                    }
-                }
-            }
-            return res;
-        }
-
-
-        size_type distinct() const{
-            if(m_size == 0) return 0;
-            return std::min(sdsl::size(m_ranges[0]), sdsl::size(m_ranges[1]));
-        }
 
         bool is_empty() const {
             return m_size == 0;
@@ -318,10 +154,8 @@ namespace sdsl {
         wt_intersection_iterator &operator=(wt_intersection_iterator &&o) {
             if (this != &o) {
                 m_wt_ptrs = std::move(o.m_wt_ptrs);
-                m_ranges = std::move(o.m_ranges);
                 m_stack = std::move(o.m_stack);
                 m_size = o.m_size;
-                m_max_level = o.m_max_level;
             }
             return *this;
         }
@@ -329,10 +163,8 @@ namespace sdsl {
         void swap(wt_intersection_iterator &o) {
             // m_bp.swap(bp_support.m_bp); use set_vector to set the supported bit_vector
             std::swap(m_wt_ptrs, o.m_wt_ptrs);
-            std::swap(m_ranges, o.m_ranges);
             std::swap(m_stack, o.m_stack);
             std::swap(m_size, o.m_size);
-            std::swap(m_max_level, o.m_max_level);
         }
     };
 

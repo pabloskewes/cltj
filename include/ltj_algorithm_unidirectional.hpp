@@ -219,14 +219,7 @@ namespace ring {
                     }
                 }else {
                     //value_type c = seek(x_j);
-                    std::vector<const wm_type*> wm_ptrs;
-                    std::vector<range_type> ranges;
-                    for(ltj_iter_type* iter : itrs){
-                        auto wm_data = iter->get_wm_data(x_j);
-                        wm_ptrs.emplace_back(wm_data.wm_ptr);
-                        ranges.emplace_back(wm_data.range);
-                    }
-                    wt_intersection_iterator<wm_type> wts_iterator(wm_ptrs, ranges);
+                    wt_intersection_iterator<wm_type> wts_iterator(itrs, x_j);
                     value_type c = wts_iterator.next();
                     //std::cout << "Seek (init): (" << (uint64_t) x_j << ": " << c << ")" <<std::endl;
                     while (c != 0) { //If empty c=0
