@@ -59,6 +59,11 @@ namespace ring {
         }
 
     public:
+
+        const size_type& max_s = m_max_s;
+        const size_type& max_p = m_max_p;
+        const size_type& max_o = m_max_o;
+
         ring() = default;
 
         // Assumes the triples have been stored in a vector<spo_triple>

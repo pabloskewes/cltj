@@ -33,7 +33,7 @@
 namespace ring {
 
     template<class iterator_t = ltj_iterator_unidirectional<uring<>, uint64_t, uint8_t>,
-             class gao_t = gao::gao_adaptive<iterator_t, util::trait_size_v2> >
+             class gao_t = gao::gao_adaptive<iterator_t, util::trait_size> >
     class ltj_algorithm_unidirectional {
 
     public:

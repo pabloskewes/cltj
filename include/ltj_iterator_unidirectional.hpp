@@ -22,6 +22,7 @@
 
 #define VERBOSE 0
 
+#include <configuration.hpp>
 #include <triple_pattern.hpp>
 #include <bwt_interval.hpp>
 #include <ltj_iterator_base.hpp>
@@ -37,7 +38,6 @@ namespace ring {
         typedef ring_t ring_type;
         typedef uint64_t size_type;
         typedef typename ring_type::bwt_type::wm_type wm_type;
-        enum state_type {s, p, o};
         typedef struct {
             const wm_type* wm_ptr;
             range_type range;
@@ -65,6 +65,8 @@ namespace ring {
 
     public:
         //const bool &is_empty = m_is_empty;
+        const size_type& level = m_level;
+        const std::array<state_type, 3>& state = m_state;
 
         ltj_iterator_unidirectional() = default;
 
@@ -494,6 +496,10 @@ namespace ring {
 
         inline size_type interval_length() const{
             return m_intervals[m_level].size();
+        }
+
+        inline const bwt_interval& interval() const{
+            return m_intervals[m_level];
         }
 
         //Solo funciona en último nivel, en otro caso habría que reajustar

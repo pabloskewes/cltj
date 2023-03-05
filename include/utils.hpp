@@ -52,7 +52,7 @@ namespace ring {
         }*/
 
 
-        struct trait_size {
+        struct trait_size_old {
 
             template<class Iterator, class Ring>
             static uint64_t subject(Ring* ptr_ring, Iterator &iter){
@@ -71,7 +71,7 @@ namespace ring {
 
         };
 
-        struct trait_size_v2 {
+        struct trait_size {
 
             template<class Iterator, class Ring>
             static uint64_t subject(Ring* ptr_ring, Iterator &iter){
@@ -94,40 +94,103 @@ namespace ring {
 
             template<class Iterator, class Ring>
             static uint64_t subject(Ring* ptr_ring, Iterator &iter){
-                if (iter.cur_p != -1 && iter.cur_o == -1) {
-                    return ptr_ring->distinct_PO_S(iter.i_s); //i_s = i_o
-                } else if (iter.cur_p == -1 && iter.cur_o != -1) {
-                    return ptr_ring->distinct_OP_S(iter.i_s);
-                } else if ( iter.cur_p != -1 && iter.cur_o != -1) {
-                    return ptr_ring->distinct_PO_S(iter.i_s);
+                if(iter.level == 0) return ptr_ring->max_s;
+                if(iter.level == 2){
+                    return ptr_ring->distinct_PO_S(iter.interval());
+                }else {//iter.level == 1
+                    if(iter.state[0] == p){
+                        return ptr_ring->distinct_PO_S(iter.interval());
+                    }else{
+                        return ptr_ring->distinct_OP_S(iter.interval());
+                    }
                 }
-                return ptr_ring->max_s;
             }
 
             template<class Iterator, class Ring>
             static uint64_t predicate(Ring* ptr_ring, Iterator &iter){
-                if (iter.cur_o != -1 && iter.cur_s == -1) {
-                    return ptr_ring->distinct_OS_P(iter.i_p); //i_s = i_o
-                } else if (iter.cur_o == -1 && iter.cur_s != -1) {
-                    return ptr_ring->distinct_SO_P(iter.i_p);
-                } else if ( iter.cur_o != -1 && iter.cur_s != -1) {
-                    return ptr_ring->distinct_SO_P(iter.i_p);
+                if(iter.level == 0) return ptr_ring->max_p;
+                if(iter.level == 2){
+                    return ptr_ring->distinct_OS_P(iter.interval());
+                }else {//iter.level == 1
+                    if(iter.state[0] == s){
+                        return ptr_ring->distinct_SO_P(iter.interval());
+                    }else{
+                        return ptr_ring->distinct_OS_P(iter.interval());
+                    }
                 }
-                return ptr_ring->max_p;
             }
 
             template<class Iterator, class Ring>
             static uint64_t object(Ring* ptr_ring, Iterator &iter){
-                if (iter.cur_p != -1 && iter.cur_s == -1) {
-                    return ptr_ring->distinct_PS_O(iter.i_o); //i_s = i_o
-                } else if (iter.cur_p == -1 && iter.cur_s != -1) {
-                    return ptr_ring->distinct_SP_O(iter.i_o);
-                } else if ( iter.cur_p != -1 && iter.cur_s != -1) {
-                    return ptr_ring->distinct_PS_O(iter.i_o);
+                if(iter.level == 0) return ptr_ring->max_p;
+                if(iter.level == 2){
+                    return ptr_ring->distinct_SP_O(iter.interval());
+                }else {//iter.level == 1
+                    if(iter.state[0] == s){
+                        return ptr_ring->distinct_SP_O(iter.interval());
+                    }else{
+                        return ptr_ring->distinct_PS_O(iter.interval());
+                    }
                 }
-                return ptr_ring->max_o;
             }
 
+        };
+
+        struct trait_distinct_uni {
+
+            template<class Iterator, class Ring>
+            static uint64_t subject(Ring* ptr_ring, Iterator &iter){
+                if(iter.level == 0) return ptr_ring->max_s;
+                if(iter.level == 2){
+                    if(iter.state[0] == p && iter.state[1] == o){
+                        return ptr_ring->distinct_PO_S(iter.interval());
+                    }else{
+                        return ptr_ring->distinct_OP_S(iter.interval());
+                    }
+                }else {//iter.level == 1
+                    if(iter.state[0] == p){
+                        return ptr_ring->distinct_PO_S(iter.interval());
+                    }else{
+                        return ptr_ring->distinct_OP_S(iter.interval());
+                    }
+                }
+            }
+
+            template<class Iterator, class Ring>
+            static uint64_t predicate(Ring* ptr_ring, Iterator &iter){
+                if(iter.level == 0) return ptr_ring->max_p;
+                if(iter.level == 2){
+                    if(iter.state[0] == s && iter.state[1] == o){
+                        return ptr_ring->distinct_SO_P(iter.interval());
+                    }else{
+                        return ptr_ring->distinct_OS_P(iter.interval());
+                    }
+                }else {//iter.level == 1
+                    if(iter.state[0] == s){
+                        return ptr_ring->distinct_SO_P(iter.interval());
+                    }else{
+                        return ptr_ring->distinct_OS_P(iter.interval());
+                    }
+                }
+            }
+
+            template<class Iterator, class Ring>
+            static uint64_t object(Ring* ptr_ring, Iterator &iter){
+                if(iter.level == 0) return ptr_ring->max_p;
+                if(iter.level == 2){
+                    if(iter.state[0] == s && iter.state[1] == p){
+                        return ptr_ring->distinct_SP_O(iter.interval());
+                    }else{
+                        return ptr_ring->distinct_PS_O(iter.interval());
+                    }
+                }else {//iter.level == 1
+                    if(iter.state[0] == s){
+                        return ptr_ring->distinct_SP_O(iter.interval());
+                    }else{
+                        return ptr_ring->distinct_PS_O(iter.interval());
+                    }
+                }
+            }
 
         };
     }

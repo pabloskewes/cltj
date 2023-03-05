@@ -88,6 +88,10 @@ namespace ring {
         const bwt_type &p_ops = m_bwt_p_ops; //SOP
         const bwt_type &o_ops = m_bwt_o_ops; //PSO
 
+        const size_type& max_s = m_max_s;
+        const size_type& max_p = m_max_p;
+        const size_type& max_o = m_max_o;
+
         uring_muthu() = default;
 
         // Assumes the triples have been stored in a vector<spo_triple>

@@ -172,7 +172,7 @@ void query(const std::string &file, const std::string &queries){
 
             typedef ring::ltj_iterator_unidirectional<ring_type, uint8_t, uint64_t> iterator_type;
             typedef ring::ltj_algorithm_unidirectional<iterator_type,
-                    ring::gao::gao_adaptive<iterator_type, ring::util::trait_size_v2>> algorithm_type;
+                    ring::gao::gao_adaptive<iterator_type, trait_type>> algorithm_type;
             algorithm_type ltj(&query, &graph);
 
             typedef std::vector<typename algorithm_type::tuple_type> results_type;
@@ -226,13 +226,13 @@ int main(int argc, char* argv[])
     std::string type = get_type(index);
 
     if(type == "uring"){
-        query<ring::uring<>, ring::util::trait_size_v2>(index, queries);
+        query<ring::uring<>, ring::util::trait_size>(index, queries);
     }else if (type == "c-uring"){
-        query<ring::c_uring, ring::util::trait_size_v2>(index, queries);
+        query<ring::c_uring, ring::util::trait_size>(index, queries);
     }else if(type == "uring-muthu"){
-        query<ring::uring_muthu<>, ring::util::trait_size_v2>(index, queries);
+        query<ring::uring_muthu<>, ring::util::trait_distinct_uni>(index, queries);
     }else if (type == "c-uring-muthu"){
-        query<ring::c_uring_muthu, ring::util::trait_size_v2>(index, queries);
+        query<ring::c_uring_muthu, ring::util::trait_distinct_uni>(index, queries);
     }else{
         std::cout << "Type of index: " << type << " is not supported." << std::endl;
     }

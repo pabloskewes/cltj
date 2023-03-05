@@ -226,17 +226,17 @@ int main(int argc, char* argv[])
     std::string type = get_type(index);
 
     if(type == "ring"){
-        query<ring::ring<>, ring::util::trait_size_v2>(index, queries);
+        query<ring::ring<>, ring::util::trait_size>(index, queries);
     }else if (type == "c-ring"){
-        query<ring::c_ring, ring::util::trait_size_v2>(index, queries);
+        query<ring::c_ring, ring::util::trait_size>(index, queries);
     }else if (type == "ring-sel"){
-        query<ring::ring_sel, ring::util::trait_size_v2>(index, queries);
+        query<ring::ring_sel, ring::util::trait_size>(index, queries);
     }else if (type == "ring-muthu"){
-        query<ring::ring_muthu<>, ring::util::trait_size_v2>(index, queries);
+        query<ring::ring_muthu<>, ring::util::trait_distinct>(index, queries);
     }else if (type == "c-ring-muthu"){
-        query<ring::c_ring_muthu, ring::util::trait_size_v2>(index, queries);
+        query<ring::c_ring_muthu, ring::util::trait_distinct>(index, queries);
     }else if (type == "ring-sel-muthu"){
-        query<ring::ring_sel_muthu, ring::util::trait_size_v2>(index, queries);
+        query<ring::ring_sel_muthu, ring::util::trait_distinct>(index, queries);
     }else{
         std::cout << "Type of index: " << type << " is not supported." << std::endl;
     }

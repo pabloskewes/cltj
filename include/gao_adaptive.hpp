@@ -36,7 +36,7 @@ namespace ring {
 
 
         template<class ltj_iterator_t = ltj_iterator <ring<>, uint8_t, uint64_t>,
-                class gao_trait_t = util::trait_size_v2>
+                class gao_trait_t = util::trait_size>
         class gao_adaptive {
 
         public:

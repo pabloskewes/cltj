@@ -34,7 +34,6 @@ namespace ring {
         typedef var_t var_type;
         typedef ring_t ring_type;
         typedef uint64_t size_type;
-        enum state_type {s, p, o};
         //std::vector<value_type> leap_result_type;
 
     private:
@@ -60,6 +59,8 @@ namespace ring {
 
     public:
         //const bool &is_empty = m_is_empty;
+        const size_type& level = m_level;
+        const std::array<state_type, 3>& state = m_state;
 
         ltj_iterator() = default;
 
@@ -456,6 +457,10 @@ namespace ring {
 
         inline size_type interval_length() const{
             return m_intervals[m_level].size();
+        }
+
+        inline const bwt_interval& interval() const{
+            return m_intervals[m_level];
         }
 
         //Solo funciona en último nivel, en otro caso habría que reajustar
