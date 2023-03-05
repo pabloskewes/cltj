@@ -122,7 +122,7 @@ namespace ring {
 
             template<class Iterator, class Ring>
             static uint64_t object(Ring* ptr_ring, Iterator &iter){
-                if(iter.level == 0) return ptr_ring->max_p;
+                if(iter.level == 0) return ptr_ring->max_o;
                 if(iter.level == 2){
                     return ptr_ring->distinct_SP_O(iter.interval());
                 }else {//iter.level == 1
@@ -176,7 +176,7 @@ namespace ring {
 
             template<class Iterator, class Ring>
             static uint64_t object(Ring* ptr_ring, Iterator &iter){
-                if(iter.level == 0) return ptr_ring->max_p;
+                if(iter.level == 0) return ptr_ring->max_o;
                 if(iter.level == 2){
                     if(iter.state[0] == s && iter.state[1] == p){
                         return ptr_ring->distinct_SP_O(iter.interval());
