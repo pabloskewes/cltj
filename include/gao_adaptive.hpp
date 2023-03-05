@@ -108,7 +108,7 @@ namespace ring {
             }
 
 
-            bool var_to_vector(const var_type var, const size_type size) {
+            bool var_to_vector(const var_type var, const size_type i, const state_type state) {
 
                 const auto &iters = m_ptr_var_iterators->at(var);
                 if(iters.size() == 1){
@@ -119,13 +119,14 @@ namespace ring {
                     if (it == m_hash_table_position.end()) {
                         info_var_type info;
                         info.name = var;
-                        info.weight = size;
+                        info.weight = gao_trait_type::get(m_ptr_ring, m_ptr_iterators->at(i), state);
                         info.is_bound = false;
                         info.pos = m_var_info.size();
                         m_var_info.emplace_back(info);
                         m_hash_table_position.insert({var, info.pos});
                         m_not_bound.push_back(info.pos);
                     } else {
+                        auto size = gao_trait_type::get(m_ptr_ring, m_ptr_iterators->at(i), state);
                         info_var_type &info = m_var_info[it->second];
                         if (info.weight > size) {
                             info.weight = size;
@@ -166,21 +167,20 @@ namespace ring {
                 for (const triple_pattern &triple_pattern : *m_ptr_triple_patterns) {
                     bool s = false, p = false, o = false;
                     var_type var_s, var_p, var_o;
-                    size_type size;
                     if (triple_pattern.s_is_variable()) {
                         var_s = (var_type) triple_pattern.term_s.value;
-                        size = gao_trait_type::subject(m_ptr_ring, m_ptr_iterators->at(i));
-                        s = var_to_vector(var_s, size);
+                        //size = gao_trait_type::subject(m_ptr_ring, m_ptr_iterators->at(i));
+                        s = var_to_vector(var_s, i, state_type::s);
                     }
                     if (triple_pattern.p_is_variable()) {
                         var_p = (var_type) triple_pattern.term_p.value;
-                        size = gao_trait_type::predicate(m_ptr_ring, m_ptr_iterators->at(i));
-                        p = var_to_vector(var_p, size);
+                        //size = gao_trait_type::predicate(m_ptr_ring, m_ptr_iterators->at(i));
+                        p = var_to_vector(var_p, i, state_type::p);
                     }
                     if (triple_pattern.o_is_variable()) {
                         var_o = (var_type) triple_pattern.term_o.value;
-                        size = gao_trait_type::object(m_ptr_ring, m_ptr_iterators->at(i));
-                        o = var_to_vector(var_o, size);
+                        //size = gao_trait_type::object(m_ptr_ring, m_ptr_iterators->at(i));
+                        o = var_to_vector(var_o, i, state_type::o);
                     }
 
                     if (s && p) {
