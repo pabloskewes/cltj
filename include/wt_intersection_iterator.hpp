@@ -75,8 +75,8 @@ namespace sdsl {
             for(size_type i = 0; i < m_size; ++i){
                 auto wm_data = iterators[i]->get_wm_data(x_j);
                 m_wt_ptrs.emplace_back(wm_data.wm_ptr);
-                element.first.emplace_back(m_wt_ptrs[i]->root());
-                element.second.emplace_back(wm_data.range);
+                element.first.emplace_back(std::move(m_wt_ptrs[i]->root()));
+                element.second.emplace_back(std::move(wm_data.range));
             }
             m_stack.emplace(element);
         }
