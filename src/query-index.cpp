@@ -175,7 +175,7 @@ void query(const std::string &file, const std::string &queries){
 
             start = high_resolution_clock::now();
             algorithm_type ltj(&query, &graph);
-            ltj.join(res, 1000, 600);
+            ltj.join(res, 5000, 600);
             stop = high_resolution_clock::now();
 
             total_time = duration_cast<nanoseconds>(stop - start).count();
