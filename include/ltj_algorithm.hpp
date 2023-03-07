@@ -196,13 +196,18 @@ namespace ring {
             if(j == m_gao.size()){
                 //Report results
                 res.emplace_back(tuple);
+                std::cout << "Add result" << std::endl;
+                for(const auto &dat : tuple){
+                    std::cout << "{" << (uint64_t) dat.first << "=" << dat.second << "} ";
+                }
+                std::cout << std::endl;
             }else{
                 var_type x_j = m_gao.next();
                 std::cout << "Variable: " << (uint64_t) x_j << std::endl;
                 std::vector<ltj_iter_type*>& itrs = m_var_to_iterators[x_j];
                 bool ok;
                 if(itrs.size() == 1 && itrs[0]->in_last_level()) {//Lonely variables
-                    std::cout << "Seeking (last level)" <<std::endl;
+                    std::cout << "Seeking (last level)" << std::endl;
                     auto results = itrs[0]->seek_all(x_j);
                     //std::cout << "Results: " << results.size() << std::endl;
                     std::cout << "Seek (last level): (" << (uint64_t) x_j << ": size=" << results.size() << ")" <<std::endl;
