@@ -198,11 +198,13 @@ namespace ring {
                 res.emplace_back(tuple);
             }else{
                 var_type x_j = m_gao.next();
+                std::cout << "Variable: " << (uint64_t) x_j << std::endl;
                 std::vector<ltj_iter_type*>& itrs = m_var_to_iterators[x_j];
                 bool ok;
                 if(itrs.size() == 1 && itrs[0]->in_last_level()) {//Lonely variables
                     auto results = itrs[0]->seek_all(x_j);
                     //std::cout << "Results: " << results.size() << std::endl;
+                    std::cout << "Seek (last level): (" << (uint64_t) x_j << ": size=" << results.size() << ")" <<std::endl;
                     for (const auto &c : results) {
                         //1. Adding result to tuple
                         tuple[j] = {x_j, c};
@@ -218,7 +220,7 @@ namespace ring {
                     }
                 }else {
                     value_type c = seek(x_j);
-                    //std::cout << "Seek (init): (" << (uint64_t) x_j << ": " << c << ")" <<std::endl;
+                    std::cout << "Seek (init): (" << (uint64_t) x_j << ": " << c << ")" <<std::endl;
                     while (c != 0) { //If empty c=0
                         //1. Adding result to tuple
                         tuple[j] = {x_j, c};
@@ -237,7 +239,7 @@ namespace ring {
                         m_gao.up();
                         //5. Next constant for x_j
                         c = seek(x_j, c + 1);
-                        //std::cout << "Seek (bucle): (" << (uint64_t) x_j << ": " << c << ")" <<std::endl;
+                        std::cout << "Seek (bucle): (" << (uint64_t) x_j << ": " << c << ")" <<std::endl;
                     }
                 }
                 m_gao.done();
