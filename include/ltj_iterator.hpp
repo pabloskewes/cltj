@@ -475,6 +475,14 @@ namespace ring {
             return {};
         }
 
+        /*value_type  leap_last_range(var_type var){
+
+        }
+
+        value_type  leap_last_range_next(var_type var){
+
+        }*/
+
 
     };
 

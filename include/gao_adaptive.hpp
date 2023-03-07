@@ -193,9 +193,11 @@ namespace ring {
                     ++i;
                 }
                 m_index = 0;
+                for(const auto & v : m_var_info){
+                    std::cout << "var=" << (uint64_t) v.name << " weight=" << v.weight << std::endl;
+                }
                 //std::cout << "Done. " << std::endl;
 
-                //std::cout << "Done. " << std::endl;
             }
 
             //! Copy constructor

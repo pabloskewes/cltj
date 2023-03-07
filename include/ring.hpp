@@ -546,11 +546,7 @@ namespace ring {
 
             //bwt_interval I_aux(I.left() - 2 * m_n_triples, I.right() - 2 * m_n_triples);
             //uint64_t nextv = I_aux.next_value(p_value, m_bwt_p);
-            uint64_t nextv = I.next_value(p_value, m_bwt_p);
-            if (nextv == 0)
-                return 0;
-            else
-                return nextv;
+            return I.next_value(p_value, m_bwt_p);
         }
 
         bwt_interval down_P(uint64_t p_value) {
