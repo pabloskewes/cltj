@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import sys
 
 
-limit = 600000000000
+limit = 600
 
 def to_seconds(value):
 	return value / 1000000000.0
@@ -17,24 +17,24 @@ df_ring = pd.read_csv(sys.argv[2], header=None, delimiter=';', names=['id', 'res
 ratio = name1 + "/" + name2
 
 df_data = pd.DataFrame()
-df_data[name1] = df_rdfcsa['time']
-df_data[name2] = df_ring['time']
+df_data[name1] = df_rdfcsa['time'].div( 1000000000.0)
+df_data[name2] = df_ring['time'].div( 1000000000.0)
 df_data[ratio] = df_data[name1] / df_data[name2]
 
 
 col_ring = df_data[name1]
 print("*****"+name1+"*****")
-sec_median = to_seconds(col_ring.median())
+sec_median = col_ring.median()
 print("Median: " + str(sec_median))
-print("Avg: " + str(to_seconds(col_ring.mean())))
+print("Avg: " + str(col_ring.mean()))
 timeout = col_ring[col_ring >= limit].count()
 print("Timeout: " + str(timeout))
 
 col_rdfcsa = df_data[name2]
 print("*****"+name2+"*****")
-sec_median = to_seconds(col_rdfcsa.median())
+sec_median = col_rdfcsa.median()
 print("Median: " + str(sec_median))
-print("Avg: " + str(to_seconds(col_rdfcsa.mean())))
+print("Avg: " + str(col_rdfcsa.mean()))
 timeout = col_rdfcsa[col_rdfcsa >= limit].count()
 print("Timeout: " + str(timeout))
 

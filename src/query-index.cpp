@@ -26,13 +26,14 @@
 #include <ltj_iterator.hpp>
 #include "utils.hpp"
 #include <ring_muthu.hpp>
+#include <time.hpp>
 
 using namespace std;
 
 //#include<chrono>
 //#include<ctime>
 
-using namespace std::chrono;
+using namespace ::util::time;
 
 bool get_file_content(string filename, vector<string> & vector_of_strings)
 {
@@ -147,8 +148,9 @@ void query(const std::string &file, const std::string &queries){
     std::ifstream ifs;
     uint64_t nQ = 0;
 
-    high_resolution_clock::time_point start, stop;
-    uint64_t total_time;
+    ::util::time::usage::usage_type start, stop;
+    uint64_t total_elapsed_time;
+    uint64_t total_user_time;
 
     if(result)
     {
@@ -173,12 +175,13 @@ void query(const std::string &file, const std::string &queries){
             typedef std::vector<typename algorithm_type::tuple_type> results_type;
             results_type res;
 
-            start = high_resolution_clock::now();
+            start = ::util::time::usage::now();
             algorithm_type ltj(&query, &graph);
             ltj.join(res, 5000, 600);
-            stop = high_resolution_clock::now();
+            stop = ::util::time::usage::now();
 
-            total_time = duration_cast<nanoseconds>(stop - start).count();
+            total_elapsed_time = (uint64_t) duration_cast<nanoseconds>(stop.elapsed - start.elapsed);
+            total_user_time = (uint64_t) duration_cast<nanoseconds>(stop.user - start.user);
 
             /*std::unordered_map<uint8_t, std::string> ht;
             for(const auto &p : hash_table_vars){
@@ -190,7 +193,7 @@ void query(const std::string &file, const std::string &queries){
             //ltj.print_gao(ht);
             //cout << "##########" << endl;
             //ltj.print_results(res, ht);
-            cout << nQ <<  ";" << res.size() << ";" << total_time << endl;
+            cout << nQ <<  ";" << res.size() << ";" << total_elapsed_time << ";" << total_user_time << endl;
             nQ++;
 
             // cout << std::chrono::duration_cast<std::chrono::nanoseconds> (end - begin).count() << std::endl;
