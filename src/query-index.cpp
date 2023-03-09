@@ -177,7 +177,7 @@ void query(const std::string &file, const std::string &queries){
 
             start = ::util::time::usage::now();
             algorithm_type ltj(&query, &graph);
-            ltj.join(res, 5000, 600);
+            ltj.join(res, 0, 600);
             stop = ::util::time::usage::now();
 
             total_elapsed_time = (uint64_t) duration_cast<nanoseconds>(stop.elapsed - start.elapsed);

@@ -41,12 +41,11 @@ namespace util {
 
     namespace time {
 
-
-        const static uint64_t nanoseconds      = 1/1000;
-        const static uint64_t microseconds    = 1;
-        const static uint64_t milliseconds    = 1000;
-        const static uint64_t seconds         = 1000000;
-        const static uint64_t minutes         = 60000000;
+        const static uint64_t nanoseconds     = 1;
+        const static uint64_t microseconds    = 1000;
+        const static uint64_t milliseconds    = 1000000;
+        const static uint64_t seconds         = 1000000000;
+        const static uint64_t minutes         = 60000000000;
 
         template<uint64_t ratio = 1>
         static double duration_cast(uint64_t value){
@@ -65,7 +64,7 @@ namespace util {
 
                 struct rusage r_usage;
                 getrusage(RUSAGE_SELF, &r_usage);
-                return (r_usage.ru_utime.tv_sec * seconds + r_usage.ru_utime.tv_usec);
+                return (r_usage.ru_utime.tv_sec *1000000 + r_usage.ru_utime.tv_usec)*1000;
             }
 
         };
@@ -82,7 +81,7 @@ namespace util {
 
                 struct rusage r_usage;
                 getrusage(RUSAGE_SELF, &r_usage);
-                return (r_usage.ru_stime.tv_sec * seconds + r_usage.ru_stime.tv_usec);
+                return (r_usage.ru_stime.tv_sec * 1000000 + r_usage.ru_stime.tv_usec)*1000;
             }
 
         };
@@ -106,8 +105,8 @@ namespace util {
                 struct rusage r_usage;
                 getrusage(RUSAGE_SELF, &r_usage);
                 usage_type res;
-                res.user = r_usage.ru_utime.tv_sec * seconds + r_usage.ru_utime.tv_usec;
-                res.system = r_usage.ru_stime.tv_sec * seconds + r_usage.ru_stime.tv_usec;
+                res.user = (r_usage.ru_utime.tv_sec * 1000000 + r_usage.ru_utime.tv_usec)*1000;
+                res.system = (r_usage.ru_stime.tv_sec * 1000000 + r_usage.ru_stime.tv_usec)*1000;
                 res.elapsed = res.user + res.system;
                 return res;
             }
