@@ -61,3 +61,6 @@ target_link_libraries(build-index-uring sdsl divsufsort divsufsort64)
 
 add_executable(query-index-uring src/query-index-uring.cpp)
 target_link_libraries(query-index-uring sdsl divsufsort divsufsort64)
+
+add_executable(check src/check.cpp)
+target_link_libraries(check sdsl divsufsort divsufsort64)

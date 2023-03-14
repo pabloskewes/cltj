@@ -19,12 +19,13 @@
 
 #include <iostream>
 #include <utility>
-#include "uring.hpp"
-#include "uring_muthu.hpp"
+#include "ring.hpp"
 #include <chrono>
 #include <triple_pattern.hpp>
-#include <ltj_algorithm_unidirectional.hpp>
+#include <ltj_algorithm.hpp>
+#include <ltj_iterator.hpp>
 #include "utils.hpp"
+#include <ring_muthu.hpp>
 #include <time.hpp>
 
 using namespace std;
@@ -132,24 +133,14 @@ std::string get_type(const std::string &file){
 }
 
 
-template<class ring_type, class trait_type>
-void query(const std::string &file, const std::string &queries, uint64_t timeout){
+void query(const std::string &queries){
     vector<string> dummy_queries;
     bool result = get_file_content(queries, dummy_queries);
 
-    ring_type graph;
-
-    cout << " Loading the index..."; fflush(stdout);
-    sdsl::load_from_file(graph, file);
-
-    cout << endl << " Index loaded " << sdsl::size_in_bytes(graph) << " bytes" << endl;
-
     std::ifstream ifs;
     uint64_t nQ = 0;
+    uint64_t same = 0, diff = 0;
 
-    ::util::time::usage::usage_type start, stop;
-    uint64_t total_elapsed_time;
-    uint64_t total_user_time;
     if(result)
     {
 
@@ -166,40 +157,79 @@ void query(const std::string &file, const std::string &queries, uint64_t timeout
                 query.push_back(triple_pattern);
             }
 
-            typedef ring::ltj_iterator_unidirectional<ring_type, uint8_t, uint64_t> iterator_type;
-            typedef ring::ltj_algorithm_unidirectional<iterator_type,
-                    ring::gao::gao_adaptive<iterator_type, trait_type>> algorithm_type;
-            typedef std::vector<typename algorithm_type::tuple_type> results_type;
-            results_type res;
+            std::unordered_map<uint8_t, uint64_t> ht;
+            for(const auto & tp : query){
+                uint64_t s_aux = 0, p_aux = 0, o_aux = 0;
+                if(tp.s_is_variable()){
+                    s_aux = tp.term_s.value;
+                    auto it = ht.find(s_aux);
+                    if(it == ht.end()){
+                        ht.insert({s_aux, 1});
+                    }else {
+                        ++it->second;
+                    }
+                }
+                if(tp.p_is_variable()){
+                    p_aux = tp.term_p.value;
+                    auto it = ht.find(p_aux);
+                    if(it == ht.end()){
+                        ht.insert({p_aux, 1});
+                    }else {
+                        ++it->second;
+                    }
+                }
 
-            start = ::util::time::usage::now();
-            algorithm_type ltj(&query, &graph);
-            ltj.join(res, 1000, 600);
-            stop = ::util::time::usage::now();
+                if(tp.o_is_variable()){
+                    o_aux = tp.term_o.value;
+                    if(o_aux != s_aux){
+                        auto it = ht.find(o_aux);
+                        if(it == ht.end()){
+                            ht.insert({o_aux, 1});
+                        }else {
+                            ++it->second;
+                        }
+                    }
+                }
 
-            total_elapsed_time = (uint64_t) duration_cast<nanoseconds>(stop.elapsed - start.elapsed);
-            total_user_time = (uint64_t) duration_cast<nanoseconds>(stop.user - start.user);
+            }
 
-            /*std::unordered_map<uint8_t, std::string> ht;
-            for(const auto &p : hash_table_vars){
-                ht.insert({p.second, p.first});
-            }*/
+            uint64_t num_lonely = 0, num_no_lonely = 0;
+            for(const auto &v : ht){
+                if(v.second > 1){
+                    ++num_no_lonely;
+                }else{
+                    ++num_lonely;
+                }
+            }
 
-            /*cout << "Query Details:" << endl;
-            ltj.print_query(ht);
-            ltj.print_gao(ht);
-            cout << "##########" << endl;*/
 
-            //ltj.print_results(res, ht);
+            if(num_no_lonely <= 1){
+                ++same;
+                cout << nQ <<  ";" << "SAME" << endl;
+            }else{
+                ++diff;
+                cout << nQ << ";" << "DIFF" << endl;
+            }
 
-            cout << nQ <<  ";" << res.size() << ";" << total_elapsed_time << ";" << total_user_time << endl;
             nQ++;
 
             // cout << std::chrono::duration_cast<std::chrono::nanoseconds> (end - begin).count() << std::endl;
 
             //cout << "RESULTS QUERY " << count << ": " << number_of_results << endl;
             count += 1;
+            /*std::unordered_map<uint8_t, std::string> ht;
+            for(const auto &p : hash_table_vars){
+                ht.insert({p.second, p.first});
+            }*/
+
+            //cout << "Query Details:" << endl;
+            //ltj.print_query(ht);
+            //ltj.print_gao(ht);
+            //cout << "##########" << endl;
+            //ltj.print_results(res, ht);
+
         }
+        std::cerr << "Total: " << nQ << " same=" << same << " diff=" << diff << endl;
 
     }
 }
@@ -210,27 +240,13 @@ int main(int argc, char* argv[])
 
     typedef ring::ring<> ring_type;
     //typedef ring::c_ring ring_type;
-    if(argc != 4){
-        std::cout << "Usage: " << argv[0] << " <index> <queries> <timeout>" << std::endl;
+    if(argc != 2){
+        std::cout << "Usage: " << argv[0] << " <queries>" << std::endl;
         return 0;
     }
+    std::string queries = argv[1];
+    query(queries);
 
-    std::string index = argv[1];
-    std::string queries = argv[2];
-    uint64_t timeout = std::atoll(argv[3]);
-    std::string type = get_type(index);
-
-    if(type == "uring"){
-        query<ring::uring<>, ring::util::trait_size>(index, queries, timeout);
-    }else if (type == "c-uring"){
-        query<ring::c_uring, ring::util::trait_size>(index, queries, timeout);
-    }else if(type == "uring-muthu"){
-        query<ring::uring_muthu<>, ring::util::trait_distinct_uni>(index, queries, timeout);
-    }else if (type == "c-uring-muthu"){
-        query<ring::c_uring_muthu, ring::util::trait_distinct_uni>(index, queries, timeout);
-    }else{
-        std::cout << "Type of index: " << type << " is not supported." << std::endl;
-    }
 	return 0;
 }
 
