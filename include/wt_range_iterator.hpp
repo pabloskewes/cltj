@@ -82,10 +82,10 @@ namespace sdsl {
                    m_stack.pop();
                    return r;
                 }else{
-                    /*auto child =  m_wt_ptr->my_expand(x.first, x.second,
-                                                          child_ranges[0], child_ranges[1], rnk);*/
-                    auto child = m_wt_ptr->expand(x.first);
-                    auto child_ranges = m_wt_ptr->expand(x.first, x.second);
+                    size_type rnk;
+                    array<range_type, 2> child_ranges;
+                    auto child =  m_wt_ptr->my_expand(x.first, x.second,
+                                                          child_ranges[0], child_ranges[1], rnk);
                     m_stack.pop();
                     if(!empty(child_ranges[1])){
                         m_stack.emplace(std::move(child[1]), child_ranges[1]);
