@@ -170,4 +170,4 @@ namespace sdsl {
 
 }
 
-#endif //RING_RPQ_WT_INTERSECTION_HPP
+#endif //RING_RPQ_WT_INTERSECTION_ITERATOR_HPP

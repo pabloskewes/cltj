@@ -31,8 +31,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // Created by Adrián on 22/9/22.
 //
 
-#ifndef RING_RPQ_WT_INTERSECTION_ITERATOR_HPP
-#define RING_RPQ_WT_INTERSECTION_ITERATOR_HPP
+#ifndef RING_RPQ_WT_ITERATOR_HPP
+#define RING_RPQ_WT_ITERATOR_HPP
 
 #include <algorithm>
 #include <utility>
@@ -65,7 +65,8 @@ namespace sdsl {
         wt_range_iterator() = default;
 
         wt_range_iterator(const wt_type* wt_ptr, const range_type &range){
-            pnvr_type element {m_wt_ptr->root, range};
+            m_wt_ptr = wt_ptr;
+            pnvr_type element{m_wt_ptr->root(), range};
             m_stack.emplace(element);
         }
 
@@ -76,8 +77,8 @@ namespace sdsl {
 
             while (!m_stack.empty()) {
                 const pnvr_type &x = m_stack.top();
-                if (m_wt_ptr->is_leaf(x.first[0])) {
-                   auto r = value_type(x.first[0].sym);
+                if (m_wt_ptr->is_leaf(x.first)) {
+                   auto r = value_type(x.first.sym);
                    m_stack.pop();
                    return r;
                 }else{
@@ -132,4 +133,4 @@ namespace sdsl {
 
 }
 
-#endif //RING_RPQ_WT_INTERSECTION_HPP
+#endif //RING_RPQ_WT_ITERATOR_HPP

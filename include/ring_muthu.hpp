@@ -35,14 +35,14 @@ namespace ring {
     public:
         typedef uint64_t size_type;
         typedef uint64_t value_type;
-        typedef bwt_so_t bwt_so_type;
+        typedef bwt_so_t bwt_type;
         typedef bwt_p_t bwt_p_type;
         typedef std::tuple<uint32_t, uint32_t, uint32_t> spo_triple_type;
 
     private:
-        bwt_so_type m_bwt_s; //POS
+        bwt_type m_bwt_s; //POS
         bwt_p_type m_bwt_p; //OSP
-        bwt_so_type m_bwt_o; //SPO
+        bwt_type m_bwt_o; //SPO
 
         muthu m_muthu_sp_o; //S->O, SP->O
         muthu m_muthu_os_p; //O->P, OS->P
@@ -73,6 +73,10 @@ namespace ring {
         }
 
     public:
+
+        const bwt_type &s_spo = m_bwt_s; //POS
+        const bwt_p_type &p_spo = m_bwt_p; //OSP
+        const bwt_type &o_spo = m_bwt_o; //SPO
 
         const size_type &max_s = m_max_s;
         const size_type &max_p = m_max_p;
@@ -142,7 +146,7 @@ namespace ring {
                 m_muthu_sp_o = muthu(new_O);
                 sdsl::util::bit_compress(new_O);
                 // builds the WT for BWT(O)
-                m_bwt_o = bwt_so_type(new_O, new_C_O);
+                m_bwt_o = bwt_type(new_O, new_C_O);
             }
 
             M_O.resize(alphabet_SO+1, 0);
@@ -211,7 +215,7 @@ namespace ring {
                     new_S[i] = std::get<0>(D[i-1]);
                 m_muthu_po_s = muthu(new_S);
                 sdsl::util::bit_compress(new_S);
-                m_bwt_s = bwt_so_type(new_S, new_C_S);
+                m_bwt_s = bwt_type(new_S, new_C_S);
             }
 
             sort(D.begin(), D.end(), [](const spo_triple& a,

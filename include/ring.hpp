@@ -60,6 +60,10 @@ namespace ring {
 
     public:
 
+        const bwt_type &s_spo = m_bwt_s; //POS
+        const bwt_p_type &p_spo = m_bwt_p; //OSP
+        const bwt_type &o_spo = m_bwt_o; //SPO
+
         const size_type& max_s = m_max_s;
         const size_type& max_p = m_max_p;
         const size_type& max_o = m_max_o;

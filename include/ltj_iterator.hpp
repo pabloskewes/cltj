@@ -22,6 +22,7 @@
 
 #define VERBOSE 0
 
+
 #include <ltj_iterator_base.hpp>
 
 namespace ring {
@@ -34,6 +35,8 @@ namespace ring {
         typedef var_t var_type;
         typedef ring_t ring_type;
         typedef uint64_t size_type;
+        typedef  wt_range_iterator<typename ring_type::bwt_type::wm_type> wt_so_iterator_type;
+        typedef  wt_range_iterator<typename ring_type::bwt_p_type::wm_type> wt_p_iterator_type;
         //std::vector<value_type> leap_result_type;
 
     private:
@@ -42,6 +45,8 @@ namespace ring {
         std::array<bwt_interval, 3> m_intervals;
         std::array<value_type, 3> m_consts;
         std::array<state_type, 3> m_state;
+        wt_so_iterator_type m_so_last_iterator;
+        wt_p_iterator_type m_p_last_iterator;
         size_type m_level = 0;
         bool m_is_empty = false;
         //std::stack<state_type> m_states;
@@ -52,6 +57,8 @@ namespace ring {
             m_ptr_triple_pattern = o.m_ptr_triple_pattern;
             m_ptr_ring = o.m_ptr_ring;
             m_intervals = o.m_intervals;
+            m_so_last_iterator = o.m_so_last_iterator;
+            m_p_last_iterator = o.m_p_last_iterator;
             m_state = o.m_state;
             m_level = o.m_level;
             m_consts = o.m_consts;
@@ -264,6 +271,8 @@ namespace ring {
                 m_ptr_triple_pattern = std::move(o.m_ptr_triple_pattern);
                 m_ptr_ring = std::move(o.m_ptr_ring);
                 m_intervals = std::move(o.m_intervals);
+                m_so_last_iterator = std::move(o.m_so_last_iterator);
+                m_p_last_iterator = std::move(o.m_p_last_iterator);
                 m_consts = std::move(o.m_consts);
                 m_state = std::move(o.m_state);
                 m_level = o.m_level;
@@ -278,6 +287,8 @@ namespace ring {
             std::swap(m_ptr_ring, o.m_ptr_ring);
             std::swap(m_intervals, o.m_intervals);
             std::swap(m_consts, o.m_consts);
+            std::swap(m_so_last_iterator, o.m_so_last_iterator);
+            std::swap(m_p_last_iterator, o.m_p_last_iterator);
             std::swap(m_state, o.m_state);
             std::swap(m_level, o.m_level);
             std::swap(m_is_empty, o.m_is_empty);
@@ -475,13 +486,29 @@ namespace ring {
             return {};
         }
 
-        /*value_type  leap_last_range(var_type var){
-
+        value_type  seek_last(var_type var){
+            range_type range = {m_intervals[2].left(), m_intervals[2].right()};
+            if(is_variable_predicate(var)){
+                m_p_last_iterator = wt_p_iterator_type(&m_ptr_ring->p_spo.get_wm(), range);
+                return m_p_last_iterator.next();
+            }else if (is_variable_subject(var)){
+                m_so_last_iterator = wt_so_iterator_type(&m_ptr_ring->s_spo.get_wm(), range);
+                return m_p_last_iterator.next();
+            }else{
+                m_so_last_iterator = wt_so_iterator_type(&m_ptr_ring->o_spo.get_wm(), range);
+                return m_p_last_iterator.next();
+            }
         }
 
-        value_type  leap_last_range_next(var_type var){
-
-        }*/
+        value_type  seek_last_next(var_type var){
+            if(is_variable_predicate(var)){
+                return m_p_last_iterator.next();
+            }else if (is_variable_subject(var)){
+                return m_p_last_iterator.next();
+            }else{
+                return m_p_last_iterator.next();
+            }
+        }
 
 
     };

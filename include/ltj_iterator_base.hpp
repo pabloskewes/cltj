@@ -23,6 +23,7 @@
 #define VERBOSE 0
 
 #include <bwt_interval.hpp>
+#include <wt_range_iterator.hpp>
 #include <triple_pattern.hpp>
 #include <vector>
 
