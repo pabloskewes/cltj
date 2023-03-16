@@ -493,10 +493,10 @@ namespace ring {
                 return m_p_last_iterator.next();
             }else if (is_variable_subject(var)){
                 m_so_last_iterator = wt_so_iterator_type(&m_ptr_ring->s_spo.get_wm(), range);
-                return m_p_last_iterator.next();
+                return m_so_last_iterator.next();
             }else{
                 m_so_last_iterator = wt_so_iterator_type(&m_ptr_ring->o_spo.get_wm(), range);
-                return m_p_last_iterator.next();
+                return m_so_last_iterator.next();
             }
         }
 
@@ -504,9 +504,9 @@ namespace ring {
             if(is_variable_predicate(var)){
                 return m_p_last_iterator.next();
             }else if (is_variable_subject(var)){
-                return m_p_last_iterator.next();
+                return m_so_last_iterator.next();
             }else{
-                return m_p_last_iterator.next();
+                return m_so_last_iterator.next();
             }
         }
 
