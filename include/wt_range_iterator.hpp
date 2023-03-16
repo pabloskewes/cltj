@@ -120,6 +120,7 @@ namespace sdsl {
         //! Move Operator=
         wt_range_iterator &operator=(wt_range_iterator &&o) {
             if (this != &o) {
+                m_wt_ptr = std::move(o.m_wt_ptr);
                 m_stack = std::move(o.m_stack);
             }
             return *this;
@@ -127,6 +128,7 @@ namespace sdsl {
 
         void swap(wt_range_iterator &o) {
             // m_bp.swap(bp_support.m_bp); use set_vector to set the supported bit_vector
+            std::swap(m_wt_ptr, o.m_wt_ptr);
             std::swap(m_stack, o.m_stack);
         }
     };
