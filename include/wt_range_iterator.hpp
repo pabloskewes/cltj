@@ -84,8 +84,8 @@ namespace sdsl {
                 }else{
                     /*auto child =  m_wt_ptr->my_expand(x.first, x.second,
                                                           child_ranges[0], child_ranges[1], rnk);*/
-                    auto child = expand(x.first);
-                    auto child_ranges = expand(x.first, x.second);
+                    auto child = m_wt_ptr->expand(x.first);
+                    auto child_ranges = m_wt_ptr->expand(x.first, x.second);
                     m_stack.pop();
                     if(!empty(child_ranges[1])){
                         m_stack.emplace(std::move(child[1]), child_ranges[1]);
