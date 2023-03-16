@@ -422,12 +422,7 @@ namespace ring {
 
         uint64_t next_O_in_S(bwt_interval &I, uint64_t O) {
             if (O > m_max_o) return 0;
-
-            uint64_t nextv = I.next_value(O, m_bwt_o);
-            if (nextv == 0)
-                return 0;
-            else
-                return nextv;
+            return I.next_value(O, m_bwt_o);
         }
 
         bool there_are_O_in_S(bwt_interval &I) {
@@ -440,12 +435,7 @@ namespace ring {
 
         uint64_t next_O_in_PS(bwt_interval &I, uint64_t O) {
             if (O > m_max_o) return 0;
-
-            uint64_t nextv = I.next_value(O, m_bwt_o);
-            if (nextv == 0)
-                return 0;
-            else
-                return nextv;
+            return I.next_value(O, m_bwt_o);
         }
 
         bool there_are_O_in_PS(bwt_interval &I) {
@@ -494,12 +484,7 @@ namespace ring {
 
         uint64_t next_S_in_P(bwt_interval &I, uint64_t s_value) {
             if (s_value > m_max_s) return 0;
-
-            uint64_t nextv = I.next_value(s_value, m_bwt_s);
-            if (nextv == 0)
-                return 0;
-            else
-                return nextv;
+            return I.next_value(s_value, m_bwt_s);
         }
 
         bool there_are_S_in_P(bwt_interval &I) {

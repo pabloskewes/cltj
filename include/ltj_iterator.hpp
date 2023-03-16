@@ -486,25 +486,23 @@ namespace ring {
             return {};
         }
 
-        value_type  seek_last(var_type var){
+        value_type seek_last(var_type var){
             range_type range = {m_intervals[2].left(), m_intervals[2].right()};
             if(is_variable_predicate(var)){
-                m_p_last_iterator = wt_p_iterator_type(&m_ptr_ring->p_spo.get_wm(), range);
+                m_p_last_iterator = wt_p_iterator_type(&(m_ptr_ring->p_spo.get_wm()), range);
                 return m_p_last_iterator.next();
             }else if (is_variable_subject(var)){
-                m_so_last_iterator = wt_so_iterator_type(&m_ptr_ring->s_spo.get_wm(), range);
+                m_so_last_iterator = wt_so_iterator_type(&(m_ptr_ring->s_spo.get_wm()), range);
                 return m_so_last_iterator.next();
             }else{
-                m_so_last_iterator = wt_so_iterator_type(&m_ptr_ring->o_spo.get_wm(), range);
+                m_so_last_iterator = wt_so_iterator_type(&(m_ptr_ring->o_spo.get_wm()), range);
                 return m_so_last_iterator.next();
             }
         }
 
-        value_type  seek_last_next(var_type var){
+        value_type seek_last_next(var_type var){
             if(is_variable_predicate(var)){
                 return m_p_last_iterator.next();
-            }else if (is_variable_subject(var)){
-                return m_so_last_iterator.next();
             }else{
                 return m_so_last_iterator.next();
             }

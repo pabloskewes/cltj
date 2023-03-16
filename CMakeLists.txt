@@ -7,7 +7,7 @@ project(Ring)
 set(CMAKE_PROJECT_NAME "Ring")
 
 #Change to "Debug" when you need it
-set(CMAKE_BUILD_TYPE "Release")
+set(CMAKE_BUILD_TYPE "Debug")
 
 # C++11 compiler Check
 if(NOT CMAKE_CXX_COMPILER_VERSION) # work around for cmake versions smaller than 2.8.10
@@ -64,3 +64,6 @@ target_link_libraries(query-index-uring sdsl divsufsort divsufsort64)
 
 add_executable(check src/check.cpp)
 target_link_libraries(check sdsl divsufsort divsufsort64)
+
+add_executable(proba src/proba.cpp)
+target_link_libraries(proba sdsl divsufsort divsufsort64)
