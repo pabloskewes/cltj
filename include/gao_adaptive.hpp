@@ -344,6 +344,10 @@ namespace ring {
             inline size_type size() {
                 return m_var_info.size() + m_lonely.size();
             }
+
+            inline size_type nolonely_size() {
+                return m_var_info.size();
+            }
         };
     };
 }

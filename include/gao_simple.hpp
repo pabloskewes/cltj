@@ -62,6 +62,7 @@ namespace ring {
             ring_type *m_ptr_ring;
             std::vector<var_type> m_order;
             size_type m_index;
+            size_type m_nolonely_size;
 
             void copy(const gao_simple &o) {
                 m_ptr_triple_patterns = o.m_ptr_triple_patterns;
@@ -69,6 +70,7 @@ namespace ring {
                 m_ptr_ring = o.m_ptr_ring;
                 m_order = o.m_order;
                 m_index = o.m_index;
+                m_nolonely_size = o.m_nolonely_size;
             }
 
 
@@ -197,7 +199,7 @@ namespace ring {
                     }
                 }
                 //std::cout << "Done. " << std::endl;
-
+                m_nolonely_size = i;
                 //3. Choosing the variables
                 i = 0;
                 //std::cout << "Choosing GAO ... " << std::flush;
@@ -253,6 +255,7 @@ namespace ring {
                     m_ptr_ring = o.m_ptr_ring;
                     m_order = std::move(o.m_order);
                     m_index = o.m_index;
+                    m_nolonely_size = o.m_nolonely_size;
                 }
                 return *this;
             }
@@ -263,6 +266,7 @@ namespace ring {
                 std::swap(m_ptr_ring, o.m_ptr_ring);
                 std::swap(m_order, o.m_order);
                 std::swap(m_index, o.m_index);
+                std::swap(m_nolonely_size, o.m_nolonely_size);
             }
 
             inline var_type next() {
@@ -286,6 +290,10 @@ namespace ring {
 
             inline size_type size() {
                 return m_order.size();
+            }
+
+            inline size_type nolonely_size() {
+                return m_nolonely_size;
             }
         };
     };
