@@ -133,7 +133,7 @@ std::string get_type(const std::string &file){
 
 
 template<class ring_type, class trait_type>
-void query(const std::string &file, const std::string &queries, uint64_t timeout){
+void query(const std::string &file, const std::string &queries, uint64_t limit){
     vector<string> dummy_queries;
     bool result = get_file_content(queries, dummy_queries);
 
@@ -174,7 +174,7 @@ void query(const std::string &file, const std::string &queries, uint64_t timeout
 
             start = ::util::time::usage::now();
             algorithm_type ltj(&query, &graph);
-            ltj.join(res, 1000, 600);
+            ltj.join(res, limit, 600);
             stop = ::util::time::usage::now();
 
             total_elapsed_time = (uint64_t) duration_cast<nanoseconds>(stop.elapsed - start.elapsed);
@@ -211,23 +211,23 @@ int main(int argc, char* argv[])
     typedef ring::ring<> ring_type;
     //typedef ring::c_ring ring_type;
     if(argc != 4){
-        std::cout << "Usage: " << argv[0] << " <index> <queries> <timeout>" << std::endl;
+        std::cout << "Usage: " << argv[0] << " <index> <queries> <limit>" << std::endl;
         return 0;
     }
 
     std::string index = argv[1];
     std::string queries = argv[2];
-    uint64_t timeout = std::atoll(argv[3]);
+    uint64_t limit = std::atoll(argv[3]);
     std::string type = get_type(index);
 
     if(type == "uring"){
-        query<ring::uring<>, ring::util::trait_size>(index, queries, timeout);
+        query<ring::uring<>, ring::util::trait_size>(index, queries, limit);
     }else if (type == "c-uring"){
-        query<ring::c_uring, ring::util::trait_size>(index, queries, timeout);
+        query<ring::c_uring, ring::util::trait_size>(index, queries, limit);
     }else if(type == "uring-muthu"){
-        query<ring::uring_muthu<>, ring::util::trait_distinct_uni>(index, queries, timeout);
+        query<ring::uring_muthu<>, ring::util::trait_distinct_uni>(index, queries, limit);
     }else if (type == "c-uring-muthu"){
-        query<ring::c_uring_muthu, ring::util::trait_distinct_uni>(index, queries, timeout);
+        query<ring::c_uring_muthu, ring::util::trait_distinct_uni>(index, queries, limit);
     }else{
         std::cout << "Type of index: " << type << " is not supported." << std::endl;
     }
