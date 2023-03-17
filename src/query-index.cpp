@@ -134,7 +134,7 @@ std::string get_type(const std::string &file){
 
 
 template<class ring_type, class trait_type>
-void query(const std::string &file, const std::string &queries){
+void query(const std::string &file, const std::string &queries, const uint64_t limit){
     vector<string> dummy_queries;
     bool result = get_file_content(queries, dummy_queries);
 
@@ -177,7 +177,7 @@ void query(const std::string &file, const std::string &queries){
 
             start = ::util::time::usage::now();
             algorithm_type ltj(&query, &graph);
-            ltj.join_v2(res, 1000, 600);
+            ltj.join_v2(res, limit, 600);
             stop = ::util::time::usage::now();
 
             total_elapsed_time = (uint64_t) duration_cast<nanoseconds>(stop.elapsed - start.elapsed);
@@ -211,27 +211,28 @@ int main(int argc, char* argv[])
 
     typedef ring::ring<> ring_type;
     //typedef ring::c_ring ring_type;
-    if(argc != 3){
-        std::cout << "Usage: " << argv[0] << " <index> <queries>" << std::endl;
+    if(argc != 4){
+        std::cout << "Usage: " << argv[0] << " <index> <queries> <limit>" << std::endl;
         return 0;
     }
 
     std::string index = argv[1];
     std::string queries = argv[2];
+    uint64_t limit = std::atoll(argv[3]);
     std::string type = get_type(index);
 
     if(type == "ring"){
-        query<ring::ring<>, ring::util::trait_size>(index, queries);
+        query<ring::ring<>, ring::util::trait_size>(index, queries, limit);
     }else if (type == "c-ring"){
-        query<ring::c_ring, ring::util::trait_size>(index, queries);
+        query<ring::c_ring, ring::util::trait_size>(index, queries, limit);
     }else if (type == "ring-sel"){
-        query<ring::ring_sel, ring::util::trait_size>(index, queries);
+        query<ring::ring_sel, ring::util::trait_size>(index, queries, limit);
     }else if (type == "ring-muthu"){
-        query<ring::ring_muthu<>, ring::util::trait_distinct>(index, queries);
+        query<ring::ring_muthu<>, ring::util::trait_distinct>(index, queries, limit);
     }else if (type == "c-ring-muthu"){
-        query<ring::c_ring_muthu, ring::util::trait_distinct>(index, queries);
+        query<ring::c_ring_muthu, ring::util::trait_distinct>(index, queries, limit);
     }else if (type == "ring-sel-muthu"){
-        query<ring::ring_sel_muthu, ring::util::trait_distinct>(index, queries);
+        query<ring::ring_sel_muthu, ring::util::trait_distinct>(index, queries, limit);
     }else{
         std::cout << "Type of index: " << type << " is not supported." << std::endl;
     }

@@ -202,9 +202,11 @@ namespace ring {
                 std::vector<ltj_iter_type*>& itrs = m_var_to_iterators[x_j];
                 bool ok;
                 if(itrs.size() == 1 && itrs[0]->in_last_level()) {//Lonely variables
-                    auto results = itrs[0]->seek_all(x_j);
+                    value_type c = itrs[0]->seek_last(x_j);
+                    //auto results = itrs[0]->seek_all(x_j);
                     //std::cout << "Results: " << results.size() << std::endl;
-                    for (const auto &c : results) {
+                    //std::cout << "Seek (last level): (" << (uint64_t) x_j << ": size=" << results.size() << ")" <<std::endl;
+                    while (c != 0) { //If empty c=0
                         //1. Adding result to tuple
                         tuple[j] = {x_j, c};
                         //2. Going down in the trie by setting x_j = c (\mu(t_i) in paper)
@@ -216,6 +218,7 @@ namespace ring {
                         //4. Going up in the trie by removing x_j = c
                         itrs[0]->up(x_j);
                         m_gao.up();
+                        c = itrs[0]->seek_last_next(x_j);
                     }
                 }else {
                     //wt_intersection_iterator<wm_type> wts_iterator(itrs, x_j);

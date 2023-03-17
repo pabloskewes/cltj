@@ -42,6 +42,7 @@ namespace ring {
             const wm_type* wm_ptr;
             range_type range;
         } wm_data_type;
+        typedef  wt_range_iterator<typename ring_type::bwt_type::wm_type> wt_iterator_type;
         //std::vector<value_type> leap_result_type;
 
     private:
@@ -51,6 +52,7 @@ namespace ring {
         std::array<state_type, 3> m_state;
         size_type m_level = 0;
         bool m_is_empty = false;
+        wt_iterator_type m_last_iterator;
         //std::stack<state_type> m_states;
 
 
@@ -59,6 +61,7 @@ namespace ring {
             m_ptr_triple_pattern = o.m_ptr_triple_pattern;
             m_ptr_ring = o.m_ptr_ring;
             m_intervals = o.m_intervals;
+            m_last_iterator = o.m_last_iterator;
             m_state = o.m_state;
             m_level = o.m_level;
         }
@@ -259,6 +262,7 @@ namespace ring {
                 m_ptr_ring = std::move(o.m_ptr_ring);
                 m_intervals = std::move(o.m_intervals);
                 m_state = std::move(o.m_state);
+                m_last_iterator = std::move(o.m_last_iterator);
                 m_level = o.m_level;
                 m_is_empty = o.m_is_empty;
             }
@@ -273,6 +277,7 @@ namespace ring {
             std::swap(m_state, o.m_state);
             std::swap(m_level, o.m_level);
             std::swap(m_is_empty, o.m_is_empty);
+            std::swap(m_last_iterator, o.m_last_iterator);
         }
 
 
@@ -523,6 +528,39 @@ namespace ring {
                     return m_ptr_ring->all_S_SPO_in_range(m_intervals[2]);
                 }
             }
+        }
+
+        value_type seek_last(var_type var){
+            range_type range = {m_intervals[2].left(), m_intervals[2].right()};
+            if(m_state[0] == s){
+                if(m_state[1] == p){
+                    m_last_iterator = wt_iterator_type(&(m_ptr_ring->o_ops.get_wm()), range);
+                    return m_last_iterator.next();
+                }else{// m_state[1] == o
+                    m_last_iterator = wt_iterator_type(&(m_ptr_ring->p_spo.get_wm()), range);
+                    return m_last_iterator.next();
+                }
+            }else if (m_state[0] == p){
+                if(m_state[1] == s){
+                    m_last_iterator = wt_iterator_type(&(m_ptr_ring->o_spo.get_wm()), range);
+                    return m_last_iterator.next();
+                }else{//m_state[1] == o
+                    m_last_iterator = wt_iterator_type(&(m_ptr_ring->s_ops.get_wm()), range);
+                    return m_last_iterator.next();
+                }
+            }else{ //m_state[0] == o
+                if(m_state[1] == s){
+                    m_last_iterator = wt_iterator_type(&(m_ptr_ring->p_ops.get_wm()), range);
+                    return m_last_iterator.next();
+                }else{//m_state[1] == p
+                    m_last_iterator = wt_iterator_type(&(m_ptr_ring->s_spo.get_wm()), range);
+                    return m_last_iterator.next();
+                }
+            }
+        }
+
+        value_type seek_last_next(var_type var){
+            return m_last_iterator.next();
         }
 
     };
