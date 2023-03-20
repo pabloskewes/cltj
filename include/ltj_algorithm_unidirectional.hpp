@@ -221,9 +221,9 @@ namespace ring {
                         c = itrs[0]->seek_last_next(x_j);
                     }
                 }else {
-                    //wt_intersection_iterator<wm_type> wts_iterator(itrs, x_j);
-                    //value_type c = wts_iterator.next();
-                    value_type c = seek(x_j);
+                    wt_intersection_iterator<wm_type> wts_iterator(itrs, x_j);
+                    value_type c = wts_iterator.next();
+                    //value_type c = seek(x_j);
                     //std::cout << "Seek (init): (" << (uint64_t) x_j << ": " << c << ")" <<std::endl;
                     while (c != 0) { //If empty c=0
                         //1. Adding result to tuple
@@ -242,8 +242,8 @@ namespace ring {
                         }
                         m_gao.up();
                         //5. Next constant for x_j
-                        //c = wts_iterator.next();
-                        c = seek(x_j, c + 1);
+                        c = wts_iterator.next();
+                        //c = seek(x_j, c + 1);
                         //std::cout << "Seek (bucle): (" << (uint64_t) x_j << ": " << c << ")" <<std::endl;
                     }
                 }
