@@ -170,8 +170,13 @@ void query(const std::string &file, const std::string &queries, const uint64_t l
 
 
             typedef ring::ltj_iterator<ring_type, uint8_t, uint64_t> iterator_type;
+#if ADAPTIVE
             typedef ring::ltj_algorithm<iterator_type,
                     ring::gao::gao_adaptive<iterator_type, trait_type>> algorithm_type;
+#else
+            typedef ring::ltj_algorithm<iterator_type,
+                    ring::gao::gao_simple<iterator_type, trait_type>> algorithm_type;
+#endif
             typedef std::vector<typename algorithm_type::tuple_type> results_type;
             results_type res;
 
