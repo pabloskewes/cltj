@@ -113,31 +113,31 @@ namespace ring {
 
                 //1. Filling var_info with data about each variable
                 //std::cout << "Filling... " << std::flush;
-                std::vector<info_var_type> var_info;
+                //std::vector<info_var_type> var_info;
                 std::unordered_map<var_type, size_type> hash_table_position;
                 var_type var_s, var_p, var_o;
                 for (const triple_pattern &triple_pattern : *m_ptr_triple_patterns) {
                     if (triple_pattern.s_is_variable()) {
                         var_s = (var_type) triple_pattern.term_s.value;
-                        var_to_vector(var_s, hash_table_position, var_info);
+                        var_to_vector(var_s, hash_table_position, m_order);
                     }
                     if (triple_pattern.p_is_variable()) {
                         var_p = (var_type) triple_pattern.term_p.value;
-                        var_to_vector(var_p, hash_table_position, var_info);
+                        var_to_vector(var_p, hash_table_position, m_order);
                     }
                     if (triple_pattern.o_is_variable()) {
                         var_o = (var_type) triple_pattern.term_o.value;
-                        var_to_vector(var_o, hash_table_position, var_info);
+                        var_to_vector(var_o, hash_table_position, m_order);
                     }
                 }
                 //std::cout << "Done. " << std::endl;
 
                 //2. Sorting variables according to their weights.
                 //std::cout << "Sorting... " << std::flush;
-                std::sort(var_info.begin(), var_info.end(), compare_var_info());
-                size_type lonely_start = var_info.size();
-                for (size_type i = 0; i < var_info.size(); ++i) {
-                    if (var_info[i].n_triples == 1 && i < lonely_start) {
+                std::sort(m_order.begin(), m_order.end(), compare_var_info());
+                size_type lonely_start = m_order.size();
+                for (size_type i = 0; i < m_order.size(); ++i) {
+                    if (m_order[i].n_triples == 1 && i < lonely_start) {
                         lonely_start = i;
                     }
                 }
