@@ -61,6 +61,9 @@ add_executable(query-index-fixed src/query-index.cpp)
 target_compile_definitions(query-index-fixed PUBLIC ADAPTIVE=0)
 target_link_libraries(query-index-fixed sdsl divsufsort divsufsort64)
 
+add_executable(query-index-random src/query-index.cpp)
+target_compile_definitions(query-index-random PUBLIC ADAPTIVE=0 VEO_RANDOM=1)
+target_link_libraries(query-index-random sdsl divsufsort divsufsort64)
 
 add_executable(build-index-uring src/build-index-uring.cpp)
 target_link_libraries(build-index-uring sdsl divsufsort divsufsort64)
@@ -72,6 +75,7 @@ target_link_libraries(query-index-uring sdsl divsufsort divsufsort64)
 add_executable(query-index-uring-fixed src/query-index-uring.cpp)
 target_compile_definitions(query-index-uring-fixed PUBLIC ADAPTIVE=0)
 target_link_libraries(query-index-uring-fixed sdsl divsufsort divsufsort64)
+
 
 add_executable(check src/check.cpp)
 target_link_libraries(check sdsl divsufsort divsufsort64)

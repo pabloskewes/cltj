@@ -18,8 +18,8 @@
  */
 
 
-#ifndef RING_GAO_ADAPTIVE_HPP
-#define RING_GAO_ADAPTIVE_HPP
+#ifndef RING_VEO_ADAPTIVE_HPP
+#define RING_VEO_ADAPTIVE_HPP
 
 #include <ring.hpp>
 #include <ltj_iterator.hpp>
@@ -32,12 +32,12 @@
 
 namespace ring {
 
-    namespace gao {
+    namespace veo {
 
 
         template<class ltj_iterator_t = ltj_iterator <ring<>, uint8_t, uint64_t>,
-                class gao_trait_t = util::trait_size>
-        class gao_adaptive {
+                class veo_trait_t = util::trait_size>
+        class veo_adaptive {
 
         public:
             typedef ltj_iterator_t ltj_iter_type;
@@ -73,7 +73,7 @@ namespace ring {
             typedef std::vector<update_type> version_type;
 
             typedef std::pair<size_type, var_type> pair_type;
-            typedef gao_trait_t gao_trait_type;
+            typedef veo_trait_t veo_trait_type;
             typedef std::unordered_map<var_type, std::vector<ltj_iter_type*>> var_to_iterators_type;
             typedef std::stack<version_type> versions_type;
             typedef std::stack<size_type> bound_type;
@@ -93,7 +93,7 @@ namespace ring {
 
 
 
-            void copy(const gao_adaptive &o) {
+            void copy(const veo_adaptive &o) {
                 m_ptr_triple_patterns = o.m_ptr_triple_patterns;
                 m_ptr_iterators = o.m_ptr_iterators;
                 m_ptr_var_iterators = o.m_ptr_var_iterators;
@@ -119,14 +119,14 @@ namespace ring {
                     if (it == m_hash_table_position.end()) {
                         info_var_type info;
                         info.name = var;
-                        info.weight = gao_trait_type::get(m_ptr_ring, m_ptr_iterators->at(i), state);
+                        info.weight = veo_trait_type::get(m_ptr_ring, m_ptr_iterators->at(i), state);
                         info.is_bound = false;
                         info.pos = m_var_info.size();
                         m_var_info.emplace_back(info);
                         m_hash_table_position.insert({var, info.pos});
                         m_not_bound.push_back(info.pos);
                     } else {
-                        auto size = gao_trait_type::get(m_ptr_ring, m_ptr_iterators->at(i), state);
+                        auto size = veo_trait_type::get(m_ptr_ring, m_ptr_iterators->at(i), state);
                         info_var_type &info = m_var_info[it->second];
                         if (info.weight > size) {
                             info.weight = size;
@@ -147,12 +147,12 @@ namespace ring {
 
         public:
 
-            gao_adaptive() = default;
+            veo_adaptive() = default;
 
-            gao_adaptive(const std::vector<triple_pattern> *triple_patterns,
-                       const std::vector<ltj_iter_type> *iterators,
-                       const var_to_iterators_type *var_iterators,
-                       ring_type *r) {
+            veo_adaptive(const std::vector<triple_pattern> *triple_patterns,
+                         const std::vector<ltj_iter_type> *iterators,
+                         const var_to_iterators_type *var_iterators,
+                         ring_type *r) {
                 m_ptr_triple_patterns = triple_patterns;
                 m_ptr_iterators = iterators;
                 m_ptr_var_iterators = var_iterators;
@@ -201,17 +201,17 @@ namespace ring {
             }
 
             //! Copy constructor
-            gao_adaptive(const gao_adaptive &o) {
+            veo_adaptive(const veo_adaptive &o) {
                 copy(o);
             }
 
             //! Move constructor
-            gao_adaptive(gao_adaptive &&o) {
+            veo_adaptive(veo_adaptive &&o) {
                 *this = std::move(o);
             }
 
             //! Copy Operator=
-            gao_adaptive &operator=(const gao_adaptive &o) {
+            veo_adaptive &operator=(const veo_adaptive &o) {
                 if (this != &o) {
                     copy(o);
                 }
@@ -219,7 +219,7 @@ namespace ring {
             }
 
             //! Move Operator=
-            gao_adaptive &operator=(gao_adaptive &&o) {
+            veo_adaptive &operator=(veo_adaptive &&o) {
                 if (this != &o) {
                     m_ptr_triple_patterns = std::move(o.m_ptr_triple_patterns);
                     m_ptr_iterators = std::move(o.m_ptr_iterators);
@@ -236,7 +236,7 @@ namespace ring {
                 return *this;
             }
 
-            void swap(gao_adaptive &o) {
+            void swap(veo_adaptive &o) {
                 std::swap(m_ptr_triple_patterns, o.m_ptr_triple_patterns);
                 std::swap(m_ptr_iterators, o.m_ptr_iterators);
                 std::swap(m_ptr_var_iterators, o.m_ptr_var_iterators);
@@ -296,11 +296,11 @@ namespace ring {
                             auto &iters = m_ptr_var_iterators->at(rel);
                             for(ltj_iter_type* iter : iters){ //Check each iterator
                                 if(iter->is_variable_subject(rel)){
-                                    w = gao_trait_type::subject(m_ptr_ring, *iter); //New weight
+                                    w = veo_trait_type::subject(m_ptr_ring, *iter); //New weight
                                 }else if (iter->is_variable_predicate(rel)){
-                                    w = gao_trait_type::predicate(m_ptr_ring, *iter);
+                                    w = veo_trait_type::predicate(m_ptr_ring, *iter);
                                 }else{
-                                    w = gao_trait_type::object(m_ptr_ring, *iter);
+                                    w = veo_trait_type::object(m_ptr_ring, *iter);
                                 }
                                 if(min_w > w) {
                                     min_w = w;
@@ -352,4 +352,4 @@ namespace ring {
     };
 }
 
-#endif //RING_GAO_SIZE_HPP
+#endif //RING_VEO_ADAPTIVE_HPP

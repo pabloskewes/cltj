@@ -18,8 +18,8 @@
  */
 
 
-#ifndef RING_GAO_SIMPLE_HPP
-#define RING_GAO_SIMPLE_HPP
+#ifndef RING_VEO_SIMPLE_HPP
+#define RING_VEO_SIMPLE_HPP
 
 #include <ring.hpp>
 #include <ltj_iterator.hpp>
@@ -32,12 +32,12 @@
 
 namespace ring {
 
-    namespace gao {
+    namespace veo {
 
 
         template<class ltj_iterator_t = ltj_iterator <ring<>, uint8_t, uint64_t>,
-                class gao_trait_t = util::trait_size>
-        class gao_simple {
+                class veo_trait_t = util::trait_size>
+        class veo_simple {
 
         public:
             typedef ltj_iterator_t ltj_iter_type;
@@ -52,7 +52,7 @@ namespace ring {
             } info_var_type;
 
             typedef std::pair<size_type, var_type> pair_type;
-            typedef gao_trait_t gao_trait_type;
+            typedef veo_trait_t veo_trait_type;
             typedef std::priority_queue<pair_type, std::vector<pair_type>, greater<pair_type>> min_heap_type;
             typedef std::unordered_map<var_type, std::vector<ltj_iter_type*>> var_to_iterators_type;
 
@@ -64,7 +64,7 @@ namespace ring {
             size_type m_index;
             size_type m_nolonely_size;
 
-            void copy(const gao_simple &o) {
+            void copy(const veo_simple &o) {
                 m_ptr_triple_patterns = o.m_ptr_triple_patterns;
                 m_ptr_iterators = o.m_ptr_iterators;
                 m_ptr_ring = o.m_ptr_ring;
@@ -136,9 +136,9 @@ namespace ring {
 
         public:
 
-            gao_simple() = default;
+            veo_simple() = default;
 
-            gao_simple(const std::vector<triple_pattern> *triple_patterns,
+            veo_simple(const std::vector<triple_pattern> *triple_patterns,
                        const std::vector<ltj_iter_type> *iterators,
                        const var_to_iterators_type *var_iterators,
                        ring_type *r) {
@@ -159,19 +159,19 @@ namespace ring {
                     if (triple_pattern.s_is_variable()) {
                         s = true;
                         var_s = (var_type) triple_pattern.term_s.value;
-                        size = gao_trait_type::subject(m_ptr_ring, m_ptr_iterators->at(i));
+                        size = veo_trait_type::subject(m_ptr_ring, m_ptr_iterators->at(i));
                         var_to_vector(var_s, size, hash_table_position, var_info);
                     }
                     if (triple_pattern.p_is_variable()) {
                         p = true;
                         var_p = (var_type) triple_pattern.term_p.value;
-                        size = gao_trait_type::predicate(m_ptr_ring, m_ptr_iterators->at(i));
+                        size = veo_trait_type::predicate(m_ptr_ring, m_ptr_iterators->at(i));
                         var_to_vector(var_p, size, hash_table_position, var_info);
                     }
                     if (triple_pattern.o_is_variable()) {
                         o = true;
                         var_o = (var_type) triple_pattern.term_o.value;
-                        size = gao_trait_type::object(m_ptr_ring, m_ptr_iterators->at(i));
+                        size = veo_trait_type::object(m_ptr_ring, m_ptr_iterators->at(i));
                         var_to_vector(var_o, size, hash_table_position, var_info);
                     }
 
@@ -230,17 +230,17 @@ namespace ring {
             }
 
             //! Copy constructor
-            gao_simple(const gao_simple &o) {
+            veo_simple(const veo_simple &o) {
                 copy(o);
             }
 
             //! Move constructor
-            gao_simple(gao_simple &&o) {
+            veo_simple(veo_simple &&o) {
                 *this = std::move(o);
             }
 
             //! Copy Operator=
-            gao_simple &operator=(const gao_simple &o) {
+            veo_simple &operator=(const veo_simple &o) {
                 if (this != &o) {
                     copy(o);
                 }
@@ -248,7 +248,7 @@ namespace ring {
             }
 
             //! Move Operator=
-            gao_simple &operator=(gao_simple &&o) {
+            veo_simple &operator=(veo_simple &&o) {
                 if (this != &o) {
                     m_ptr_triple_patterns = std::move(o.m_ptr_triple_patterns);
                     m_ptr_iterators = std::move(o.m_ptr_iterators);
@@ -260,7 +260,7 @@ namespace ring {
                 return *this;
             }
 
-            void swap(gao_simple &o) {
+            void swap(veo_simple &o) {
                 std::swap(m_ptr_triple_patterns, o.m_ptr_triple_patterns);
                 std::swap(m_ptr_iterators, o.m_ptr_iterators);
                 std::swap(m_ptr_ring, o.m_ptr_ring);
