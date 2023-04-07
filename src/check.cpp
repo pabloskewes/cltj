@@ -159,7 +159,7 @@ void query(const std::string &queries){
 
             std::unordered_map<uint8_t, uint64_t> ht;
             for(const auto & tp : query){
-                uint64_t s_aux = 0, p_aux = 0, o_aux = 0;
+                uint64_t s_aux = -1, p_aux = -1, o_aux = -1;
                 if(tp.s_is_variable()){
                     s_aux = tp.term_s.value;
                     auto it = ht.find(s_aux);
@@ -205,10 +205,15 @@ void query(const std::string &queries){
 
             if(num_no_lonely <= 1){
                 ++same;
-                cout << nQ <<  ";" << "SAME" << endl;
+                if(num_no_lonely == 1){
+                    cout << nQ <<  ";" << "TYPE2" << endl;
+                }else{
+                    cout << nQ <<  ";" << "TYPE1" << endl;
+                }
+
             }else{
                 ++diff;
-                cout << nQ << ";" << "DIFF" << endl;
+                cout << nQ << ";" << "TYPE3" << endl;
             }
 
             nQ++;
