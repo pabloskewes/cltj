@@ -28,6 +28,7 @@
 #include <ltj_iterator.hpp>
 #include <ltj_iterator_unidirectional.hpp>
 #include <veo_simple.hpp>
+#include <veo_simple_random.hpp>
 #include <veo_adaptive.hpp>
 #include <veo_random.hpp>
 #include <veo_random_lonely.hpp>

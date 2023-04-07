@@ -178,7 +178,7 @@ void query(const std::string &file, const std::string &queries, const uint64_t l
 #else
 #if VEO_RANDOM
             typedef ring::ltj_algorithm<iterator_type,
-                    ring::veo::veo_random<iterator_type, trait_type>> algorithm_type;
+                    ring::veo::veo_simple_random<iterator_type, trait_type>> algorithm_type;
 #else
             typedef ring::ltj_algorithm<iterator_type,
                     ring::veo::veo_simple<iterator_type, trait_type>> algorithm_type;
