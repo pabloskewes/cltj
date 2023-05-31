@@ -454,7 +454,7 @@ namespace ring {
         }
 
         void print_veo(std::unordered_map<uint8_t, std::string> &ht){
-            std::cout << "veo: " << std::endl;
+            std::cout << "veo: ";
             for(uint64_t j = 0; j < m_veo.size(); ++j){
                 std::cout << "?" << ht[m_veo.next()] << " ";
             }
