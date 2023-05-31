@@ -11,14 +11,18 @@ limit = 600
 
 def to_seconds(value):
 	return value / 1000000000.0
-a = ""
-fix_adap = sys.argv[1]
-if fix_adap == "fixed":
-	a = ".fixed"
-l = ""
+
+def swap(handles, labels, i, j):
+	temp = handles[i]
+	handles[i] = handles[j]
+	handles[j] = temp
+	temp_l = labels[i]
+	labels[i] = labels[j]
+	labels[j] = temp_l
+
 b = ""
-if len(sys.argv) > 2:
-	l = sys.argv[2]
+if len(sys.argv) > 1:
+	l = sys.argv[1]
 	b = ".1000"
 
 #xaxis = float(sys.argv[3])
@@ -47,6 +51,12 @@ df_rdfcsa_fix = pd.read_csv("fixed/" + l + "type1.rdfcsa.fixed"+b+".time.csv",
 df_crdfcsa_fix = pd.read_csv("fixed/" + l + "type1.crdfcsa.fixed"+b+".time.csv",
 						header=None, delimiter=';', names=['id', 'res', 'time'])
 
+df_cltj = pd.read_csv("cltj/adaptive/" + l + "type1.cltj.limit"+b+".csv",
+						header=None, delimiter=';', names=['id', 'res', 'time'])
+
+df_cltj_fix = pd.read_csv("cltj/fixed/" + l + "type1.cltj.limit"+b+".csv",
+						header=None, delimiter=';', names=['id', 'res', 'time'])
+
 
 df_data = pd.DataFrame()
 df_data['Ring-large'] = df_ring['time'].div( 1000000.0)
@@ -61,27 +71,11 @@ df_data['RDFCSA-large'] = df_rdfcsa['time'].div( 1000000.0)
 df_data['RDFCSA-fix'] = df_rdfcsa_fix['time'].div( 1000000.0)
 df_data['RDFCSA-small'] = df_crdfcsa['time'].div( 1000000.0)
 df_data['RDFCSA-small-fix'] = df_crdfcsa_fix['time'].div( 1000000.0)
+df_data['CompactLTJ'] = df_cltj['time'].div( 1000000.0)
+df_data['CompactLTJ-fix'] = df_cltj_fix['time'].div( 1000000.0)
 
-names = ['Ring-large', 'Ring-small', 'URing-large', 'URing-small', 'RDFCSA-large', 'RDFCSA-small']
-bpt = [12, 12.5, 7.30, 7.8, 22.2, 22.7, 14.61, 15.11, 23.2, 23.7, 15.8, 16.3]
-
-title = "Type 1-2 "
-if fix_adap == "fixed":
-	title = title + " Fixed "
-else:
-	title = title + " Adaptive "
-if l == "limit/":
-	title = title + " Limit"
-
-print("--------------------------------------------------")
-print(title)
-print("Name;Mean;Avg;Timeout")
-for name in names:
-	col = df_data[name]
-	print(name + ";" + str(col.median()) + ";" + str(col.mean()) + ";" +
-		  str(col[col >= limit].count()))
-
-print("--------------------------------------------------")
+names = ['Ring-large', 'Ring-small', 'URing-large', 'URing-small', 'RDFCSA-large', 'RDFCSA-small', 'CompactLTJ', 'CompactLTJ-fix']
+bpt = [12, 12.5, 7.30, 7.8, 22.2, 22.7, 14.61, 15.11, 23.2, 23.7, 15.8, 16.3, 41.8, 42.3]
 
 
 fig, (ax1, ax2, ax3) = plt.subplots(nrows=3, ncols=1, figsize=(10, 16))
@@ -93,8 +87,8 @@ bplot1 = ax1.boxplot(df_data,
                      showfliers=False)  # will be used to label x-ticks
 ax1.set_title('Type I', weight='bold')
 
-colors = ['cornflowerblue', 'orange', 'mediumseagreen', 'plum', 'silver', 'chocolate']
-colors2 = ['cornflowerblue', 'orange', 'mediumseagreen', 'plum', 'lightblue', 'bisque', 'springgreen', 'pink', 'silver', 'chocolate']
+colors = ['cornflowerblue', 'orange', 'mediumseagreen', 'plum', 'silver', 'chocolate', 'yellow']
+colors2 = ['cornflowerblue', 'orange', 'mediumseagreen', 'plum', 'lightblue', 'bisque', 'springgreen', 'pink', 'silver', 'chocolate', 'yellow']
 
 i = 0
 for bplot in bplot1['boxes']:
@@ -131,12 +125,31 @@ for bplot in bplot1['fliers']:
 		bplot.set_markeredgecolor(colors[i // 2])
 	i = i + 1
 
+#bigotes cortados
+i = 0
+for bplot in bplot1['caps']:
+	print(bplot.get_ydata()[0])
+	captop = int(bplot.get_ydata()[0])
+	if captop > 30:
+ 		if (i//2) % 2 == 0:
+ 			#xlabel = bpt[i // 2]-5.1
+ 			#ax3.text(xlabel, 1053,
+ 	        #    '{:d}'.format(captop), va='center', weight='bold')
+ 			xlabel = bpt[i // 2]-0.8
+ 			ax1.text(xlabel, 29,
+ 	            '{:d}'.format(captop), va='center', rotation=90)
+ 		else:
+ 			xlabel = bpt[i // 2]+0.1
+ 			ax1.text(xlabel, 29,
+ 	            '{:d}'.format(captop), va='center', rotation=90)
+	i = i + 1
+
 #fig = df_data.boxplot(positions=bpt, grid=False, return_type='axes')
 #fig.plot()
 #plt.suptitle(title)
-ax1.set_xticks(np.arange(6, 25, step=2), np.arange(6, 25, step=2))
-ax1.set_ylim(top=70)
-ax1.set_ylim(bottom=-1)
+ax1.set_xticks(np.arange(6, 43, step=2), np.arange(6, 43, step=2))
+ax1.set_ylim(top=30)
+ax1.set_ylim(bottom=-0.2)
 #ax1.set_ylim(bottom=-0.2)
 #ax1.set_yscale('symlog')
 #ax1.set_yscale('log')
@@ -168,6 +181,11 @@ df_rdfcsa_fix = pd.read_csv("fixed/" + l + "type2.rdfcsa.fixed"+b+".time.csv",
 						header=None, delimiter=';', names=['id', 'res', 'time'])
 df_crdfcsa_fix = pd.read_csv("fixed/" + l + "type2.crdfcsa.fixed"+b+".time.csv",
 						header=None, delimiter=';', names=['id', 'res', 'time'])
+df_cltj = pd.read_csv("cltj/adaptive/" + l + "type2.cltj.limit"+b+".csv",
+						header=None, delimiter=';', names=['id', 'res', 'time'])
+df_cltj_fix = pd.read_csv("cltj/fixed/" + l + "type2.cltj.limit"+b+".csv",
+						header=None, delimiter=';', names=['id', 'res', 'time'])
+
 
 
 df_data = pd.DataFrame()
@@ -183,6 +201,8 @@ df_data['RDFCSA-large'] = df_rdfcsa['time'].div( 1000000.0)
 df_data['RDFCSA-fix'] = df_rdfcsa_fix['time'].div( 1000000.0)
 df_data['RDFCSA-small'] = df_crdfcsa['time'].div( 1000000.0)
 df_data['RDFCSA-small-fix'] = df_crdfcsa_fix['time'].div( 1000000.0)
+df_data['CompactLTJ'] = df_cltj['time'].div( 1000000.0)
+df_data['CompactLTJ-fix'] = df_cltj_fix['time'].div( 1000000.0)
 
 # rectangular box plot
 bplot2 = ax2.boxplot(df_data,
@@ -226,12 +246,31 @@ for bplot in bplot2['fliers']:
 		bplot.set_markeredgecolor(colors[i // 2])
 	i = i + 1
 
+#bigotes cortados
+i = 0
+for bplot in bplot2['caps']:
+	print(bplot.get_ydata()[0])
+	captop = int(bplot.get_ydata()[0])
+	if captop > 70:
+ 		if (i//2) % 2 == 0:
+ 			#xlabel = bpt[i // 2]-5.1
+ 			#ax3.text(xlabel, 1053,
+ 	        #    '{:d}'.format(captop), va='center', weight='bold')
+ 			xlabel = bpt[i // 2]-0.8
+ 			ax2.text(xlabel, 66,
+ 	            '{:d}'.format(captop), va='center', rotation=90)
+ 		else:
+ 			xlabel = bpt[i // 2]+0.1
+ 			ax2.text(xlabel, 66,
+ 	            '{:d}'.format(captop), va='center', rotation=90)
+	i = i + 1
+
 #fig = df_data.boxplot(positions=bpt, grid=False, return_type='axes')
 #fig.plot()
 #plt.suptitle(title)
-ax2.set_xticks(np.arange(6, 25, step=2), np.arange(6, 25, step=2))
+ax2.set_xticks(np.arange(6, 43, step=2), np.arange(6, 43, step=2))
 #ax1.set_ylim(top=150)
-ax2.set_ylim(top=120)
+ax2.set_ylim(top=70)
 ax2.set_ylim(bottom=-1)
 #ax2.set_ylim(bottom=-0.2)
 #ax2.set_yscale('symlog')
@@ -283,6 +322,14 @@ df_curing_fixm = pd.read_csv("fixed/" + l + "type3.c-uring-muthu.fixed"+b+".time
 					   header=None, delimiter=';', names=['id', 'res', 'time', 'utime'])
 
 
+df_cltj = pd.read_csv("cltj/adaptive/" + l + "type3.cltj.limit"+b+".csv",
+						header=None, delimiter=';', names=['id', 'res', 'time'])
+
+
+df_cltj_fix = pd.read_csv("cltj/fixed/" + l + "type3.cltj.limit"+b+".csv",
+						header=None, delimiter=';', names=['id', 'res', 'time'])
+
+
 df_data = pd.DataFrame()
 df_data['Ring-large'] = df_ring['time'].div( 1000000.0)
 df_data['Ring-large-fix'] = df_ring_fix['time'].div( 1000000.0)
@@ -304,19 +351,21 @@ df_data['RDFCSA-large'] = df_rdfcsa['time'].div( 1000000.0)
 df_data['RDFCSA-large-fix'] = df_rdfcsa_fix['time'].div( 1000000.0)
 df_data['RDFCSA-small'] = df_crdfcsa['time'].div( 1000000.0)
 df_data['RDFCSA-small-fix'] = df_crdfcsa_fix['time'].div( 1000000.0)
+df_data['CompactLTJ'] = df_cltj['time'].div( 1000000.0)
+df_data['CompactLTJ-fix'] = df_cltj_fix['time'].div( 1000000.0)
 
 print(df_data.describe())
 
-names = ['Ring-large', 'Ring-large-F', 'Ring-small', 'Ring-small-F', 'URing-large', 'URing-large-F', 'URing-small', 'URing-small-F', 
-		 'VRing-large', 'VRing-large-F', 'VRing-small', 'VRing-small-F', 'VURing-large', 'VURing-large-F', 'VURing-small', 'VURing-small-F', 
-		 'RDFCSA-large', 'RDFCSA-large-F', 'RDFCSA-small', 'RDFCSA-small-F']
+names = ['Ring-l', 'Ring-l-F', 'Ring-s', 'Ring-s-F', 'URing-l', 'URing-l-F', 'URing-s', 'URing-s-F', 
+		 'VRing-l', 'VRing-l-F', 'VRing-s', 'VRing-s-F', 'VURing-l', 'VURing-l-F', 'VURing-s', 'VURing-s-F', 
+		 'RDFCSA-l', 'RDFCSA-l-F', 'RDFCSA-s', 'RDFCSA-s-F', 'CompactLTJ', 'CompactLTJ-F']
 #bpt = [12.15, 7.30, 23.0, 14.61, 40.28, 35.42, 51.65, 42.74, 24.0, 15.81]
 
-bpt = [12, 13, 7.30, 8.3, 22.0, 23, 14.6, 15.6, 40.3, 41.3, 35.4, 36.4, 51.7, 52.7, 42.7, 43.7, 24.0, 25.0, 16.6, 17.6]
+bpt = [11.7, 12.4, 6.9, 7.6, 22.9, 23.6, 14.3, 14.9, 39.9, 40.6, 35.1, 35.8, 51.3, 52, 42.7, 43.4, 24.3, 25, 15.6, 16.3, 41.3, 42]
 
 # rectangular box plot
 bplot3 = ax3.boxplot(df_data,
-					 widths = 1,
+					 widths = 0.7,
                      patch_artist=True,  # fill with color
                      positions = bpt,
                      showfliers=False)  # will be used to label x-ticks
@@ -360,26 +409,27 @@ for bplot in bplot3['fliers']:
 #bigotes cortados
 i = 0
 for bplot in bplot3['caps']:
+	print(bplot.get_ydata()[0])
 	captop = int(bplot.get_ydata()[0])
 	if captop > 1100:
-		if (i//2) % 2 == 0:
-			#xlabel = bpt[i // 2]-5.1
-			#ax3.text(xlabel, 1053,
-	        #    '{:d}'.format(captop), va='center', weight='bold')
-			xlabel = bpt[i // 2]-1.1
-			ax3.text(xlabel, 1060,
-	            '{:d}'.format(captop), va='center', rotation=90)
-		else:
-			xlabel = bpt[i // 2]+0.1
-			ax3.text(xlabel, 1060,
-	            '{:d}'.format(captop), va='center', rotation=90)
+ 		if (i//2) % 2 == 0:
+ 			#xlabel = bpt[i // 2]-5.1
+ 			#ax3.text(xlabel, 1053,
+ 	        #    '{:d}'.format(captop), va='center', weight='bold')
+ 			xlabel = bpt[i // 2]-1.1
+ 			ax3.text(xlabel, 1060,
+ 	            '{:d}'.format(captop), va='center', rotation=90)
+ 		else:
+ 			xlabel = bpt[i // 2]+0.1
+ 			ax3.text(xlabel, 1060,
+ 	            '{:d}'.format(captop), va='center', rotation=90)
 	i = i + 1
 
 
 
 ax3.set_xticks(np.arange(6, 56, step=4), np.arange(6, 56, step=4))
 ax3.set_ylim(top=1150)
-ax3.set_ylim(bottom=-1)
+ax3.set_ylim(bottom=-10)
 #ax2[0].set_yscale('symlog')
 #ax1.set_yscale('log')
 
@@ -474,9 +524,24 @@ ax3.set_xlabel("Space (bpt)")
 
 #fig.legend(bplot1['boxes'], names, loc='outside upper center', ncol=5)
 #fig.legend(bplot3['boxes'][::2], names[::2], ncol=5, fontsize=12, loc='upper center')
-fig.legend(bplot3['boxes'][::2], names[::2], ncol=5, fontsize=14, loc='upper center', bbox_to_anchor=[0.5, 1.05])
+handles = bplot3['boxes'][::2]
+labels = names[::2]
+
+#legend_order = ['Ring-large', 'Ring-small', 'RDFCSA-large', 'URing-large', 'URing-small', 'RDFCSA-small', 'VRing-large', 'VRing-small', 'CompactLTJ', 'VURing-large', 'VURing-small']
+
+#h = []
+#l = []
+#for v in legend_order:
+#	print(v)
+#	i = labels.index(v)
+#	h.append(handles[i])
+#	l.append(labels[i])
+
+#labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0]))
+fig.legend(handles, labels, ncol=6, fontsize=14, loc='upper center', bbox_to_anchor=[0.5, 1.06])
 fig.tight_layout()
 #plt.show()
+
 
 
 fig.savefig('boxplots-space-time-vertical.pdf', bbox_inches ="tight")
