@@ -23,7 +23,7 @@
 #define RING_TRIPLE_PATTERN_HPP
 
 
-namespace ring {
+namespace ltj {
 
 
 

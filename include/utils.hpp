@@ -23,10 +23,10 @@
 
 #include <iostream>
 #include <set>
-#include "ring.hpp"
+#include <cltj.hpp>
+#include <configuration.hpp>
 
-
-namespace ring {
+namespace ltj {
 
     namespace util {
 
@@ -55,17 +55,17 @@ namespace ring {
         struct trait_size_old {
 
             template<class Iterator, class Ring>
-            static uint64_t subject(Ring* ptr_ring, Iterator &iter){
+            static uint64_t subject(Ring *ptr_ring, Iterator &iter) {
                 return iter.i_s.size();
             }
 
             template<class Iterator, class Ring>
-            static uint64_t predicate(Ring* ptr_ring, Iterator &iter){
+            static uint64_t predicate(Ring *ptr_ring, Iterator &iter) {
                 return iter.i_p.size();
             }
 
             template<class Iterator, class Ring>
-            static uint64_t object(Ring* ptr_ring, Iterator &iter){
+            static uint64_t object(Ring *ptr_ring, Iterator &iter) {
                 return iter.i_o.size();
             }
 
@@ -73,216 +73,23 @@ namespace ring {
 
         struct trait_size {
 
-            template<class Iterator, class Ring>
-            static uint64_t get(Ring* ptr_ring, Iterator &iter, state_type state){
-                return iter.interval_length();
+            template<class Iterator>
+            static uint64_t get(Iterator &iter) {
+                if(iter.nfixed==0) return -1ULL;
+                if(iter.nfixed==1){
+                    return iter.subtree_size_d1();
+                }else{
+                    return iter.children();
+                }
             }
-
-            template<class Iterator, class Ring>
-            static uint64_t subject(Ring* ptr_ring, Iterator &iter){
-                return iter.interval_length();
-            }
-
-            template<class Iterator, class Ring>
-            static uint64_t predicate(Ring* ptr_ring, Iterator &iter){
-                return iter.interval_length();
-            }
-
-            template<class Iterator, class Ring>
-            static uint64_t object(Ring* ptr_ring, Iterator &iter){
-                return iter.interval_length();
-            }
-
         };
 
         struct trait_distinct {
 
-            template<class Iterator, class Ring>
-            static uint64_t get(Ring* ptr_ring, Iterator &iter, state_type state){
-                if(state == s){
-                    if(iter.level == 0) return ptr_ring->max_s;
-                    if(iter.level == 2){
-                        return ptr_ring->distinct_PO_S(iter.interval());
-                    }else {//iter.level == 1
-                        if(iter.state[0] == p){
-                            return ptr_ring->distinct_PO_S(iter.interval());
-                        }else{
-                            return ptr_ring->distinct_OP_S(iter.interval());
-                        }
-                    }
-                }else if (state == p){
-                    if(iter.level == 0) return ptr_ring->max_p;
-                    if(iter.level == 2){
-                        return ptr_ring->distinct_OS_P(iter.interval());
-                    }else {//iter.level == 1
-                        if(iter.state[0] == s){
-                            return ptr_ring->distinct_SO_P(iter.interval());
-                        }else{
-                            return ptr_ring->distinct_OS_P(iter.interval());
-                        }
-                    }
-                }else{
-                    if(iter.level == 0) return ptr_ring->max_o;
-                    if(iter.level == 2){
-                        return ptr_ring->distinct_SP_O(iter.interval());
-                    }else {//iter.level == 1
-                        if(iter.state[0] == s){
-                            return ptr_ring->distinct_SP_O(iter.interval());
-                        }else{
-                            return ptr_ring->distinct_PS_O(iter.interval());
-                        }
-                    }
-                };
-            }
-
-            template<class Iterator, class Ring>
-            static uint64_t subject(Ring* ptr_ring, Iterator &iter){
-                if(iter.level == 0) return ptr_ring->max_s;
-                if(iter.level == 2){
-                    return ptr_ring->distinct_PO_S(iter.interval());
-                }else {//iter.level == 1
-                    if(iter.state[0] == p){
-                        return ptr_ring->distinct_PO_S(iter.interval());
-                    }else{
-                        return ptr_ring->distinct_OP_S(iter.interval());
-                    }
-                }
-            }
-
-            template<class Iterator, class Ring>
-            static uint64_t predicate(Ring* ptr_ring, Iterator &iter){
-                if(iter.level == 0) return ptr_ring->max_p;
-                if(iter.level == 2){
-                    return ptr_ring->distinct_OS_P(iter.interval());
-                }else {//iter.level == 1
-                    if(iter.state[0] == s){
-                        return ptr_ring->distinct_SO_P(iter.interval());
-                    }else{
-                        return ptr_ring->distinct_OS_P(iter.interval());
-                    }
-                }
-            }
-
-            template<class Iterator, class Ring>
-            static uint64_t object(Ring* ptr_ring, Iterator &iter){
-                if(iter.level == 0) return ptr_ring->max_o;
-                if(iter.level == 2){
-                    return ptr_ring->distinct_SP_O(iter.interval());
-                }else {//iter.level == 1
-                    if(iter.state[0] == s){
-                        return ptr_ring->distinct_SP_O(iter.interval());
-                    }else{
-                        return ptr_ring->distinct_PS_O(iter.interval());
-                    }
-                }
-            }
-
-        };
-
-        struct trait_distinct_uni {
-
-            template<class Iterator, class Ring>
-            static uint64_t get(Ring* ptr_ring, Iterator &iter, state_type state) {
-                if (state == s) {
-                    if(iter.level == 0) return ptr_ring->max_s;
-                    if(iter.level == 2){
-                        if(iter.state[0] == p && iter.state[1] == o){
-                            return ptr_ring->distinct_PO_S(iter.interval());
-                        }else{
-                            return ptr_ring->distinct_OP_S(iter.interval());
-                        }
-                    }else {//iter.level == 1
-                        if(iter.state[0] == p){
-                            return ptr_ring->distinct_PO_S(iter.interval());
-                        }else{
-                            return ptr_ring->distinct_OP_S(iter.interval());
-                        }
-                    }
-                }else if (state == p){
-                    if(iter.level == 0) return ptr_ring->max_p;
-                    if(iter.level == 2){
-                        if(iter.state[0] == s && iter.state[1] == o){
-                            return ptr_ring->distinct_SO_P(iter.interval());
-                        }else{
-                            return ptr_ring->distinct_OS_P(iter.interval());
-                        }
-                    }else {//iter.level == 1
-                        if(iter.state[0] == s){
-                            return ptr_ring->distinct_SO_P(iter.interval());
-                        }else{
-                            return ptr_ring->distinct_OS_P(iter.interval());
-                        }
-                    }
-                }else{
-                    if(iter.level == 0) return ptr_ring->max_o;
-                    if(iter.level == 2){
-                        if(iter.state[0] == s && iter.state[1] == p){
-                            return ptr_ring->distinct_SP_O(iter.interval());
-                        }else{
-                            return ptr_ring->distinct_PS_O(iter.interval());
-                        }
-                    }else {//iter.level == 1
-                        if(iter.state[0] == s){
-                            return ptr_ring->distinct_SP_O(iter.interval());
-                        }else{
-                            return ptr_ring->distinct_PS_O(iter.interval());
-                        }
-                    }
-                }
-            }
-
-            template<class Iterator, class Ring>
-            static uint64_t subject(Ring* ptr_ring, Iterator &iter){
-                if(iter.level == 0) return ptr_ring->max_s;
-                if(iter.level == 2){
-                    if(iter.state[0] == p && iter.state[1] == o){
-                        return ptr_ring->distinct_PO_S(iter.interval());
-                    }else{
-                        return ptr_ring->distinct_OP_S(iter.interval());
-                    }
-                }else {//iter.level == 1
-                    if(iter.state[0] == p){
-                        return ptr_ring->distinct_PO_S(iter.interval());
-                    }else{
-                        return ptr_ring->distinct_OP_S(iter.interval());
-                    }
-                }
-            }
-
-            template<class Iterator, class Ring>
-            static uint64_t predicate(Ring* ptr_ring, Iterator &iter){
-                if(iter.level == 0) return ptr_ring->max_p;
-                if(iter.level == 2){
-                    if(iter.state[0] == s && iter.state[1] == o){
-                        return ptr_ring->distinct_SO_P(iter.interval());
-                    }else{
-                        return ptr_ring->distinct_OS_P(iter.interval());
-                    }
-                }else {//iter.level == 1
-                    if(iter.state[0] == s){
-                        return ptr_ring->distinct_SO_P(iter.interval());
-                    }else{
-                        return ptr_ring->distinct_OS_P(iter.interval());
-                    }
-                }
-            }
-
-            template<class Iterator, class Ring>
-            static uint64_t object(Ring* ptr_ring, Iterator &iter){
-                if(iter.level == 0) return ptr_ring->max_o;
-                if(iter.level == 2){
-                    if(iter.state[0] == s && iter.state[1] == p){
-                        return ptr_ring->distinct_SP_O(iter.interval());
-                    }else{
-                        return ptr_ring->distinct_PS_O(iter.interval());
-                    }
-                }else {//iter.level == 1
-                    if(iter.state[0] == s){
-                        return ptr_ring->distinct_SP_O(iter.interval());
-                    }else{
-                        return ptr_ring->distinct_PS_O(iter.interval());
-                    }
-                }
+            template<class Iterator>
+            static uint64_t get(Iterator &iter) {
+                if(iter.nfixed==0) return -1ULL;
+                return iter.children();
             }
 
         };

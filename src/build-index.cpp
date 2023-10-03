@@ -1,95 +1,47 @@
-/*
- * build-index.cpp
- * Copyright (C) 2020 Author removed for double-blind evaluation
- *
- *
- * This is free software: you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the
- * Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This software is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
-
 #include <iostream>
-#include "ring.hpp"
-#include "ring_muthu.hpp"
-#include <fstream>
-#include <sdsl/construct.hpp>
-#include <ltj_algorithm.hpp>
+#include <cltj_table_indexing.hpp>
 
 using namespace std;
 
 using namespace std::chrono;
 using timer = std::chrono::high_resolution_clock;
 
-template<class ring>
-void build_index(const std::string &dataset, const std::string &output){
-    vector<spo_triple> D, E;
+int main(int argc, char **argv){
+    try{
 
-    std::ifstream ifs(dataset);
-    uint64_t s, p , o;
-    do {
-        ifs >> s >> p >> o;
-        D.push_back(spo_triple(s, p, o));
-    } while (!ifs.eof());
+        if(argc <= 1){
+            cout<<"No extra command line argument given other that program name"<<endl;
+            return 0;
+        }
 
-    D.shrink_to_fit();
-    cout << "--Indexing " << D.size() << " triples" << endl;
-    memory_monitor::start();
-    auto start = timer::now();
 
-    ring A(D);
-    auto stop = timer::now();
-    memory_monitor::stop();
-    cout << "  Index built  " << sdsl::size_in_bytes(A) << " bytes" << endl;
+        cltj::TableIndexer ti = cltj::TableIndexer();
 
-    sdsl::store_to_file(A, output);
-    cout << "Index saved" << endl;
-    cout << duration_cast<seconds>(stop-start).count() << " seconds." << endl;
-    cout << memory_monitor::peak() << " bytes." << endl;
 
-}
+        // for(int i=1; i<argc; i++){
 
-int main(int argc, char **argv)
-{
+        // }
 
-    if(argc != 3){
-        std::cout << "Usage: " << argv[0] << " <dataset> [ring|c-ring|ring-sel|ring-muthu|c-ring-muthu|ring-sel-muthu]" << std::endl;
-        return 0;
+        string file_name = argv[1];
+        ti.readTable(file_name);
+        memory_monitor::start();
+        auto start = timer::now();
+
+        ti.indexNewTable(file_name);
+        auto stop = timer::now();
+        memory_monitor::stop();
+
+        ti.saveIndex();
+
+        cout << "Index saved" << endl;
+        cout << duration_cast<seconds>(stop-start).count() << " seconds." << endl;
+        cout << memory_monitor::peak() << " bytes." << endl;
+        // ti.indexNewTable(file_name);
+
+        // ind.save();
     }
-
-    std::string dataset = argv[1];
-    std::string type    = argv[2];
-    if(type == "ring"){
-        std::string index_name = dataset + ".ring";
-        build_index<ring::ring<>>(dataset, index_name);
-    }else if (type == "c-ring"){
-        std::string index_name = dataset + ".c-ring";
-        build_index<ring::c_ring>(dataset, index_name);
-    }else if (type == "ring-sel"){
-        std::string index_name = dataset + ".ring-sel";
-        build_index<ring::ring_sel>(dataset, index_name);
-    }else if (type == "ring-muthu"){
-        std::string index_name = dataset + ".ring-muthu";
-        build_index<ring::ring_muthu<>>(dataset, index_name);
-    }else if (type == "c-ring-muthu"){
-        std::string index_name = dataset + ".c-ring-muthu";
-        build_index<ring::c_ring_muthu>(dataset, index_name);
-    }else if (type == "ring-sel-muthu"){
-        std::string index_name = dataset + ".ring-sel-muthu";
-        build_index<ring::ring_sel_muthu>(dataset, index_name);
-    }else{
-        std::cout << "Usage: " << argv[0] << " <dataset> [ring|c-ring|ring-sel|ring-muthu|c-ring-muthu|ring-sel-muthu]" << std::endl;
+    catch(const char *msg){
+        cerr<<msg<<endl;
     }
-
     return 0;
 }
-

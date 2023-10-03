@@ -21,21 +21,22 @@
 #ifndef RING_VEO_ADAPTIVE_HPP
 #define RING_VEO_ADAPTIVE_HPP
 
-#include <ring.hpp>
+#include <cltj.hpp>
 #include <ltj_iterator.hpp>
-#include <ltj_iterator_unidirectional.hpp>
 #include <triple_pattern.hpp>
 #include <unordered_map>
 #include <vector>
 #include <utils.hpp>
 #include <unordered_set>
+#include <list>
+#include <configuration.hpp>
 
-namespace ring {
+namespace ltj {
 
     namespace veo {
 
 
-        template<class ltj_iterator_t = ltj_iterator <ring<>, uint8_t, uint64_t>,
+        template<class ltj_iterator_t = ltj_iterator <index_scheme::compactLTJ, uint8_t, uint64_t>,
                 class veo_trait_t = util::trait_size>
         class veo_adaptive {
 
@@ -43,12 +44,12 @@ namespace ring {
             typedef ltj_iterator_t ltj_iter_type;
             typedef typename ltj_iter_type::var_type var_type;
             typedef uint64_t size_type;
-            typedef typename ltj_iter_type::ring_type ring_type;
+            typedef typename ltj_iter_type::index_scheme_type index_scheme_type;
 
 
             /*enum spo_type {subject, predicate, object};
             typedef struct {
-                std::vector<spo_type> vec_spo;
+                vector<spo_type> vec_spo;
                 size_type iter_pos;
             } spo_iter_type;*/
 
@@ -56,12 +57,12 @@ namespace ring {
                 var_type name;
                 size_type weight;
                 size_type pos;
-                //std::vector<spo_iter_type> iterators;
-                std::unordered_set<var_type> related;
+                //vector<spo_iter_type> iterators;
+                unordered_set<var_type> related;
                 bool is_bound;
             } info_var_type;
 
-            typedef  std::list<size_type> list_type;
+            typedef  list<size_type> list_type;
             typedef  typename list_type::iterator list_iterator_type;
 
             typedef struct {
@@ -70,22 +71,22 @@ namespace ring {
             } update_type;
 
 
-            typedef std::vector<update_type> version_type;
+            typedef vector<update_type> version_type;
 
-            typedef std::pair<size_type, var_type> pair_type;
+            typedef pair<size_type, var_type> pair_type;
             typedef veo_trait_t veo_trait_type;
-            typedef std::unordered_map<var_type, std::vector<ltj_iter_type*>> var_to_iterators_type;
-            typedef std::stack<version_type> versions_type;
-            typedef std::stack<size_type> bound_type;
+            typedef unordered_map<var_type, vector<ltj_iter_type*>> var_to_iterators_type;
+            typedef stack<version_type> versions_type;
+            typedef stack<size_type> bound_type;
 
         private:
-            const std::vector<triple_pattern> *m_ptr_triple_patterns;
-            const std::vector<ltj_iter_type> *m_ptr_iterators;
+            const vector<triple_pattern> *m_ptr_triple_patterns;
+            const vector<ltj_iter_type> *m_ptr_iterators;
             const var_to_iterators_type *m_ptr_var_iterators;
-            ring_type *m_ptr_ring;
-            std::unordered_map<var_type, size_type> m_hash_table_position;
-            std::vector<info_var_type> m_var_info;
-            std::vector<var_type> m_lonely;
+            index_scheme_type *m_ptr_ring;
+            unordered_map<var_type, size_type> m_hash_table_position;
+            vector<info_var_type> m_var_info;
+            vector<var_type> m_lonely;
             size_type m_index;
             list_type m_not_bound;
             bound_type m_bound;
@@ -119,14 +120,14 @@ namespace ring {
                     if (it == m_hash_table_position.end()) {
                         info_var_type info;
                         info.name = var;
-                        info.weight = veo_trait_type::get(m_ptr_ring, m_ptr_iterators->at(i), state);
+                        info.weight = veo_trait_type::get(m_ptr_iterators->at(i));
                         info.is_bound = false;
                         info.pos = m_var_info.size();
                         m_var_info.emplace_back(info);
                         m_hash_table_position.insert({var, info.pos});
                         m_not_bound.push_back(info.pos);
                     } else {
-                        auto size = veo_trait_type::get(m_ptr_ring, m_ptr_iterators->at(i), state);
+                        auto size = veo_trait_type::get(m_ptr_iterators->at(i));
                         info_var_type &info = m_var_info[it->second];
                         if (info.weight > size) {
                             info.weight = size;
@@ -149,10 +150,10 @@ namespace ring {
 
             veo_adaptive() = default;
 
-            veo_adaptive(const std::vector<triple_pattern> *triple_patterns,
-                         const std::vector<ltj_iter_type> *iterators,
+            veo_adaptive(const vector<triple_pattern> *triple_patterns,
+                         const vector<ltj_iter_type> *iterators,
                          const var_to_iterators_type *var_iterators,
-                         ring_type *r) {
+                         index_scheme_type *r) {
                 m_ptr_triple_patterns = triple_patterns;
                 m_ptr_iterators = iterators;
                 m_ptr_var_iterators = var_iterators;
@@ -160,7 +161,7 @@ namespace ring {
 
 
                 //1. Filling var_info with data about each variable
-                //std::cout << "Filling... " << std::flush;
+                //cout << "Filling... " << flush;
                 size_type i = 0;
                 for (const triple_pattern &triple_pattern : *m_ptr_triple_patterns) {
                     bool s = false, p = false, o = false;
@@ -194,9 +195,9 @@ namespace ring {
                 }
                 m_index = 0;
                 /*for(const auto & v : m_var_info){
-                    std::cout << "var=" << (uint64_t) v.name << " weight=" << v.weight << std::endl;
+                    cout << "var=" << (uint64_t) v.name << " weight=" << v.weight << endl;
                 }*/
-                //std::cout << "Done. " << std::endl;
+                //cout << "Done. " << endl;
 
             }
 
@@ -207,7 +208,7 @@ namespace ring {
 
             //! Move constructor
             veo_adaptive(veo_adaptive &&o) {
-                *this = std::move(o);
+                *this = move(o);
             }
 
             //! Copy Operator=
@@ -221,17 +222,17 @@ namespace ring {
             //! Move Operator=
             veo_adaptive &operator=(veo_adaptive &&o) {
                 if (this != &o) {
-                    m_ptr_triple_patterns = std::move(o.m_ptr_triple_patterns);
-                    m_ptr_iterators = std::move(o.m_ptr_iterators);
-                    m_ptr_ring = std::move(o.m_ptr_ring);
+                    m_ptr_triple_patterns = move(o.m_ptr_triple_patterns);
+                    m_ptr_iterators = move(o.m_ptr_iterators);
+                    m_ptr_ring = move(o.m_ptr_ring);
                     m_ptr_var_iterators = o.m_ptr_var_iterators;
-                    m_hash_table_position = std::move(o.m_hash_table_position);
-                    m_lonely = std::move(o.m_lonely);
+                    m_hash_table_position = move(o.m_hash_table_position);
+                    m_lonely = move(o.m_lonely);
                     m_index = o.m_index;
-                    m_bound = std::move(o.m_bound);
-                    m_versions = std::move(o.m_versions);
-                    m_var_info = std::move(o.m_var_info);
-                    m_not_bound = std::move(o.m_not_bound);
+                    m_bound = move(o.m_bound);
+                    m_versions = move(o.m_versions);
+                    m_var_info = move(o.m_var_info);
+                    m_not_bound = move(o.m_not_bound);
                 }
                 return *this;
             }
@@ -295,13 +296,7 @@ namespace ring {
                             size_type min_w = m_var_info[pos].weight, w;
                             auto &iters = m_ptr_var_iterators->at(rel);
                             for(ltj_iter_type* iter : iters){ //Check each iterator
-                                if(iter->is_variable_subject(rel)){
-                                    w = veo_trait_type::subject(m_ptr_ring, *iter); //New weight
-                                }else if (iter->is_variable_predicate(rel)){
-                                    w = veo_trait_type::predicate(m_ptr_ring, *iter);
-                                }else{
-                                    w = veo_trait_type::object(m_ptr_ring, *iter);
-                                }
+                                w = veo_trait_type::get(*iter); //New weight
                                 if(min_w > w) {
                                     min_w = w;
                                     u = true;

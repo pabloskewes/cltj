@@ -24,18 +24,14 @@
 
 
 #include <triple_pattern.hpp>
-#include <ring.hpp>
+#include <cltj.hpp>
 #include <ltj_iterator.hpp>
-#include <ltj_iterator_unidirectional.hpp>
 #include <veo_simple.hpp>
-#include <veo_simple_random.hpp>
 #include <veo_adaptive.hpp>
-#include <veo_random.hpp>
-#include <veo_random_lonely.hpp>
 
-namespace ring {
+namespace ltj {
 
-    template<class iterator_t = ltj_iterator<ring<>, uint8_t, uint64_t>,
+    template<class iterator_t = ltj_iterator<index_scheme::compactLTJ, uint8_t, uint64_t>,
              class veo_t = veo::veo_adaptive<iterator_t, util::trait_size> >
     class ltj_algorithm {
 
@@ -44,18 +40,18 @@ namespace ring {
         typedef uint64_t size_type;
         typedef iterator_t ltj_iter_type;
         typedef typename ltj_iter_type::var_type var_type;
-        typedef typename ltj_iter_type::ring_type ring_type;
+        typedef typename ltj_iter_type::index_scheme_type index_scheme_type;
         typedef typename ltj_iter_type::value_type const_type;
         typedef veo_t veo_type;
-        typedef std::unordered_map<var_type, std::vector<ltj_iter_type*>> var_to_iterators_type;
-        typedef std::vector<std::pair<var_type, value_type>> tuple_type;
-        typedef std::chrono::high_resolution_clock::time_point time_point_type;
+        typedef unordered_map<var_type, vector<ltj_iter_type*>> var_to_iterators_type;
+        typedef vector<pair<var_type, value_type>> tuple_type;
+        typedef chrono::high_resolution_clock::time_point time_point_type;
 
     private:
-        const std::vector<triple_pattern>* m_ptr_triple_patterns;
+        const vector<triple_pattern>* m_ptr_triple_patterns;
         veo_type m_veo;
-        ring_type* m_ptr_ring;
-        std::vector<ltj_iter_type> m_iterators;
+        index_scheme_type* m_ptr_ring;
+        vector<ltj_iter_type> m_iterators;
         var_to_iterators_type m_var_to_iterators;
         bool m_is_empty = false;
 
@@ -75,7 +71,7 @@ namespace ring {
             if(it != m_var_to_iterators.end()){
                 it->second.push_back(ptr_iterator);
             }else{
-                std::vector<ltj_iter_type*> vec = {ptr_iterator};
+                vector<ltj_iter_type*> vec = {ptr_iterator};
                 m_var_to_iterators.insert({var, vec});
             }
         }
@@ -85,7 +81,7 @@ namespace ring {
 
         ltj_algorithm() = default;
 
-        ltj_algorithm(const std::vector<triple_pattern>* triple_patterns, ring_type* ring){
+        ltj_algorithm(const vector<triple_pattern>* triple_patterns, index_scheme_type* ring){
 
             m_ptr_triple_patterns = triple_patterns;
             m_ptr_ring = ring;
@@ -124,7 +120,7 @@ namespace ring {
 
         //! Move constructor
         ltj_algorithm(ltj_algorithm &&o) {
-            *this = std::move(o);
+            *this = move(o);
         }
 
         //! Copy Operator=
@@ -138,11 +134,11 @@ namespace ring {
         //! Move Operator=
         ltj_algorithm &operator=(ltj_algorithm &&o) {
             if (this != &o) {
-                m_ptr_triple_patterns = std::move(o.m_ptr_triple_patterns);
-                m_veo = std::move(o.m_veo);
-                m_ptr_ring = std::move(o.m_ptr_ring);
-                m_iterators = std::move(o.m_iterators);
-                m_var_to_iterators = std::move(o.m_var_to_iterators);
+                m_ptr_triple_patterns = move(o.m_ptr_triple_patterns);
+                m_veo = move(o.m_veo);
+                m_ptr_ring = move(o.m_ptr_ring);
+                m_iterators = move(o.m_iterators);
+                m_var_to_iterators = move(o.m_var_to_iterators);
                 m_is_empty = o.m_is_empty;
             }
             return *this;
@@ -164,28 +160,12 @@ namespace ring {
         * @param limit_results     Limit of results
         * @param timeout_seconds   Timeout in seconds
         */
-        void join(std::vector<tuple_type> &res,
+        void join(vector<tuple_type> &res,
                   const size_type limit_results = 0, const size_type timeout_seconds = 0){
             if(m_is_empty) return;
-            time_point_type start = std::chrono::high_resolution_clock::now();
+            time_point_type start = chrono::high_resolution_clock::now();
             tuple_type t(m_veo.size());
             search(0, t, res, start, limit_results, timeout_seconds);
-        };
-
-        void join_v2(std::vector<tuple_type> &res,
-                  const size_type limit_results = 0, const size_type timeout_seconds = 0){
-            if(m_is_empty) return;
-            time_point_type start = std::chrono::high_resolution_clock::now();
-            tuple_type t(m_veo.size());
-            search_v2(0, t, res, start, limit_results, timeout_seconds);
-        };
-
-        void join_ramas(std::vector<tuple_type> &res, size_type &ramas,
-                  const size_type limit_results = 0, const size_type timeout_seconds = 0){
-            if(m_is_empty) return;
-            time_point_type start = std::chrono::high_resolution_clock::now();
-            tuple_type t(m_veo.size());
-            search_ramas(0, t, res, start, ramas, limit_results, timeout_seconds);
         };
 
 
@@ -198,14 +178,14 @@ namespace ring {
          * @param limit_results     Limit of results
          * @param timeout_seconds   Timeout in seconds
          */
-        bool search(const size_type j, tuple_type &tuple, std::vector<tuple_type> &res,
+        bool search(const size_type j, tuple_type &tuple, vector<tuple_type> &res,
                     const time_point_type start,
                     const size_type limit_results = 0, const size_type timeout_seconds = 0){
 
             //(Optional) Check timeout
             if(timeout_seconds > 0){
-                time_point_type stop = std::chrono::high_resolution_clock::now();
-                auto sec = std::chrono::duration_cast<std::chrono::seconds>(stop-start).count();
+                time_point_type stop = chrono::high_resolution_clock::now();
+                auto sec = chrono::duration_cast<chrono::seconds>(stop-start).count();
                 if(sec > timeout_seconds) return false;
             }
 
@@ -215,21 +195,22 @@ namespace ring {
             if(j == m_veo.size()){
                 //Report results
                 res.emplace_back(tuple);
-                /*std::cout << "Add result" << std::endl;
+                /*cout << "Add result" << endl;
                 for(const auto &dat : tuple){
-                    std::cout << "{" << (uint64_t) dat.first << "=" << dat.second << "} ";
+                    cout << "{" << (uint64_t) dat.first << "=" << dat.second << "} ";
                 }
-                std::cout << std::endl;*/
+                cout << endl;*/
             }else{
                 var_type x_j = m_veo.next();
-                //std::cout << "Variable: " << (uint64_t) x_j << std::endl;
-                std::vector<ltj_iter_type*>& itrs = m_var_to_iterators[x_j];
+                //cout << "Variable: " << (uint64_t) x_j << endl;
+                //cout << (uint64_t) x_j << endl;
+                vector<ltj_iter_type*>& itrs = m_var_to_iterators[x_j];
                 bool ok;
                 if(itrs.size() == 1 && itrs[0]->in_last_level()) {//Lonely variables
-                    //std::cout << "Seeking (last level)" << std::endl;
+                    //cout << "Seeking (last level)" << endl;
                     auto results = itrs[0]->seek_all(x_j);
-                    //std::cout << "Results: " << results.size() << std::endl;
-                    //std::cout << "Seek (last level): (" << (uint64_t) x_j << ": size=" << results.size() << ")" <<std::endl;
+                    //cout << "Results: " << results.size() << endl;
+                    //cout << "Seek (last level): (" << (uint64_t) x_j << ": size=" << results.size() << ")" <<endl;
                     for (const auto &c : results) {
                         //1. Adding result to tuple
                         tuple[j] = {x_j, c};
@@ -245,7 +226,7 @@ namespace ring {
                     }
                 }else {
                     value_type c = seek(x_j);
-                    //std::cout << "Seek (init): (" << (uint64_t) x_j << ": " << c << ")" <<std::endl;
+                    //cout << "Seek (init): (" << (uint64_t) x_j << ": " << c << ")" <<endl;
                     while (c != 0) { //If empty c=0
                         //1. Adding result to tuple
                         tuple[j] = {x_j, c};
@@ -264,7 +245,7 @@ namespace ring {
                         m_veo.up();
                         //5. Next constant for x_j
                         c = seek(x_j, c + 1);
-                        //std::cout << "Seek (bucle): (" << (uint64_t) x_j << ": " << c << ")" <<std::endl;
+                        //cout << "Seek (bucle): (" << (uint64_t) x_j << ": " << c << ")" <<endl;
                     }
                 }
                 m_veo.done();
@@ -272,160 +253,6 @@ namespace ring {
             return true;
         };
 
-        bool search_v2(const size_type j, tuple_type &tuple, std::vector<tuple_type> &res,
-                    const time_point_type start,
-                    const size_type limit_results = 0, const size_type timeout_seconds = 0){
-
-            //(Optional) Check timeout
-            if(timeout_seconds > 0){
-                time_point_type stop = std::chrono::high_resolution_clock::now();
-                auto sec = std::chrono::duration_cast<std::chrono::seconds>(stop-start).count();
-                if(sec > timeout_seconds) return false;
-            }
-
-            //(Optional) Check limit
-            if(limit_results > 0 && res.size() == limit_results) return false;
-
-            if(j == m_veo.size()){
-                //Report results
-                res.emplace_back(tuple);
-                /*std::cout << "Add result" << std::endl;
-                for(const auto &dat : tuple){
-                    std::cout << "{" << (uint64_t) dat.first << "=" << dat.second << "} ";
-                }
-                std::cout << std::endl;*/
-            }else{
-                var_type x_j = m_veo.next();
-                //std::cout << "Variable: " << (uint64_t) x_j << std::endl;
-                std::vector<ltj_iter_type*>& itrs = m_var_to_iterators[x_j];
-                bool ok;
-                if(itrs.size() == 1 && itrs[0]->in_last_level()) {//Lonely variables
-                    //std::cout << "Seeking (last level)" << std::endl;
-                    value_type c = itrs[0]->seek_last(x_j);
-                    //auto results = itrs[0]->seek_all(x_j);
-                    //std::cout << "Results: " << results.size() << std::endl;
-                    //std::cout << "Seek (last level): (" << (uint64_t) x_j << ": size=" << results.size() << ")" <<std::endl;
-                    while (c != 0) { //If empty c=0
-                        //1. Adding result to tuple
-                        tuple[j] = {x_j, c};
-                        //2. Going down in the trie by setting x_j = c (\mu(t_i) in paper)
-                        itrs[0]->down(x_j, c);
-                        m_veo.down();
-                        //2. Search with the next variable x_{j+1}
-                        ok = search_v2(j + 1, tuple, res, start, limit_results, timeout_seconds);
-                        if(!ok) return false;
-                        //4. Going up in the trie by removing x_j = c
-                        itrs[0]->up(x_j);
-                        m_veo.up();
-
-                        c = itrs[0]->seek_last_next(x_j);
-                    }
-                }else {
-                    value_type c = seek(x_j);
-                    //std::cout << "Seek (init): (" << (uint64_t) x_j << ": " << c << ")" <<std::endl;
-                    while (c != 0) { //If empty c=0
-                        //1. Adding result to tuple
-                        tuple[j] = {x_j, c};
-                        //2. Going down in the tries by setting x_j = c (\mu(t_i) in paper)
-                        for (ltj_iter_type* iter : itrs) {
-                            iter->down(x_j, c);
-                        }
-                        m_veo.down();
-                        //3. Search with the next variable x_{j+1}
-                        ok = search_v2(j + 1, tuple, res, start, limit_results, timeout_seconds);
-                        if(!ok) return false;
-                        //4. Going up in the tries by removing x_j = c
-                        for (ltj_iter_type *iter : itrs) {
-                            iter->up(x_j);
-                        }
-                        m_veo.up();
-                        //5. Next constant for x_j
-                        c = seek(x_j, c + 1);
-                        //std::cout << "Seek (bucle): (" << (uint64_t) x_j << ": " << c << ")" <<std::endl;
-                    }
-                }
-                m_veo.done();
-            }
-            return true;
-        };
-
-
-        bool search_ramas(const size_type j, tuple_type &tuple, std::vector<tuple_type> &res,
-                    const time_point_type start, size_type &ramas,
-                    const size_type limit_results = 0, const size_type timeout_seconds = 0){
-
-            //(Optional) Check timeout
-            if(timeout_seconds > 0){
-                time_point_type stop = std::chrono::high_resolution_clock::now();
-                auto sec = std::chrono::duration_cast<std::chrono::seconds>(stop-start).count();
-                if(sec > timeout_seconds) return false;
-            }
-
-            //(Optional) Check limit
-            if(limit_results > 0 && res.size() == limit_results) return false;
-
-            if(j == m_veo.nolonely_size()){
-                ++ramas;
-            }
-            if(j == m_veo.size()){
-                //Report results
-                res.emplace_back(tuple);
-                /*std::cout << "Add result" << std::endl;
-                for(const auto &dat : tuple){
-                    std::cout << "{" << (uint64_t) dat.first << "=" << dat.second << "} ";
-                }
-                std::cout << std::endl;*/
-            }else{
-                var_type x_j = m_veo.next();
-                //std::cout << "Variable: " << (uint64_t) x_j << std::endl;
-                std::vector<ltj_iter_type*>& itrs = m_var_to_iterators[x_j];
-                bool ok;
-                if(itrs.size() == 1 && itrs[0]->in_last_level()) {//Lonely variables
-                    //std::cout << "Seeking (last level)" << std::endl;
-                    auto results = itrs[0]->seek_all(x_j);
-                    //std::cout << "Results: " << results.size() << std::endl;
-                    //std::cout << "Seek (last level): (" << (uint64_t) x_j << ": size=" << results.size() << ")" <<std::endl;
-                    for (const auto &c : results) {
-                        //1. Adding result to tuple
-                        tuple[j] = {x_j, c};
-                        //2. Going down in the trie by setting x_j = c (\mu(t_i) in paper)
-                        itrs[0]->down(x_j, c);
-                        m_veo.down();
-                        //2. Search with the next variable x_{j+1}
-                        ok = search_ramas(j + 1, tuple, res, start, ramas,limit_results, timeout_seconds);
-                        if(!ok) return false;
-                        //4. Going up in the trie by removing x_j = c
-                        itrs[0]->up(x_j);
-                        m_veo.up();
-                    }
-                }else {
-                    value_type c = seek(x_j);
-                    //std::cout << "Seek (init): (" << (uint64_t) x_j << ": " << c << ")" <<std::endl;
-                    while (c != 0) { //If empty c=0
-                        //1. Adding result to tuple
-                        tuple[j] = {x_j, c};
-                        //2. Going down in the tries by setting x_j = c (\mu(t_i) in paper)
-                        for (ltj_iter_type* iter : itrs) {
-                            iter->down(x_j, c);
-                        }
-                        m_veo.down();
-                        //3. Search with the next variable x_{j+1}
-                        ok = search_ramas(j + 1, tuple, res, start, ramas,limit_results, timeout_seconds);
-                        if(!ok) return false;
-                        //4. Going up in the tries by removing x_j = c
-                        for (ltj_iter_type *iter : itrs) {
-                            iter->up(x_j);
-                        }
-                        m_veo.up();
-                        //5. Next constant for x_j
-                        c = seek(x_j, c + 1);
-                        //std::cout << "Seek (bucle): (" << (uint64_t) x_j << ": " << c << ")" <<std::endl;
-                    }
-                }
-                m_veo.done();
-            }
-            return true;
-        };
 
         /**
          *
@@ -436,7 +263,7 @@ namespace ring {
          */
 
         value_type seek(const var_type x_j, value_type c=-1){
-            std::vector<ltj_iter_type*>& itrs = m_var_to_iterators[x_j];
+            vector<ltj_iter_type*>& itrs = m_var_to_iterators[x_j];
             value_type c_i, c_prev = 0, i = 0, n_ok = 0;
             while (true){
                 //Compute leap for each triple that contains x_j
@@ -453,34 +280,34 @@ namespace ring {
             }
         }
 
-        void print_veo(std::unordered_map<uint8_t, std::string> &ht){
-            std::cout << "veo: ";
+        void print_veo(unordered_map<uint8_t, string> &ht){
+            cout << "veo: ";
             for(uint64_t j = 0; j < m_veo.size(); ++j){
-                std::cout << "?" << ht[m_veo.next()] << " ";
+                cout << "?" << ht[m_veo.next()] << " ";
             }
-            std::cout << std::endl;
+            cout << endl;
         }
 
-        void print_query(std::unordered_map<uint8_t, std::string> &ht){
-            std::cout << "Query: " << std::endl;
+        void print_query(unordered_map<uint8_t, string> &ht){
+            cout << "Query: " << endl;
             for(size_type i = 0; i <  m_ptr_triple_patterns->size(); ++i){
                 m_ptr_triple_patterns->at(i).print(ht);
                 if(i < m_ptr_triple_patterns->size()-1){
-                    std::cout << " . ";
+                    cout << " . ";
                 }
             }
-            std::cout << std::endl;
+            cout << endl;
         }
 
-        void print_results(std::vector<tuple_type> &res, std::unordered_map<uint8_t, std::string> &ht){
-            std::cout << "Results: " << std::endl;
+        void print_results(vector<tuple_type> &res, unordered_map<uint8_t, string> &ht){
+            cout << "Results: " << endl;
             uint64_t i = 1;
             for(tuple_type &tuple :  res){
-                std::cout << "[" << i << "]: ";
-                for(std::pair<var_type, value_type> &pair : tuple){
-                    std::cout << "?" << ht[pair.first] << "=" << pair.second << " ";
+                cout << "[" << i << "]: ";
+                for(pair<var_type, value_type> &pair : tuple){
+                    cout << "?" << ht[pair.first] << "=" << pair.second << " ";
                 }
-                std::cout << std::endl;
+                cout << endl;
                 ++i;
             }
         }

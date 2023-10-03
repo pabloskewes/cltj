@@ -19,13 +19,12 @@
 
 #include <iostream>
 #include <utility>
-#include "ring.hpp"
+#include "cltj.hpp"
 #include <chrono>
 #include <triple_pattern.hpp>
 #include <ltj_algorithm.hpp>
 #include <ltj_iterator.hpp>
 #include "utils.hpp"
-#include <ring_muthu.hpp>
 #include <time.hpp>
 
 using namespace std;
@@ -105,10 +104,10 @@ uint64_t get_constant(string &s){
     return std::stoull(s);
 }
 
-ring::triple_pattern get_triple(string & s, std::unordered_map<std::string, uint8_t> &hash_table_vars) {
+ltj::triple_pattern get_triple(string & s, std::unordered_map<std::string, uint8_t> &hash_table_vars) {
     vector<string> terms = tokenizer(s, ' ');
 
-    ring::triple_pattern triple;
+    ltj::triple_pattern triple;
     if(is_variable(terms[0])){
         triple.var_s(get_variable(terms[0], hash_table_vars));
     }else{
@@ -133,17 +132,12 @@ std::string get_type(const std::string &file){
 }
 
 
-template<class ring_type, class trait_type>
+template<class index_scheme_type, class trait_type>
 void query(const std::string &file, const std::string &queries, const uint64_t limit){
     vector<string> dummy_queries;
     bool result = get_file_content(queries, dummy_queries);
 
-    ring_type graph;
-
-    cout << " Loading the index..."; fflush(stdout);
-    sdsl::load_from_file(graph, file);
-
-    cout << endl << " Index loaded " << sdsl::size_in_bytes(graph) << " bytes" << endl;
+    index_scheme_type graph(file);
 
     std::ifstream ifs;
     uint64_t nQ = 0;
@@ -161,7 +155,7 @@ void query(const std::string &file, const std::string &queries, const uint64_t l
             //vector<Term*> terms_created;
             //vector<Triple*> query;
             std::unordered_map<std::string, uint8_t> hash_table_vars;
-            std::vector<ring::triple_pattern> query;
+            std::vector<ltj::triple_pattern> query;
             vector<string> tokens_query = tokenizer(query_string, '.');
             for (string& token : tokens_query) {
                 auto triple_pattern = get_triple(token, hash_table_vars);
@@ -169,27 +163,21 @@ void query(const std::string &file, const std::string &queries, const uint64_t l
             }
 
 
-            typedef ring::ltj_iterator<ring_type, uint8_t, uint64_t> iterator_type;
+            typedef ltj::ltj_iterator<index_scheme_type, uint8_t, uint64_t> iterator_type;
 #if ADAPTIVE
-
-            typedef ring::ltj_algorithm<iterator_type,
-                    ring::veo::veo_adaptive<iterator_type, trait_type>> algorithm_type;
+            typedef ltj::ltj_algorithm<iterator_type,
+                    ltj::veo::veo_adaptive<iterator_type, trait_type>> algorithm_type;
 
 #else
-#if VEO_RANDOM
-            typedef ring::ltj_algorithm<iterator_type,
-                    ring::veo::veo_simple_random<iterator_type, trait_type>> algorithm_type;
-#else
-            typedef ring::ltj_algorithm<iterator_type,
-                    ring::veo::veo_simple<iterator_type, trait_type>> algorithm_type;
-#endif
+            typedef ltj::ltj_algorithm<iterator_type,
+                    ltj::veo::veo_simple<iterator_type, trait_type>> algorithm_type;
 #endif
             typedef std::vector<typename algorithm_type::tuple_type> results_type;
             results_type res;
 
             start = ::util::time::usage::now();
             algorithm_type ltj(&query, &graph);
-            ltj.join_v2(res, limit, 600);
+            ltj.join(res, limit, 600);
             stop = ::util::time::usage::now();
 
             total_elapsed_time = (uint64_t) duration_cast<nanoseconds>(stop.elapsed - start.elapsed);
@@ -221,30 +209,22 @@ void query(const std::string &file, const std::string &queries, const uint64_t l
 int main(int argc, char* argv[])
 {
 
-    typedef ring::ring<> ring_type;
+    typedef index_scheme::compactLTJ compactLTJ;
     //typedef ring::c_ring ring_type;
-    if(argc != 4){
-        std::cout << "Usage: " << argv[0] << " <index> <queries> <limit>" << std::endl;
+    if(argc != 5){
+        std::cout << "Usage: " << argv[0] << " <index> <queries> <limit> <type>" << std::endl;
         return 0;
     }
 
     std::string index = argv[1];
     std::string queries = argv[2];
     uint64_t limit = std::atoll(argv[3]);
-    std::string type = get_type(index);
+    std::string type = argv[4];
 
-    if(type == "ring"){
-        query<ring::ring<>, ring::util::trait_size>(index, queries, limit);
-    }else if (type == "c-ring"){
-        query<ring::c_ring, ring::util::trait_size>(index, queries, limit);
-    }else if (type == "ring-sel"){
-        query<ring::ring_sel, ring::util::trait_size>(index, queries, limit);
-    }else if (type == "ring-muthu"){
-        query<ring::ring_muthu<>, ring::util::trait_distinct>(index, queries, limit);
-    }else if (type == "c-ring-muthu"){
-        query<ring::c_ring_muthu, ring::util::trait_distinct>(index, queries, limit);
-    }else if (type == "ring-sel-muthu"){
-        query<ring::ring_sel_muthu, ring::util::trait_distinct>(index, queries, limit);
+    if(type == "normal"){
+        query<compactLTJ, ltj::util::trait_distinct>(index, queries, limit);
+    }else if (type == "star"){
+        query<compactLTJ, ltj::util::trait_size>(index, queries, limit);
     }else{
         std::cout << "Type of index: " << type << " is not supported." << std::endl;
     }

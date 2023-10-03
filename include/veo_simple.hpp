@@ -21,21 +21,21 @@
 #ifndef RING_VEO_SIMPLE_HPP
 #define RING_VEO_SIMPLE_HPP
 
-#include <ring.hpp>
+#include <cltj.hpp>
 #include <ltj_iterator.hpp>
-#include <ltj_iterator_unidirectional.hpp>
 #include <triple_pattern.hpp>
 #include <unordered_map>
 #include <vector>
 #include <utils.hpp>
 #include <unordered_set>
+#include <queue>
 
-namespace ring {
+namespace ltj {
 
     namespace veo {
 
 
-        template<class ltj_iterator_t = ltj_iterator <ring<>, uint8_t, uint64_t>,
+        template<class ltj_iterator_t = ltj_iterator <index_scheme::compactLTJ, uint8_t, uint64_t>,
                 class veo_trait_t = util::trait_size>
         class veo_simple {
 
@@ -43,7 +43,7 @@ namespace ring {
             typedef ltj_iterator_t ltj_iter_type;
             typedef typename ltj_iter_type::var_type var_type;
             typedef uint64_t size_type;
-            typedef typename ltj_iter_type::ring_type ring_type;
+            typedef typename ltj_iter_type::index_scheme_type index_scheme_type;
             typedef struct {
                 var_type name;
                 size_type weight;
@@ -51,16 +51,16 @@ namespace ring {
                 std::unordered_set<var_type> related;
             } info_var_type;
 
-            typedef std::pair<size_type, var_type> pair_type;
+            typedef pair<size_type, var_type> pair_type;
             typedef veo_trait_t veo_trait_type;
-            typedef std::priority_queue<pair_type, std::vector<pair_type>, greater<pair_type>> min_heap_type;
-            typedef std::unordered_map<var_type, std::vector<ltj_iter_type*>> var_to_iterators_type;
+            typedef priority_queue<pair_type, vector<pair_type>, greater<pair_type>> min_heap_type;
+            typedef unordered_map<var_type, vector<ltj_iter_type*>> var_to_iterators_type;
 
         private:
-            const std::vector<triple_pattern> *m_ptr_triple_patterns;
-            const std::vector<ltj_iter_type> *m_ptr_iterators;
-            ring_type *m_ptr_ring;
-            std::vector<var_type> m_order;
+            const vector<triple_pattern> *m_ptr_triple_patterns;
+            const vector<ltj_iter_type> *m_ptr_iterators;
+            index_scheme_type *m_ptr_ring;
+            vector<var_type> m_order;
             size_type m_index;
             size_type m_nolonely_size;
 
@@ -75,8 +75,8 @@ namespace ring {
 
 
             void var_to_vector(const var_type var, const size_type size,
-                               std::unordered_map<var_type, size_type> &hash_table,
-                               std::vector<info_var_type> &vec) {
+                               unordered_map<var_type, size_type> &hash_table,
+                               vector<info_var_type> &vec) {
 
                 auto it = hash_table.find(var);
                 if (it == hash_table.end()) {
@@ -96,8 +96,8 @@ namespace ring {
             }
 
             void var_to_related(const var_type var, const var_type rel,
-                                std::unordered_map<var_type, size_type> &hash_table,
-                                std::vector<info_var_type> &vec) {
+                                unordered_map<var_type, size_type> &hash_table,
+                                vector<info_var_type> &vec) {
 
                 auto pos_var = hash_table[var];
                 vec[pos_var].related.insert(rel);
@@ -107,9 +107,9 @@ namespace ring {
 
 
             void fill_heap(const var_type var,
-                           std::unordered_map<var_type, size_type> &hash_table,
-                           std::vector<info_var_type> &vec,
-                           std::vector<bool> &checked,
+                           unordered_map<var_type, size_type> &hash_table,
+                           vector<info_var_type> &vec,
+                           vector<bool> &checked,
                            min_heap_type &heap) {
 
                 auto pos_var = hash_table[var];
@@ -138,19 +138,19 @@ namespace ring {
 
             veo_simple() = default;
 
-            veo_simple(const std::vector<triple_pattern> *triple_patterns,
-                       const std::vector<ltj_iter_type> *iterators,
+            veo_simple(const vector<triple_pattern> *triple_patterns,
+                       const vector<ltj_iter_type> *iterators,
                        const var_to_iterators_type *var_iterators,
-                       ring_type *r) {
+                       index_scheme_type *r) {
                 m_ptr_triple_patterns = triple_patterns;
                 m_ptr_iterators = iterators;
                 m_ptr_ring = r;
 
 
                 //1. Filling var_info with data about each variable
-                //std::cout << "Filling... " << std::flush;
-                std::vector<info_var_type> var_info;
-                std::unordered_map<var_type, size_type> hash_table_position;
+                //cout << "Filling... " << flush;
+                vector<info_var_type> var_info;
+                unordered_map<var_type, size_type> hash_table_position;
                 size_type i = 0;
                 for (const triple_pattern &triple_pattern : *m_ptr_triple_patterns) {
                     bool s = false, p = false, o = false;
@@ -159,19 +159,19 @@ namespace ring {
                     if (triple_pattern.s_is_variable()) {
                         s = true;
                         var_s = (var_type) triple_pattern.term_s.value;
-                        size = veo_trait_type::subject(m_ptr_ring, m_ptr_iterators->at(i));
+                        size = veo_trait_type::get(m_ptr_iterators->at(i));
                         var_to_vector(var_s, size, hash_table_position, var_info);
                     }
                     if (triple_pattern.p_is_variable()) {
                         p = true;
                         var_p = (var_type) triple_pattern.term_p.value;
-                        size = veo_trait_type::predicate(m_ptr_ring, m_ptr_iterators->at(i));
+                        size = veo_trait_type::get(m_ptr_iterators->at(i));
                         var_to_vector(var_p, size, hash_table_position, var_info);
                     }
                     if (triple_pattern.o_is_variable()) {
                         o = true;
                         var_o = (var_type) triple_pattern.term_o.value;
-                        size = veo_trait_type::object(m_ptr_ring, m_ptr_iterators->at(i));
+                        size = veo_trait_type::get(m_ptr_iterators->at(i));
                         var_to_vector(var_o, size, hash_table_position, var_info);
                     }
 
@@ -186,11 +186,11 @@ namespace ring {
                     }
                     ++i;
                 }
-                //std::cout << "Done. " << std::endl;
+                //cout << "Done. " << endl;
 
                 //2. Sorting variables according to their weights.
-                //std::cout << "Sorting... " << std::flush;
-                std::sort(var_info.begin(), var_info.end(), compare_var_info());
+                //cout << "Sorting... " << flush;
+                sort(var_info.begin(), var_info.end(), compare_var_info());
                 size_type lonely_start = var_info.size();
                 for (i = 0; i < var_info.size(); ++i) {
                     hash_table_position[var_info[i].name] = i;
@@ -198,12 +198,12 @@ namespace ring {
                         lonely_start = i;
                     }
                 }
-                //std::cout << "Done. " << std::endl;
+                //cout << "Done. " << endl;
                 m_nolonely_size = i;
                 //3. Choosing the variables
                 i = 0;
-                //std::cout << "Choosing GAO ... " << std::flush;
-                std::vector<bool> checked(var_info.size(), false);
+                //cout << "Choosing GAO ... " << flush;
+                vector<bool> checked(var_info.size(), false);
                 m_order.reserve(var_info.size());
                 while (i < lonely_start) { //Related variables
                     if (!checked[i]) {
@@ -226,7 +226,7 @@ namespace ring {
                     ++i;
                 }
                 m_index = 0;
-                //std::cout << "Done. " << std::endl;
+                //cout << "Done. " << endl;
             }
 
             //! Copy constructor
@@ -236,7 +236,7 @@ namespace ring {
 
             //! Move constructor
             veo_simple(veo_simple &&o) {
-                *this = std::move(o);
+                *this = move(o);
             }
 
             //! Copy Operator=
@@ -250,10 +250,10 @@ namespace ring {
             //! Move Operator=
             veo_simple &operator=(veo_simple &&o) {
                 if (this != &o) {
-                    m_ptr_triple_patterns = std::move(o.m_ptr_triple_patterns);
-                    m_ptr_iterators = std::move(o.m_ptr_iterators);
+                    m_ptr_triple_patterns = move(o.m_ptr_triple_patterns);
+                    m_ptr_iterators = move(o.m_ptr_iterators);
                     m_ptr_ring = o.m_ptr_ring;
-                    m_order = std::move(o.m_order);
+                    m_order = move(o.m_order);
                     m_index = o.m_index;
                     m_nolonely_size = o.m_nolonely_size;
                 }
