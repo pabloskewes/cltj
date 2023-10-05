@@ -259,12 +259,12 @@ namespace ltj {
                 ++m_nfixed;
                 m_fixed[0]=s;
                 m_it_v[0][m_nfixed+1] = m_it_v[1][m_nfixed+1]
-                        = m_tries[0]->child(m_it_v[0][m_nfixed], 1);
+                        = m_tries[m_trie_i]->child(m_it_v[0][m_nfixed], 1);
                 //m_pos_v[0][m_nfixed+1]  = m_pos_v[1][m_nfixed+1] = 1;
 
 
             }else if (!m_ptr_triple_pattern->p_is_variable()){
-                m_trie_i = 0;
+                m_trie_i = 2;
                 m_range_i = 0;
                 if(!exists(p, m_ptr_triple_pattern->term_p.value)){
                     m_is_empty = true;
@@ -273,10 +273,12 @@ namespace ltj {
                 ++m_nfixed;
                 m_fixed[0]=p;
                 m_it_v[0][m_nfixed+1] = m_it_v[1][m_nfixed+1]
-                        = m_tries[0]->child(m_it_v[0][m_nfixed], 1);
+                        = m_tries[m_trie_i]->child(m_it_v[0][m_nfixed], 1);
                // m_pos_v[0][m_nfixed+1]  = m_pos_v[1][m_nfixed+1] = 1;
 
             }else if (!m_ptr_triple_pattern->o_is_variable()){
+                m_trie_i = 4;
+                m_range_i = 0;
                 if(!exists(o, m_ptr_triple_pattern->term_o.value)){
                     m_is_empty = true;
                     return;
@@ -284,7 +286,7 @@ namespace ltj {
                 ++m_nfixed;
                 m_fixed[0]=o;
                 m_it_v[0][m_nfixed+1] = m_it_v[1][m_nfixed+1]
-                        = m_tries[0]->child(m_it_v[0][m_nfixed], 1);
+                        = m_tries[m_trie_i]->child(m_it_v[0][m_nfixed], 1);
                // m_pos_v[0][m_nfixed+1]  = m_pos_v[1][m_nfixed+1] = 1;
             }
         }
@@ -460,7 +462,6 @@ namespace ltj {
             if(p.second > end) return 0;
 
             m_it_v[m_range_i][m_nfixed+1]  = nodeselect(p.second, trie); //next pos in the trie
-            m_degree_v[m_range_i][m_nfixed+1] = cnt;
             return p.first;
         }
 
@@ -473,7 +474,7 @@ namespace ltj {
             return m_degree_v[m_range_i][m_nfixed+1];
         }
 
-        inline size_type subtree_size_d1() const {
+        inline size_type subtree_size_d1() const { //TODO: review this
             auto trie = m_tries[m_trie_i];
             auto cnt = m_degree_v[m_range_i][m_nfixed+1];
             size_type leftmost_leaf, rightmost_leaf;
