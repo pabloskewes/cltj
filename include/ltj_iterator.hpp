@@ -111,6 +111,15 @@ namespace ltj {
             return m_it_v[m_range_i][m_nfixed+1];
         }
 
+        inline size_type nodemap(size_type i, cltj::CTrie* trie) const {
+            return trie->b_rank0(i)-2;
+        }
+
+        inline size_type nodeselect(size_type i, cltj::CTrie* trie) const {
+            return trie->b_sel0(i+2)+1;
+        }
+
+
         ltj_iterator() = default;
         ltj_iterator(const triple_pattern *triple, index_scheme_type *index) {
             m_ptr_triple_pattern = triple;
@@ -393,19 +402,18 @@ namespace ltj {
                 }
             }
 
-
-            if (c == -1) return key();
             auto trie = m_tries[m_trie_i];
             //auto it_parent = parent();
             auto it = current();
             uint32_t cnt = trie->childrenCount(it);
-            uint32_t i = trie->b_rank0(current())-2;
-            uint32_t last = trie->b_rank0(trie->child(it, cnt))-2; //TODO: save it as cnt
-            auto p = trie->binary_search_seek(c, i, last);
+            auto first_child = trie->child(it, 1);
+            uint32_t beg = nodemap(first_child, trie);
+            uint32_t end = beg+cnt-1;
+            auto p = trie->binary_search_seek(c, beg, end);
 
-            if(p.second > last or p.first != c) return false;
+            if(p.second > end or p.first != c) return false;
 
-            m_it_v[m_range_i][m_nfixed+1]  = trie->b_sel0(p.second+2)+1; //next pos in the trie
+            m_it_v[m_range_i][m_nfixed+1]  = nodeselect(p.second, trie); //next pos in the trie
             //m_pos_v[m_range_i][m_nfixed+1] = trie->child(it_parent, cnt);
             return true;
         }
