@@ -44,7 +44,7 @@ namespace ltj {
     private:
         const triple_pattern *m_ptr_triple_pattern;
         index_scheme_type *m_ptr_index; //TODO: should be const
-        std::vector<std::string> m_orders = {"012", "021", "120", "102", "201", "210"};
+        std::vector<std::string> m_orders = {"0 1 2", "0 2 1", "1 2 0", "1 0 2", "2 0 1", "2 1 0"};
         //Penso que con esto debería ser suficiente (mais parte do de Diego)
         bool m_is_empty = false;
         std::array<cltj::CTrie*, 6> m_tries;
