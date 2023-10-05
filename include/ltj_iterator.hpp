@@ -85,7 +85,7 @@ namespace ltj {
         const size_type &nfixed = m_nfixed;
 
         uint32_t key(){
-            return m_tries[m_trie_i]->key_at(m_it_v[m_range_i][m_nfixed]);
+            return m_tries[m_trie_i]->key_at(current());
         }
 
         inline bool is_variable_subject(var_type var) {
@@ -451,15 +451,16 @@ namespace ltj {
             if (c == -1) return key();
             auto trie = m_tries[m_trie_i];
             auto it_parent = parent();
-            uint32_t cnt = m_degree_v[m_range_i][m_nfixed+1];
-            uint32_t i = trie->b_rank0(current())-2;
-            uint32_t last = trie->b_rank0(trie->child(it_parent, cnt))-2; //TODO: save it as cnt
-            auto p = trie->binary_search_seek(c, i, last);
+            auto cnt = m_degree_v[m_range_i][m_nfixed+1];
+            //uint32_t i = trie->b_rank0(current())-2;
+            auto beg = nodemap(current(), trie);
+            auto end = nodemap(trie->child(it_parent, cnt), trie); //TODO: save it as cnt
+            auto p  = trie->binary_search_seek(c, beg, end);
 
-            if(p.second > last) return 0;
+            if(p.second > end) return 0;
 
-            m_it_v[m_range_i][m_nfixed+1]  = trie->b_sel0(p.second+2)+1; //next pos in the trie
-            //m_pos_v[m_range_i][m_nfixed+1] = trie->child(it_parent, cnt);
+            m_it_v[m_range_i][m_nfixed+1]  = nodeselect(p.second, trie); //next pos in the trie
+            m_degree_v[m_range_i][m_nfixed+1] = cnt;
             return p.first;
         }
 
