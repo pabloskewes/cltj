@@ -136,7 +136,7 @@ namespace ltj {
 
                 m_range_i = 0;
                 m_trie_i = 0;
-                c = leap(m_ptr_triple_pattern->term_s.value);
+                c = leap_const(s, m_ptr_triple_pattern->term_s.value);
                 if(c != m_ptr_triple_pattern->term_s.value){
                     m_is_empty = true;
                     return;
@@ -146,7 +146,7 @@ namespace ltj {
                         = m_tries[m_trie_i]->child(m_it_v[0][m_nfixed], 1);
                 //m_pos_v[0][m_nfixed+1] = 1;
 
-                c = leap(m_ptr_triple_pattern->term_p.value);
+                c = leap_const(p, m_ptr_triple_pattern->term_p.value);
                 if(c != m_ptr_triple_pattern->term_p.value){
                     m_is_empty = true;
                     return;
@@ -156,7 +156,7 @@ namespace ltj {
                         = m_tries[m_trie_i]->child(m_it_v[0][m_nfixed], 1);
                 //m_pos_v[0][m_nfixed+1] = 1;
 
-                c = leap(m_ptr_triple_pattern->term_o.value);
+                c = leap_const(o, m_ptr_triple_pattern->term_o.value);
                 if(c != m_ptr_triple_pattern->term_o.value){
                     m_is_empty = true;
                     return;
@@ -170,7 +170,7 @@ namespace ltj {
                 m_trie_i = 1;
                 m_range_i = 1;
 
-                c = leap(m_ptr_triple_pattern->term_s.value);
+                c = leap_const(s, m_ptr_triple_pattern->term_s.value);
                 if(c != m_ptr_triple_pattern->term_s.value){
                     m_is_empty = true;
                     return;
@@ -180,7 +180,7 @@ namespace ltj {
                         = m_tries[m_trie_i]->child(m_it_v[m_range_i][m_nfixed], 1);
                 //m_pos_v[m_range_i][m_nfixed+1] = 1;
 
-                c = leap(m_ptr_triple_pattern->term_o.value);
+                c = leap_const(o, m_ptr_triple_pattern->term_o.value);
                 if(c != m_ptr_triple_pattern->term_o.value){
                     m_is_empty = true;
                     return;
@@ -197,7 +197,7 @@ namespace ltj {
                 m_trie_i = 0;
                 m_range_i = 0;
 
-                c = leap(m_ptr_triple_pattern->term_s.value);
+                c = leap_const(s, m_ptr_triple_pattern->term_s.value);
                 if (c != m_ptr_triple_pattern->term_s.value) {
                     m_is_empty = true;
                     return;
@@ -207,7 +207,7 @@ namespace ltj {
                         = m_tries[m_trie_i]->child(m_it_v[m_range_i][m_nfixed], 1);
                 //m_pos_v[m_range_i][m_nfixed + 1] = 1;
 
-                c = leap(m_ptr_triple_pattern->term_o.value);
+                c = leap_const(o, m_ptr_triple_pattern->term_o.value);
                 if (c != m_ptr_triple_pattern->term_o.value) {
                     m_is_empty = true;
                     return;
@@ -224,7 +224,7 @@ namespace ltj {
                 m_trie_i = 2;
                 m_range_i = 0;
 
-                c = leap(m_ptr_triple_pattern->term_s.value);
+                c = leap_const(s,m_ptr_triple_pattern->term_s.value);
                 if(c != m_ptr_triple_pattern->term_s.value){
                     m_is_empty = true;
                     return;
@@ -234,7 +234,7 @@ namespace ltj {
                         = m_tries[m_trie_i]->child(m_it_v[m_range_i][m_nfixed], 1);
                 //m_pos_v[m_range_i][m_nfixed+1] = 1;
 
-                c = leap(m_ptr_triple_pattern->term_o.value);
+                c = leap_const(o, m_ptr_triple_pattern->term_o.value);
                 if(c != m_ptr_triple_pattern->term_o.value){
                     m_is_empty = true;
                     return;
@@ -250,7 +250,7 @@ namespace ltj {
             }else if (!m_ptr_triple_pattern->s_is_variable()){
                 m_trie_i = 0;
                 m_range_i = 0;
-                c = leap(m_ptr_triple_pattern->term_s.value);
+                c = leap_const(s, m_ptr_triple_pattern->term_s.value);
                 if(c != m_ptr_triple_pattern->term_s.value){
                     m_is_empty = true;
                     return;
@@ -265,7 +265,7 @@ namespace ltj {
             }else if (!m_ptr_triple_pattern->p_is_variable()){
                 m_trie_i = 0;
                 m_range_i = 0;
-                c = leap(m_ptr_triple_pattern->term_p.value);
+                c = leap_const(p, m_ptr_triple_pattern->term_p.value);
                 if(c != m_ptr_triple_pattern->term_p.value){
                     m_is_empty = true;
                     return;
@@ -276,7 +276,7 @@ namespace ltj {
                // m_pos_v[0][m_nfixed+1]  = m_pos_v[1][m_nfixed+1] = 1;
                 m_fixed[0]=p;
             }else if (!m_ptr_triple_pattern->o_is_variable()){
-                c = leap(m_ptr_triple_pattern->term_o.value);
+                c = leap_const(o, m_ptr_triple_pattern->term_o.value);
                 if(c != m_ptr_triple_pattern->term_o.value){
                     m_is_empty = true;
                     return;
@@ -380,6 +380,46 @@ namespace ltj {
             --m_nfixed;
         };
 
+
+        value_type leap_const(state_type state, size_type c) { //Return the minimum in the range
+            //If c=-1 we need to get the minimum value for the current level.
+
+            if(m_nfixed == 0) {
+                if (state == s) {
+                    m_trie_i = 0;
+                } else if (state == p) {
+                    m_trie_i = 2;
+                } else {
+                    m_trie_i = 4;
+                }
+            }else if (m_nfixed == 1){
+                if (state == s) { //Fix variables
+                    m_trie_i = (m_fixed[m_nfixed-1] == o) ? 4 : 3 ;
+                    m_range_i = (m_fixed[m_nfixed-1] == o) ? 0 : 1;
+                } else if (state == p) {
+                    m_trie_i = (m_fixed[m_nfixed-1] == s) ? 0 : 5 ;
+                    m_range_i = (m_fixed[m_nfixed-1] == s) ? 0 : 1;
+                } else {
+                    m_trie_i = (m_fixed[m_nfixed-1] == p) ? 2 : 1 ;
+                    m_range_i = (m_fixed[m_nfixed-1] == p) ? 0 : 1;
+                }
+            }
+
+
+            if (c == -1) return key();
+            auto trie = m_tries[m_trie_i];
+            auto it_parent = parent();
+            uint32_t cnt = m_degree_v[m_range_i][m_nfixed+1];
+            uint32_t i = trie->b_rank0(current())-2;
+            uint32_t last = trie->b_rank0(trie->child(it_parent, cnt))-2; //TODO: save it as cnt
+            auto p = trie->binary_search_seek(c, i, last);
+
+            if(p.second > last) return 0;
+
+            m_it_v[m_range_i][m_nfixed+1]  = trie->b_sel0(p.second+2)+1; //next pos in the trie
+            //m_pos_v[m_range_i][m_nfixed+1] = trie->child(it_parent, cnt);
+            return p.first;
+        }
 
         value_type leap(var_type var, size_type c = -1) { //Return the minimum in the range
             //If c=-1 we need to get the minimum value for the current level.
