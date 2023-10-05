@@ -419,8 +419,8 @@ namespace ltj {
 
             if(p.second > end or p.first != c) return false;
 
-            m_it_v[m_range_i][m_nfixed+1]  = nodeselect(p.second, trie); //next pos in the trie
-            m_degree_v[m_range_i][m_nfixed+1] = cnt;
+            m_it_v[0][m_nfixed+1] = m_it_v[1][m_nfixed+1]  = nodeselect(p.second, trie); //next pos in the trie
+            m_degree_v[0][m_nfixed+1] = m_degree_v[1][m_nfixed+1] = cnt;
             //m_pos_v[m_range_i][m_nfixed+1] = trie->child(it_parent, cnt);
             return true;
         }
