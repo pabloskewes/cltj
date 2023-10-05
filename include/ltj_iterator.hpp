@@ -409,7 +409,7 @@ namespace ltj {
             if (c == -1) return key();
             auto trie = m_tries[m_trie_i];
             auto it_parent = parent();
-            uint32_t cnt = m_degree_v[m_range_i][m_nfixed+1];
+            uint32_t cnt = trie->childrenCount(it_parent);
             uint32_t i = trie->b_rank0(current())-2;
             uint32_t last = trie->b_rank0(trie->child(it_parent, cnt))-2; //TODO: save it as cnt
             auto p = trie->binary_search_seek(c, i, last);
