@@ -138,8 +138,10 @@ namespace ltj {
             m_ptr_index = nullptr;
         }
         */
+
+        //TODO: update degrees
         void process_constants(){
-            size_type c = -1;
+
             if(!m_ptr_triple_pattern->s_is_variable() && !m_ptr_triple_pattern->o_is_variable()
                 && !m_ptr_triple_pattern->p_is_variable()){
 
@@ -150,6 +152,7 @@ namespace ltj {
                     return;
                 }
                 ++m_nfixed;
+                m_fixed[0]=s;
                 m_it_v[0][m_nfixed+1]
                         = m_tries[m_trie_i]->child(m_it_v[0][m_nfixed], 1);
                 //m_pos_v[0][m_nfixed+1] = 1;
@@ -159,6 +162,7 @@ namespace ltj {
                     return;
                 }
                 ++m_nfixed;
+                m_fixed[1]=p;
                 m_it_v[0][m_nfixed+1]
                         = m_tries[m_trie_i]->child(m_it_v[0][m_nfixed], 1);
                 //m_pos_v[0][m_nfixed+1] = 1;
@@ -168,8 +172,6 @@ namespace ltj {
                     return;
                 }
                 ++m_nfixed;
-                m_fixed[0]=s;
-                m_fixed[1]=p;
                 m_fixed[2]=o;
 
             }else if (!m_ptr_triple_pattern->s_is_variable() && !m_ptr_triple_pattern->o_is_variable()){
@@ -181,6 +183,7 @@ namespace ltj {
                     return;
                 }
                 ++m_nfixed;
+                m_fixed[0]=s;
                 m_it_v[m_range_i][m_nfixed+1]
                         = m_tries[m_trie_i]->child(m_it_v[m_range_i][m_nfixed], 1);
                 //m_pos_v[m_range_i][m_nfixed+1] = 1;
@@ -190,12 +193,11 @@ namespace ltj {
                     return;
                 }
                 ++m_nfixed;
+                m_fixed[1]=o;
                 m_it_v[m_range_i][m_nfixed+1]
                         = m_tries[m_trie_i]->child(m_it_v[m_range_i][m_nfixed], 1);
                 //m_pos_v[m_range_i][m_nfixed+1] = 1;
 
-                m_fixed[0]=s;
-                m_fixed[1]=o;
 
             }else if (!m_ptr_triple_pattern->s_is_variable() && !m_ptr_triple_pattern->p_is_variable()) {
                 m_trie_i = 0;
@@ -206,6 +208,7 @@ namespace ltj {
                     return;
                 }
                 ++m_nfixed;
+                m_fixed[0]=s;
                 m_it_v[m_range_i][m_nfixed + 1]
                         = m_tries[m_trie_i]->child(m_it_v[m_range_i][m_nfixed], 1);
                 //m_pos_v[m_range_i][m_nfixed + 1] = 1;
@@ -215,12 +218,11 @@ namespace ltj {
                     return;
                 }
                 ++m_nfixed;
+                m_fixed[1]=p;
                 m_it_v[m_range_i][m_nfixed + 1]
                         = m_tries[m_trie_i]->child(m_it_v[m_range_i][m_nfixed], 1);
                 //m_pos_v[m_range_i][m_nfixed + 1] = 1;
 
-                m_fixed[0]=s;
-                m_fixed[1]=p;
 
             }else if (!m_ptr_triple_pattern->p_is_variable() && !m_ptr_triple_pattern->o_is_variable()){
                 m_trie_i = 2;
@@ -231,6 +233,7 @@ namespace ltj {
                     return;
                 }
                 ++m_nfixed;
+                m_fixed[0]=p;
                 m_it_v[m_range_i][m_nfixed+1]
                         = m_tries[m_trie_i]->child(m_it_v[m_range_i][m_nfixed], 1);
                 //m_pos_v[m_range_i][m_nfixed+1] = 1;
@@ -240,12 +243,11 @@ namespace ltj {
                     return;
                 }
                 ++m_nfixed;
+                m_fixed[1]=o;
                 m_it_v[m_range_i][m_nfixed+1]
                         = m_tries[m_trie_i]->child(m_it_v[m_range_i][m_nfixed], 1);
                 //m_pos_v[m_range_i][m_nfixed+1] = 1;
 
-                m_fixed[0]=p;
-                m_fixed[1]=o;
 
             }else if (!m_ptr_triple_pattern->s_is_variable()){
                 m_trie_i = 0;
@@ -255,11 +257,11 @@ namespace ltj {
                     return;
                 }
                 ++m_nfixed;
+                m_fixed[0]=s;
                 m_it_v[0][m_nfixed+1] = m_it_v[1][m_nfixed+1]
                         = m_tries[0]->child(m_it_v[0][m_nfixed], 1);
                 //m_pos_v[0][m_nfixed+1]  = m_pos_v[1][m_nfixed+1] = 1;
 
-                m_fixed[0]=s;
 
             }else if (!m_ptr_triple_pattern->p_is_variable()){
                 m_trie_i = 0;
@@ -269,20 +271,21 @@ namespace ltj {
                     return;
                 }
                 ++m_nfixed;
+                m_fixed[0]=p;
                 m_it_v[0][m_nfixed+1] = m_it_v[1][m_nfixed+1]
                         = m_tries[0]->child(m_it_v[0][m_nfixed], 1);
                // m_pos_v[0][m_nfixed+1]  = m_pos_v[1][m_nfixed+1] = 1;
-                m_fixed[0]=p;
+
             }else if (!m_ptr_triple_pattern->o_is_variable()){
                 if(!exists(o, m_ptr_triple_pattern->term_o.value)){
                     m_is_empty = true;
                     return;
                 }
                 ++m_nfixed;
+                m_fixed[0]=o;
                 m_it_v[0][m_nfixed+1] = m_it_v[1][m_nfixed+1]
                         = m_tries[0]->child(m_it_v[0][m_nfixed], 1);
                // m_pos_v[0][m_nfixed+1]  = m_pos_v[1][m_nfixed+1] = 1;
-                m_fixed[0]=o;
             }
         }
 
@@ -378,6 +381,7 @@ namespace ltj {
         };
 
 
+        //TODO update degrees
         bool exists(state_type state, size_type c) { //Return the minimum in the range
             //If c=-1 we need to get the minimum value for the current level.
 
@@ -414,6 +418,7 @@ namespace ltj {
             if(p.second > end or p.first != c) return false;
 
             m_it_v[m_range_i][m_nfixed+1]  = nodeselect(p.second, trie); //next pos in the trie
+            m_degree_v[m_range_i][m_nfixed+1] = cnt;
             //m_pos_v[m_range_i][m_nfixed+1] = trie->child(it_parent, cnt);
             return true;
         }
