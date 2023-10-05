@@ -50,7 +50,7 @@ link_directories(~/lib)
 
 
 add_executable(build-index src/build-index.cpp)
-target_link_libraries(build-index sdsl divsufsort divsufsort64)
+target_link_libraries(build-index stdc++fs sdsl divsufsort divsufsort64)
 
 add_executable(query-index src/query-index.cpp)
 target_compile_definitions(query-index PUBLIC ADAPTIVE=1)

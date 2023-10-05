@@ -250,6 +250,7 @@ namespace ltj {
             }else if (!m_ptr_triple_pattern->s_is_variable()){
                 m_trie_i = 0;
                 m_range_i = 0;
+                c = leap(m_ptr_triple_pattern->term_s.value);
                 if(c != m_ptr_triple_pattern->term_s.value){
                     m_is_empty = true;
                     return;
@@ -264,6 +265,7 @@ namespace ltj {
             }else if (!m_ptr_triple_pattern->p_is_variable()){
                 m_trie_i = 0;
                 m_range_i = 0;
+                c = leap(m_ptr_triple_pattern->term_p.value);
                 if(c != m_ptr_triple_pattern->term_p.value){
                     m_is_empty = true;
                     return;
@@ -274,6 +276,7 @@ namespace ltj {
                // m_pos_v[0][m_nfixed+1]  = m_pos_v[1][m_nfixed+1] = 1;
                 m_fixed[0]=p;
             }else if (!m_ptr_triple_pattern->o_is_variable()){
+                c = leap(m_ptr_triple_pattern->term_o.value);
                 if(c != m_ptr_triple_pattern->term_o.value){
                     m_is_empty = true;
                     return;
