@@ -139,7 +139,9 @@ namespace ltj {
                 m_tries[i] = m_ptr_index->get_trie(m_orders[i]);
             }
             m_status[0].it = 2;
-            m_status[0].last = 1;
+            m_status[0].beg = 2;
+            m_status[0].end = 1;
+            m_status[0].cnt = 1;
             //m_status[1][0].it = 2;
             //m_status[1][0].last = 1;
             m_redo[0] = false;
