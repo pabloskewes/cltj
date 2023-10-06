@@ -40,6 +40,7 @@ namespace ltj {
         enum state_type {s = 0, p = 1, o = 2};
         typedef struct {
             size_type it;
+            size_type cnt;
             size_type beg;
             size_type end;
         } level_data_type;
@@ -351,6 +352,7 @@ namespace ltj {
             if(p.second > end or p.first != c) return false;
             m_status[m_nfixed+1].beg = beg;
             m_status[m_nfixed+1].end = end;
+            m_status[m_nfixed+1].cnt = cnt;
             m_redo[m_nfixed+1] = false;
             m_status[m_nfixed+1].it = nodeselect(p.second, trie);
             return true;
@@ -390,6 +392,7 @@ namespace ltj {
                 m_status[m_nfixed+1].beg = beg;
                 m_status[m_nfixed+1].end = end;
                 m_status[m_nfixed+1].it  = it;
+                m_status[m_nfixed+1].cnt  = cnt;
                 m_redo[m_nfixed+1] = false;
             }else{
                 beg = nodemap(current(), trie);
@@ -410,12 +413,12 @@ namespace ltj {
         }
 
         inline size_type children() const{
-            return m_degree_v[m_status_i][m_nfixed+1];
+            return m_status[m_nfixed+1].cnt;
         }
 
         inline size_type subtree_size_d1() const { //TODO: review this
             auto trie = m_tries[m_trie_i];
-            auto cnt = m_degree_v[m_status_i][m_nfixed+1];
+            auto cnt = m_status[m_nfixed+1].cnt;
             size_type leftmost_leaf, rightmost_leaf;
             auto it = current();
             //Leftmost
