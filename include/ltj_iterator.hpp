@@ -338,7 +338,6 @@ namespace ltj {
 
         bool exists(state_type state, size_type c) { //Return the minimum in the range
             //If c=-1 we need to get the minimum value for the current level.
-
             if(m_nfixed == 0) {
                 m_trie_i = 2*state;
             }else if (m_nfixed == 1){
@@ -358,6 +357,8 @@ namespace ltj {
 
             size_type beg, end;
             auto cnt = trie->childrenCount(parent());
+            auto cnt2 = m_tries[m_trie_i]->childrenCount(parent());
+            std::cout << "count: " << cnt << " = " << cnt2 << std::endl;
             beg = nodemap(trie->child(parent(), 1), trie);
             end = beg + cnt -1;
             auto p = trie->binary_search_seek(c, beg, end);
