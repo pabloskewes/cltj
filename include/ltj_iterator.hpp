@@ -87,6 +87,7 @@ namespace ltj {
             m_trie_i = o.m_trie_i;
             m_status_i = o.m_status_i;
             m_status = o.m_status;
+            m_redo = o.m_redo;
         }
 
         void print_status(){
@@ -293,6 +294,7 @@ namespace ltj {
                 m_trie_i = std::move(o.m_trie_i);
                 m_status_i = std::move(o.m_status_i);
                 m_status = std::move(o.m_status);
+                m_redo = std::move(o.m_redo);
             }
             return *this;
         }
@@ -309,6 +311,7 @@ namespace ltj {
             std::swap(m_trie_i, o.m_trie_i);
             std::swap(m_status_i, o.m_status_i);
             std::swap(m_status, o.m_status);
+            std::swap(m_redo, o.m_redo);
         }
 
 
@@ -358,8 +361,6 @@ namespace ltj {
 
             size_type beg, end;
             auto cnt = trie->childrenCount(parent());
-            auto a = trie->child(parent(), 1);
-            std::cout << "a: " << a << std::endl;
             beg = nodemap(trie->child(parent(), 1), trie);
             end = beg + cnt -1;
             auto p = trie->binary_search_seek(c, beg, end);
