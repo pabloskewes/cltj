@@ -358,6 +358,8 @@ namespace ltj {
 
             size_type beg, end;
             auto cnt = trie->childrenCount(parent());
+            auto a = trie->child(parent(), 1);
+            std::cout << "a: " << a << std::endl;
             beg = nodemap(trie->child(parent(), 1), trie);
             end = beg + cnt -1;
             auto p = trie->binary_search_seek(c, beg, end);
@@ -394,10 +396,12 @@ namespace ltj {
                 }
             }
 
+
             std::cout << "Trie: " << m_trie_i << std::endl;
             auto trie = m_tries[m_trie_i];
             size_type beg, end, it;
             if(m_redo[m_nfixed+1]){ //First time of leap (after a down)
+                std::cout << "parent: " << parent() << std::endl;
                 auto cnt = trie->childrenCount(parent());
                 it = trie->child(parent(), 1);
                 beg = nodemap(it, trie);
