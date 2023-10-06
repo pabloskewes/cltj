@@ -313,7 +313,7 @@ namespace ltj {
 
         void down(state_type state){
             ++m_nfixed;
-            m_fixed[m_nfixed] = state;
+            m_fixed[m_nfixed-1] = state;
             m_redo[m_nfixed+1] = true;
         }
 
