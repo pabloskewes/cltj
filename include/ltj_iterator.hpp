@@ -89,6 +89,13 @@ namespace ltj {
             m_status = o.m_status;
         }
 
+        void print_status(){
+            for(int i = 0; i <= m_nfixed; ++i){
+                std::cout << "it=" << m_status[i].it << " cnt=" << m_status[i].cnt << " beg=" << m_status[i].beg
+                << " end=" << m_status[i].end << std::endl;
+            }
+        }
+
     public:
         /*
             Returns the key of the current position of the iterator
@@ -246,6 +253,9 @@ namespace ltj {
                 }
                 down(o);
             }
+
+            std::cout << "Constants" << std::endl;
+            print_status();
         }
 
         const triple_pattern* get_triple_pattern() const{
@@ -384,6 +394,7 @@ namespace ltj {
                 }
             }
 
+            std::cout << "Trie: " << m_trie_i << std::endl;
             auto trie = m_tries[m_trie_i];
             size_type beg, end, it;
             if(m_redo[m_nfixed+1]){ //First time of leap (after a down)
@@ -400,7 +411,7 @@ namespace ltj {
                 beg = nodemap(current(), trie);
                 end = m_status[m_nfixed+1].end;
             }
-
+            print_status();
             if(c == -1) return key();
             auto p  = trie->binary_search_seek(c, beg, end);
             if(p.second > end) return 0;
