@@ -90,7 +90,8 @@ namespace ltj {
         }
 
         void print_status(){
-            for(int i = 0; i <= m_nfixed; ++i){
+            std::cout << "fixed: " << m_nfixed << std::endl;
+            for(int i = 0; i < m_status.size(); ++i){
                 std::cout << "it=" << m_status[i].it << " cnt=" << m_status[i].cnt << " beg=" << m_status[i].beg
                 << " end=" << m_status[i].end << std::endl;
             }
@@ -357,8 +358,6 @@ namespace ltj {
 
             size_type beg, end;
             auto cnt = trie->childrenCount(parent());
-            auto cnt2 = m_tries[m_trie_i]->childrenCount(parent());
-            std::cout << "count: " << cnt << " = " << cnt2 << std::endl;
             beg = nodemap(trie->child(parent(), 1), trie);
             end = beg + cnt -1;
             auto p = trie->binary_search_seek(c, beg, end);
