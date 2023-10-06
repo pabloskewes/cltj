@@ -37,14 +37,7 @@ namespace ltj {
         typedef var_t var_type;
         typedef index_scheme_t index_scheme_type;
         typedef uint64_t size_type;
-        enum state_type {s = 0, p = 1, o = 2};
-        typedef struct {
-            size_type it;
-            size_type beg;
-            size_type end;
-        } level_data_type;
-        typedef std::array<level_data_type, 4> status_type;
-        typedef std::array<bool, 4> redo_array_type;
+        enum state_type {s, p, o};
         //std::vector<value_type> leap_result_type;
 
 
@@ -52,25 +45,20 @@ namespace ltj {
         const triple_pattern *m_ptr_triple_pattern;
         index_scheme_type *m_ptr_index; //TODO: should be const
         std::vector<std::string> m_orders = {"0 1 2", "0 2 1", "1 2 0", "1 0 2", "2 0 1", "2 1 0"};
-        //                                     SPO      SOP      POS      PSO     OSP      OPS
         //Penso que con esto debería ser suficiente (mais parte do de Diego)
         bool m_is_empty = false;
         std::array<cltj::CTrie*, 6> m_tries;
         size_type m_nfixed = 0;
         std::array<state_type, 3> m_fixed;
-        
+
         size_type m_trie_i = 0;
-        size_type m_status_i = 0;
-        status_type m_status;
-        redo_array_type m_redo;
-        
-        
-        //std::array<std::vector<size_type>, 2> m_it_v = {std::vector<size_type>(4, 0),
-        //                                                std::vector<size_type>(4, 0)};
+        size_type m_range_i = 0;
+        std::array<std::vector<size_type>, 2> m_it_v = {std::vector<size_type>(4, 0),
+                                                        std::vector<size_type>(4, 0)};
         //std::array<std::vector<size_type>, 2> m_pos_v = {std::vector<size_type>(4, 1),
         //                                                std::vector<size_type>(4, 1)}; //TODO: remove it
-        //std::array<std::vector<size_type>, 2> m_degree_v = {std::vector<size_type>(4, 1),
-        //                                                    std::vector<size_type>(4, 1)};
+        std::array<std::vector<size_type>, 2> m_degree_v = {std::vector<size_type>(4, 1),
+                                                            std::vector<size_type>(4, 1)};
         //TODO: add another vector for the last child
         //std::array<size_type, 2> m_parent_it_v = {0, 0}; // NEW DIEGO
         //std::array<size_type, 2> m_pos_in_parent_v = {1,1}; // NEW DIEGO
@@ -84,8 +72,10 @@ namespace ltj {
             m_is_empty = o.m_is_empty;
             m_tries = o.m_tries;
             m_trie_i = o.m_trie_i;
-            m_status_i = o.m_status_i;
-            m_status = o.m_status;
+            m_range_i = o.m_range_i;
+            m_it_v = o.m_it_v;
+            //m_pos_v = o.m_pos_v;
+            m_degree_v = o.m_degree_v;
         }
 
     public:
@@ -113,12 +103,12 @@ namespace ltj {
             return m_is_empty;
         }
 
-        inline size_type parent() const{
-           return m_status[m_nfixed].it;
+        inline size_type parent(){
+           return m_it_v[m_range_i][m_nfixed];
         }
 
         inline size_type current() const {
-            return m_status[m_nfixed+1].it;
+            return m_it_v[m_range_i][m_nfixed+1];
         }
 
         inline size_type nodemap(size_type i, cltj::CTrie* trie) const {
@@ -137,14 +127,8 @@ namespace ltj {
             for(int i = 0; i < m_orders.size(); ++i){
                 m_tries[i] = m_ptr_index->get_trie(m_orders[i]);
             }
-            m_status[0].it = 2;
-            m_status[0].last = 1;
-            //m_status[1][0].it = 2;
-            //m_status[1][0].last = 1;
-            m_redo[0] = false;
-            m_redo[1] = true;
-            m_redo[2] = true;
-            m_redo[3] = true;
+            m_it_v[0][1] = 2;
+            m_it_v[1][1] = 2;
 
             process_constants();
         }
@@ -160,88 +144,147 @@ namespace ltj {
             if(!m_ptr_triple_pattern->s_is_variable() && !m_ptr_triple_pattern->o_is_variable()
                 && !m_ptr_triple_pattern->p_is_variable()){
 
+                m_range_i = 0;
+                m_trie_i = 0;
                 if(!exists(s, m_ptr_triple_pattern->term_s.value)){
                     m_is_empty = true;
                     return;
                 }
-                down(s);
+                ++m_nfixed;
+                m_fixed[0]=s;
+
+                m_it_v[0][m_nfixed+1]
+                        = m_tries[m_trie_i]->child(m_it_v[0][m_nfixed], 1);
                 if(!exists(p, m_ptr_triple_pattern->term_p.value)){
                     m_is_empty = true;
                     return;
                 }
-                down(p);
+                ++m_nfixed;
+                m_fixed[1]=p;
+
+                m_it_v[0][m_nfixed+1]
+                        = m_tries[m_trie_i]->child(m_it_v[0][m_nfixed], 1);
                 if(!exists(o, m_ptr_triple_pattern->term_o.value)){
                     m_is_empty = true;
                     return;
                 }
-                down(o);
+                ++m_nfixed;
+                m_fixed[2]=o;
 
             }else if (!m_ptr_triple_pattern->s_is_variable() && !m_ptr_triple_pattern->o_is_variable()){
+                m_trie_i = 1;
+                m_range_i = 1;
 
                 if(!exists(s, m_ptr_triple_pattern->term_s.value)){
                     m_is_empty = true;
                     return;
                 }
-                down(s);
+                ++m_nfixed;
+                m_fixed[0]=s;
+                m_it_v[m_range_i][m_nfixed+1]
+                        = m_tries[m_trie_i]->child(m_it_v[m_range_i][m_nfixed], 1);
+                //m_pos_v[m_range_i][m_nfixed+1] = 1;
+
                 if(!exists(o, m_ptr_triple_pattern->term_o.value)){
                     m_is_empty = true;
                     return;
                 }
-                down(o);
-                //m_pos_v[m_status_i][m_nfixed+1] = 1;
+                ++m_nfixed;
+                m_fixed[1]=o;
+                m_it_v[m_range_i][m_nfixed+1]
+                        = m_tries[m_trie_i]->child(m_it_v[m_range_i][m_nfixed], 1);
+                //m_pos_v[m_range_i][m_nfixed+1] = 1;
 
 
             }else if (!m_ptr_triple_pattern->s_is_variable() && !m_ptr_triple_pattern->p_is_variable()) {
+                m_trie_i = 0;
+                m_range_i = 0;
 
                 if (!exists(s, m_ptr_triple_pattern->term_s.value)) {
                     m_is_empty = true;
                     return;
                 }
-                down(s);
+                ++m_nfixed;
+                m_fixed[0]=s;
+                m_it_v[m_range_i][m_nfixed + 1]
+                        = m_tries[m_trie_i]->child(m_it_v[m_range_i][m_nfixed], 1);
+                //m_pos_v[m_range_i][m_nfixed + 1] = 1;
 
                 if (!exists(p, m_ptr_triple_pattern->term_p.value)) {
                     m_is_empty = true;
                     return;
                 }
-                down(p);
+                ++m_nfixed;
+                m_fixed[1]=p;
+                m_it_v[m_range_i][m_nfixed + 1]
+                        = m_tries[m_trie_i]->child(m_it_v[m_range_i][m_nfixed], 1);
+                //m_pos_v[m_range_i][m_nfixed + 1] = 1;
 
 
             }else if (!m_ptr_triple_pattern->p_is_variable() && !m_ptr_triple_pattern->o_is_variable()){
+                m_trie_i = 2;
+                m_range_i = 0;
 
                 if(!exists(s, m_ptr_triple_pattern->term_s.value)){
                     m_is_empty = true;
                     return;
                 }
-                down(p);
+                ++m_nfixed;
+                m_fixed[0]=p;
+                m_it_v[m_range_i][m_nfixed+1]
+                        = m_tries[m_trie_i]->child(m_it_v[m_range_i][m_nfixed], 1);
+                //m_pos_v[m_range_i][m_nfixed+1] = 1;
 
                 if(!exists(o, m_ptr_triple_pattern->term_o.value)){
                     m_is_empty = true;
                     return;
                 }
-                down(o);
+                ++m_nfixed;
+                m_fixed[1]=o;
+                m_it_v[m_range_i][m_nfixed+1]
+                        = m_tries[m_trie_i]->child(m_it_v[m_range_i][m_nfixed], 1);
+                //m_pos_v[m_range_i][m_nfixed+1] = 1;
 
 
             }else if (!m_ptr_triple_pattern->s_is_variable()){
+                m_trie_i = 0;
+                m_range_i = 0;
                 if(!exists(s, m_ptr_triple_pattern->term_s.value)){
                     m_is_empty = true;
                     return;
                 }
-                down(s);
+                ++m_nfixed;
+                m_fixed[0]=s;
+                m_it_v[0][m_nfixed+1] = m_it_v[1][m_nfixed+1]
+                        = m_tries[m_trie_i]->child(m_it_v[0][m_nfixed], 1);
+                //m_pos_v[0][m_nfixed+1]  = m_pos_v[1][m_nfixed+1] = 1;
 
 
             }else if (!m_ptr_triple_pattern->p_is_variable()){
+                m_trie_i = 2;
+                m_range_i = 0;
                 if(!exists(p, m_ptr_triple_pattern->term_p.value)){
                     m_is_empty = true;
                     return;
                 }
-                down(p);
+                ++m_nfixed;
+                m_fixed[0]=p;
+                m_it_v[0][m_nfixed+1] = m_it_v[1][m_nfixed+1]
+                        = m_tries[m_trie_i]->child(m_it_v[0][m_nfixed], 1);
+               // m_pos_v[0][m_nfixed+1]  = m_pos_v[1][m_nfixed+1] = 1;
 
             }else if (!m_ptr_triple_pattern->o_is_variable()){
+                m_trie_i = 4;
+                m_range_i = 0;
                 if(!exists(o, m_ptr_triple_pattern->term_o.value)){
                     m_is_empty = true;
                     return;
                 }
-                down(o);
+                ++m_nfixed;
+                m_fixed[0]=o;
+                m_it_v[0][m_nfixed+1] = m_it_v[1][m_nfixed+1]
+                        = m_tries[m_trie_i]->child(m_it_v[0][m_nfixed], 1);
+               // m_pos_v[0][m_nfixed+1]  = m_pos_v[1][m_nfixed+1] = 1;
             }
         }
 
@@ -277,8 +320,10 @@ namespace ltj {
                 m_is_empty = std::move(o.m_is_empty);
                 m_tries = std::move(o.m_tries);
                 m_trie_i = std::move(o.m_trie_i);
-                m_status_i = std::move(o.m_status_i);
-                m_status = std::move(o.m_status);
+                m_range_i = std::move(o.m_range_i);
+                m_it_v = std::move(o.m_it_v);
+                //m_pos_v = std::move(o.m_pos_v);
+                m_degree_v = std::move(o.m_degree_v);
             }
             return *this;
         }
@@ -293,18 +338,16 @@ namespace ltj {
             std::swap(m_is_empty, o.m_is_empty);
             std::swap(m_tries, o.m_tries);
             std::swap(m_trie_i, o.m_trie_i);
-            std::swap(m_status_i, o.m_status_i);
-            std::swap(m_status, o.m_status);
+            std::swap(m_range_i, o.m_range_i);
+            std::swap(m_it_v, o.m_it_v);
+            //std::swap(m_pos_v, o.m_pos_v);
+            std::swap(m_degree_v, o.m_degree_v);
         }
 
 
-        void down(state_type state){
-            ++m_nfixed;
-            m_fixed[m_nfixed] = state;
-            m_redo[m_nfixed+1] = true;
-        }
 
         void down(var_type var, value_type c) { //Go down in the trie
+            ++m_nfixed;
             state_type state;
             if (is_variable_subject(var)) {
                 state = s;
@@ -313,7 +356,22 @@ namespace ltj {
             } else {
                 state = o;
             }
-            down(state);
+            m_fixed[m_nfixed-1] = state;
+            if(m_nfixed == 1){ //First fix
+                //if(m_tries[m_trie_i]->childrenCount(m_it_v[0][m_nfixed])){
+                auto cnt = m_tries[m_trie_i]->childrenCount(m_it_v[0][m_nfixed]);
+                m_it_v[0][m_nfixed+1] = m_it_v[1][m_nfixed+1]
+                        = m_tries[m_trie_i]->child(m_it_v[m_range_i][m_nfixed], 1);
+                //m_pos_v[0][m_nfixed+1] = m_pos_v[1][m_nfixed+1] = 1;
+                m_degree_v[0][m_nfixed+1] = m_degree_v[1][m_nfixed+1] = cnt;
+                //}
+            }else if (m_nfixed == 2){ //Fix one trie (the active one)
+                auto cnt = m_tries[m_trie_i]->childrenCount(m_it_v[m_range_i][m_nfixed]);
+                m_it_v[m_range_i][m_nfixed+1] = m_tries[m_trie_i]->child(m_it_v[m_range_i][m_nfixed], 1);
+               // m_pos_v[m_range_i][m_nfixed+1] = 1;
+                m_degree_v[m_range_i][m_nfixed+1] = cnt;
+                //}
+            }
         };
 
         //Reverses the intervals and variable weights. Also resets the current value.
@@ -322,37 +380,45 @@ namespace ltj {
         };
 
 
-
+        //TODO update degrees
         bool exists(state_type state, size_type c) { //Return the minimum in the range
             //If c=-1 we need to get the minimum value for the current level.
 
             if(m_nfixed == 0) {
-                m_trie_i = 2*state;
+                if (state == s) {
+                    m_trie_i = 0;
+                } else if (state == p) {
+                    m_trie_i = 2;
+                } else {
+                    m_trie_i = 4;
+                }
             }else if (m_nfixed == 1){
                 if (state == s) { //Fix variables
                     m_trie_i = (m_fixed[m_nfixed-1] == o) ? 4 : 3 ;
-                   // m_status_i = (m_fixed[m_nfixed-1] == o) ? 0 : 1;
+                    m_range_i = (m_fixed[m_nfixed-1] == o) ? 0 : 1;
                 } else if (state == p) {
                     m_trie_i = (m_fixed[m_nfixed-1] == s) ? 0 : 5 ;
-                   // m_status_i = (m_fixed[m_nfixed-1] == s) ? 0 : 1;
+                    m_range_i = (m_fixed[m_nfixed-1] == s) ? 0 : 1;
                 } else {
                     m_trie_i = (m_fixed[m_nfixed-1] == p) ? 2 : 1 ;
-                   // m_status_i = (m_fixed[m_nfixed-1] == p) ? 0 : 1;
+                    m_range_i = (m_fixed[m_nfixed-1] == p) ? 0 : 1;
                 }
             }
 
             auto trie = m_tries[m_trie_i];
-
-            size_type beg, end;
-            auto cnt = trie->childrenCount(parent());
-            beg = nodemap(trie->child(parent(), 1), trie);
-            end = beg + cnt -1;
+            //auto it_parent = parent();
+            auto it = current();
+            uint32_t cnt = trie->childrenCount(it);
+            auto first_child = trie->child(it, 1);
+            uint32_t beg = nodemap(first_child, trie);
+            uint32_t end = beg+cnt-1;
             auto p = trie->binary_search_seek(c, beg, end);
+
             if(p.second > end or p.first != c) return false;
-            m_status[m_nfixed+1].beg = beg;
-            m_status[m_nfixed+1].end = end;
-            m_redo[m_nfixed+1] = false;
-            m_status[m_nfixed+1].it = nodeselect(p.second, trie);
+
+            m_it_v[0][m_nfixed+1] = m_it_v[1][m_nfixed+1]  = nodeselect(p.second, trie); //next pos in the trie
+            m_degree_v[0][m_nfixed+1] = m_degree_v[1][m_nfixed+1] = cnt;
+            //m_pos_v[m_range_i][m_nfixed+1] = trie->child(it_parent, cnt);
             return true;
         }
 
@@ -370,37 +436,29 @@ namespace ltj {
             }else if (m_nfixed == 1){
                 if (is_variable_subject(var)) { //Fix variables
                     m_trie_i = (m_fixed[m_nfixed-1] == o) ? 4 : 3 ;
-                   // m_status_i = (m_fixed[m_nfixed-1] == o) ? 0 : 1;
+                    m_range_i = (m_fixed[m_nfixed-1] == o) ? 0 : 1;
                 } else if (is_variable_predicate(var)) {
                     m_trie_i = (m_fixed[m_nfixed-1] == s) ? 0 : 5 ;
-                    //m_status_i = (m_fixed[m_nfixed-1] == s) ? 0 : 1;
+                    m_range_i = (m_fixed[m_nfixed-1] == s) ? 0 : 1;
                 } else {
                     m_trie_i = (m_fixed[m_nfixed-1] == p) ? 2 : 1 ;
-                   // m_status_i = (m_fixed[m_nfixed-1] == p) ? 0 : 1;
+                    m_range_i = (m_fixed[m_nfixed-1] == p) ? 0 : 1;
                 }
             }
 
-            auto trie = m_tries[m_trie_i];
-            size_type beg, end, it;
-            if(m_redo[m_nfixed+1]){ //First time of leap (after a down)
-                auto cnt = trie->childrenCount(parent());
-                it = trie->child(parent(), 1);
-                beg = nodemap(it, trie);
-                end = beg + cnt -1;
-                m_status[m_nfixed+1].beg = beg;
-                m_status[m_nfixed+1].end = end;
-                m_status[m_nfixed+1].it  = it;
-                m_redo[m_nfixed+1] = false;
-            }else{
-                beg = nodemap(current(), trie);
-                end = m_status[m_nfixed+1].end;
-            }
 
-            if(c == -1) return key();
+            if (c == -1) return key();
+            auto trie = m_tries[m_trie_i];
+            auto it_parent = parent();
+            auto cnt = m_degree_v[m_range_i][m_nfixed];
+            //uint32_t i = trie->b_rank0(current())-2;
+            auto beg = nodemap(current(), trie);
+            auto end = nodemap(trie->child(it_parent, cnt), trie); //TODO: save it as cnt
             auto p  = trie->binary_search_seek(c, beg, end);
+
             if(p.second > end) return 0;
 
-            m_status[m_nfixed+1].it = nodeselect(p.second, trie); // pos in the trie
+            m_it_v[m_range_i][m_nfixed+1]  = nodeselect(p.second, trie); //next pos in the trie
             return p.first;
         }
 
@@ -410,12 +468,12 @@ namespace ltj {
         }
 
         inline size_type children() const{
-            return m_degree_v[m_status_i][m_nfixed+1];
+            return m_degree_v[m_range_i][m_nfixed+1];
         }
 
         inline size_type subtree_size_d1() const { //TODO: review this
             auto trie = m_tries[m_trie_i];
-            auto cnt = m_degree_v[m_status_i][m_nfixed+1];
+            auto cnt = m_degree_v[m_range_i][m_nfixed+1];
             size_type leftmost_leaf, rightmost_leaf;
             auto it = current();
             //Leftmost
