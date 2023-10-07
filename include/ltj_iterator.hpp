@@ -342,6 +342,7 @@ namespace ltj {
                 state = p;
             }
             choose_trie(state);
+            std::cout << "trie_i: " << m_trie_i << " status_i: " << m_status_i << std::endl;
             cltj::CompactTrieIV* trie = m_tries[m_trie_i];
             size_type beg, end, it;
             if(m_redo[m_nfixed+1]){ //First time of leap (after a down)
