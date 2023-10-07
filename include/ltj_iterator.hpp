@@ -381,6 +381,7 @@ namespace ltj {
             }else{
                 m_status[m_nfixed+1].it[m_status_i] = nodeselect(p.second, trie);
             }
+            print_status();
             return true;
         }
 
@@ -414,7 +415,6 @@ namespace ltj {
                 beg = nodemap(current(), trie);
                 end = m_status[m_nfixed+1].end;
             }
-            print_status();
             if(c == -1) return key();
             auto p  = trie->binary_search_seek(c, beg, end);
             if(p.second > end) return 0;
@@ -425,6 +425,7 @@ namespace ltj {
             }else{
                 m_status[m_nfixed+1].it[m_status_i] = nodeselect(p.second, trie);
             }
+            print_status();
             return p.first;
         }
 
