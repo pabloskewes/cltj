@@ -100,86 +100,23 @@ namespace ltj {
 
         void process_constants(){
 
-            if(!m_ptr_triple_pattern->s_is_variable() && !m_ptr_triple_pattern->o_is_variable()
-               && !m_ptr_triple_pattern->p_is_variable()){
-
+            if(!m_ptr_triple_pattern->s_is_variable()){
                 if(!exists(s, m_ptr_triple_pattern->term_s.value)){
                     m_is_empty = true;
                     return;
                 }
                 down(s);
+            }
+
+            if(!m_ptr_triple_pattern->p_is_variable()){
                 if(!exists(p, m_ptr_triple_pattern->term_p.value)){
                     m_is_empty = true;
                     return;
                 }
                 down(p);
-                if(!exists(o, m_ptr_triple_pattern->term_o.value)){
-                    m_is_empty = true;
-                    return;
-                }
-                down(o);
+            }
 
-            }else if (!m_ptr_triple_pattern->s_is_variable() && !m_ptr_triple_pattern->o_is_variable()){
-
-                if(!exists(s, m_ptr_triple_pattern->term_s.value)){
-                    m_is_empty = true;
-                    return;
-                }
-                down(s);
-                if(!exists(o, m_ptr_triple_pattern->term_o.value)){
-                    m_is_empty = true;
-                    return;
-                }
-                down(o);
-                //m_pos_v[m_status_i][m_nfixed+1] = 1;
-
-
-            }else if (!m_ptr_triple_pattern->s_is_variable() && !m_ptr_triple_pattern->p_is_variable()) {
-
-                if (!exists(s, m_ptr_triple_pattern->term_s.value)) {
-                    m_is_empty = true;
-                    return;
-                }
-                down(s);
-
-                if (!exists(p, m_ptr_triple_pattern->term_p.value)) {
-                    m_is_empty = true;
-                    return;
-                }
-                down(p);
-
-
-            }else if (!m_ptr_triple_pattern->p_is_variable() && !m_ptr_triple_pattern->o_is_variable()){
-
-                if(!exists(s, m_ptr_triple_pattern->term_s.value)){
-                    m_is_empty = true;
-                    return;
-                }
-                down(p);
-
-                if(!exists(o, m_ptr_triple_pattern->term_o.value)){
-                    m_is_empty = true;
-                    return;
-                }
-                down(o);
-
-
-            }else if (!m_ptr_triple_pattern->s_is_variable()){
-                if(!exists(s, m_ptr_triple_pattern->term_s.value)){
-                    m_is_empty = true;
-                    return;
-                }
-                down(s);
-
-
-            }else if (!m_ptr_triple_pattern->p_is_variable()){
-                if(!exists(p, m_ptr_triple_pattern->term_p.value)){
-                    m_is_empty = true;
-                    return;
-                }
-                down(p);
-
-            }else if (!m_ptr_triple_pattern->o_is_variable()){
+            if(!m_ptr_triple_pattern->o_is_variable()){
                 if(!exists(o, m_ptr_triple_pattern->term_o.value)){
                     m_is_empty = true;
                     return;
@@ -256,6 +193,15 @@ namespace ltj {
             m_ptr_index = index;
             for(int i = 0; i < m_orders.size(); ++i){
                 m_tries[i] = m_ptr_index->get_trie(m_orders[i]);
+                /*std::cout << "Trie[" << i << "]: ";
+                for(int j = 0; j < m_tries[i]->B.size(); ++j){
+                    if(m_tries[i]->B[j]){
+                        std::cout << "1";
+                    }else{
+                        std::cout << "0";
+                    }
+                }
+                std::cout << std::endl;*/
             }
             m_status[0].it[0] = 2;
             m_status[0].it[1] = 2;
@@ -400,7 +346,6 @@ namespace ltj {
             size_type beg, end, it;
             if(m_redo[m_nfixed+1]){ //First time of leap (after a down)
                 std::cout << "parent: " << parent() << std::endl;
-
                 auto cnt = trie->childrenCount(parent());
                 it = trie->child(parent(), 1);
                 beg = nodemap(it, trie);
@@ -424,7 +369,7 @@ namespace ltj {
             }else{
                 m_status[m_nfixed+1].it[m_status_i] = nodeselect(p.second, trie);
             }
-            //print_status();
+            print_status();
             return p.first;
         }
 
