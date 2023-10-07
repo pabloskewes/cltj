@@ -202,15 +202,15 @@ namespace ltj {
                 cout << endl;*/
             }else{
                 var_type x_j = m_veo.next();
-                //cout << "Variable: " << (uint64_t) x_j << endl;
+                cout << "Variable: " << (uint64_t) x_j << endl;
                 //cout << (uint64_t) x_j << endl;
                 vector<ltj_iter_type*>& itrs = m_var_to_iterators[x_j];
                 bool ok;
                 if(itrs.size() == 1 && itrs[0]->in_last_level()) {//Lonely variables
-                    //cout << "Seeking (last level)" << endl;
+                    cout << "Seeking (last level)" << endl;
                     auto results = itrs[0]->seek_all(x_j);
                     //cout << "Results: " << results.size() << endl;
-                    //cout << "Seek (last level): (" << (uint64_t) x_j << ": size=" << results.size() << ")" <<endl;
+                    cout << "Seek (last level): (" << (uint64_t) x_j << ": size=" << results.size() << ")" <<endl;
                     for (const auto &c : results) {
                         //1. Adding result to tuple
                         tuple[j] = {x_j, c};
@@ -226,7 +226,7 @@ namespace ltj {
                     }
                 }else {
                     value_type c = seek(x_j);
-                    //cout << "Seek (init): (" << (uint64_t) x_j << ": " << c << ")" <<endl;
+                    cout << "Seek (init): (" << (uint64_t) x_j << ": " << c << ")" <<endl;
                     while (c != 0) { //If empty c=0
                         //1. Adding result to tuple
                         tuple[j] = {x_j, c};
@@ -245,7 +245,7 @@ namespace ltj {
                         m_veo.up();
                         //5. Next constant for x_j
                         c = seek(x_j, c + 1);
-                        //cout << "Seek (bucle): (" << (uint64_t) x_j << ": " << c << ")" <<endl;
+                        cout << "Seek (bucle): (" << (uint64_t) x_j << ": " << c << ")" <<endl;
                     }
                 }
                 m_veo.done();

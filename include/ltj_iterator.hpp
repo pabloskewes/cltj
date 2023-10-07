@@ -188,7 +188,7 @@ namespace ltj {
             }
 
             std::cout << "Constants" << std::endl;
-            print_status();
+            //print_status();
         }
 
         void choose_trie(state_type state){
@@ -381,7 +381,7 @@ namespace ltj {
             }else{
                 m_status[m_nfixed+1].it[m_status_i] = nodeselect(p.second, trie);
             }
-            print_status();
+            //print_status();
             return true;
         }
 
@@ -424,7 +424,7 @@ namespace ltj {
             }else{
                 m_status[m_nfixed+1].it[m_status_i] = nodeselect(p.second, trie);
             }
-            print_status();
+            //print_status();
             return p.first;
         }
 
@@ -459,7 +459,7 @@ namespace ltj {
             auto it_parent = parent();
             uint32_t cnt = trie->childrenCount(it_parent);
             size_type it;
-            for(int i = 1; i <= cnt; ++i){
+            for(int i = 1; i <= cnt; ++i){ //TODO: improve this avoiding computing the child every time
                 it = trie->child(it_parent, i);
                 results.emplace_back(trie->key_at(it));
             }
