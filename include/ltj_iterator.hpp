@@ -39,7 +39,7 @@ namespace ltj {
         typedef uint64_t size_type;
         enum state_type {s = 0, p = 1, o = 2};
         typedef struct {
-            size_type it;
+            std::array<size_type, 2> it;
             size_type cnt;
             size_type beg;
             size_type end;
@@ -93,84 +93,15 @@ namespace ltj {
         void print_status(){
             std::cout << "fixed: " << m_nfixed << std::endl;
             for(int i = 0; i < m_status.size(); ++i){
-                std::cout << "it=" << m_status[i].it << " cnt=" << m_status[i].cnt << " beg=" << m_status[i].beg
-                << " end=" << m_status[i].end << std::endl;
+                std::cout << "it0=" << m_status[i].it[1] << " it1=" << m_status[i].it[1] << " cnt=" << m_status[i].cnt
+                << " beg=" << m_status[i].beg << " end=" << m_status[i].end << std::endl;
             }
         }
-
-    public:
-        /*
-            Returns the key of the current position of the iterator
-        */
-        const size_type &nfixed = m_nfixed;
-
-        uint32_t key(){
-            return m_tries[m_trie_i]->key_at(current());
-        }
-
-        inline bool is_variable_subject(var_type var) {
-            return m_ptr_triple_pattern->term_s.is_variable && var == m_ptr_triple_pattern->term_s.value;
-        }
-
-        inline bool is_variable_predicate(var_type var) {
-            return m_ptr_triple_pattern->term_p.is_variable && var == m_ptr_triple_pattern->term_p.value;
-        }
-
-        inline bool is_variable_object(var_type var) {
-            return m_ptr_triple_pattern->term_o.is_variable && var == m_ptr_triple_pattern->term_o.value;
-        }
-        inline const bool is_empty(){
-            return m_is_empty;
-        }
-
-        inline size_type parent() const{
-           return m_status[m_nfixed].it;
-        }
-
-        inline size_type current() const {
-            return m_status[m_nfixed+1].it;
-        }
-
-        inline size_type nodemap(size_type i, cltj::CTrie* trie) const {
-            return trie->b_rank0(i)-2;
-        }
-
-        inline size_type nodeselect(size_type i, cltj::CTrie* trie) const {
-            return trie->b_sel0(i+2)+1;
-        }
-
-
-        ltj_iterator() = default;
-        ltj_iterator(const triple_pattern *triple, index_scheme_type *index) {
-            m_ptr_triple_pattern = triple;
-            m_ptr_index = index;
-            for(int i = 0; i < m_orders.size(); ++i){
-                m_tries[i] = m_ptr_index->get_trie(m_orders[i]);
-            }
-            m_status[0].it = 2;
-            m_status[0].beg = 2;
-            m_status[0].end = 1;
-            m_status[0].cnt = 1;
-            //m_status[1][0].it = 2;
-            //m_status[1][0].last = 1;
-            m_redo[0] = false;
-            m_redo[1] = true;
-            m_redo[2] = true;
-            m_redo[3] = true;
-
-            process_constants();
-        }
-        /*
-        ~ltj_iterator(){
-            m_ptr_triple_pattern = nullptr;
-            m_ptr_index = nullptr;
-        }
-        */
 
         void process_constants(){
 
             if(!m_ptr_triple_pattern->s_is_variable() && !m_ptr_triple_pattern->o_is_variable()
-                && !m_ptr_triple_pattern->p_is_variable()){
+               && !m_ptr_triple_pattern->p_is_variable()){
 
                 if(!exists(s, m_ptr_triple_pattern->term_s.value)){
                     m_is_empty = true;
@@ -260,6 +191,95 @@ namespace ltj {
             print_status();
         }
 
+        void choose_trie(state_type state){
+            if(m_nfixed == 0) {
+                m_trie_i = 2*state;
+            }else if (m_nfixed == 1){
+                if (state == s) { //Fix variables
+                    m_trie_i = (m_fixed[m_nfixed-1] == o) ? 4 : 3 ;
+                    m_status_i = (m_fixed[m_nfixed-1] == o) ? 0 : 1;
+                } else if (state == p) {
+                    m_trie_i = (m_fixed[m_nfixed-1] == s) ? 0 : 5 ;
+                    m_status_i = (m_fixed[m_nfixed-1] == s) ? 0 : 1;
+                } else {
+                    m_trie_i = (m_fixed[m_nfixed-1] == p) ? 2 : 1 ;
+                    m_status_i = (m_fixed[m_nfixed-1] == p) ? 0 : 1;
+                }
+            }
+        }
+
+    public:
+        /*
+            Returns the key of the current position of the iterator
+        */
+        const size_type &nfixed = m_nfixed;
+
+        uint32_t key(){
+            return m_tries[m_trie_i]->key_at(current());
+        }
+
+        inline bool is_variable_subject(var_type var) {
+            return m_ptr_triple_pattern->term_s.is_variable && var == m_ptr_triple_pattern->term_s.value;
+        }
+
+        inline bool is_variable_predicate(var_type var) {
+            return m_ptr_triple_pattern->term_p.is_variable && var == m_ptr_triple_pattern->term_p.value;
+        }
+
+        inline bool is_variable_object(var_type var) {
+            return m_ptr_triple_pattern->term_o.is_variable && var == m_ptr_triple_pattern->term_o.value;
+        }
+        inline const bool is_empty(){
+            return m_is_empty;
+        }
+
+        inline size_type parent() const{
+           return m_status[m_nfixed].it[m_status_i];
+        }
+
+        inline size_type current() const {
+            return m_status[m_nfixed+1].it[m_status_i];
+        }
+
+        inline size_type nodemap(size_type i, cltj::CTrie* trie) const {
+            return trie->b_rank0(i)-2;
+        }
+
+        inline size_type nodeselect(size_type i, cltj::CTrie* trie) const {
+            return trie->b_sel0(i+2)+1;
+        }
+
+
+        ltj_iterator() = default;
+        ltj_iterator(const triple_pattern *triple, index_scheme_type *index) {
+            m_ptr_triple_pattern = triple;
+            m_ptr_index = index;
+            for(int i = 0; i < m_orders.size(); ++i){
+                m_tries[i] = m_ptr_index->get_trie(m_orders[i]);
+            }
+            m_status[0].it[0] = 2;
+            m_status[0].it[1] = 2;
+            m_status[0].beg = 2;
+            m_status[0].end = 1;
+            m_status[0].cnt = 1;
+            //m_status[1][0].it = 2;
+            //m_status[1][0].last = 1;
+            m_redo[0] = false;
+            m_redo[1] = true;
+            m_redo[2] = true;
+            m_redo[3] = true;
+
+            process_constants();
+        }
+        /*
+        ~ltj_iterator(){
+            m_ptr_triple_pattern = nullptr;
+            m_ptr_index = nullptr;
+        }
+        */
+
+
+
         const triple_pattern* get_triple_pattern() const{
             return m_ptr_triple_pattern;
         }
@@ -341,22 +361,8 @@ namespace ltj {
 
 
         bool exists(state_type state, size_type c) { //Return the minimum in the range
-            //If c=-1 we need to get the minimum value for the current level.
-            if(m_nfixed == 0) {
-                m_trie_i = 2*state;
-            }else if (m_nfixed == 1){
-                if (state == s) { //Fix variables
-                    m_trie_i = (m_fixed[m_nfixed-1] == o) ? 4 : 3 ;
-                   // m_status_i = (m_fixed[m_nfixed-1] == o) ? 0 : 1;
-                } else if (state == p) {
-                    m_trie_i = (m_fixed[m_nfixed-1] == s) ? 0 : 5 ;
-                   // m_status_i = (m_fixed[m_nfixed-1] == s) ? 0 : 1;
-                } else {
-                    m_trie_i = (m_fixed[m_nfixed-1] == p) ? 2 : 1 ;
-                   // m_status_i = (m_fixed[m_nfixed-1] == p) ? 0 : 1;
-                }
-            }
 
+            choose_trie(state);
             auto trie = m_tries[m_trie_i];
 
             size_type beg, end;
@@ -369,50 +375,42 @@ namespace ltj {
             m_status[m_nfixed+1].end = end;
             m_status[m_nfixed+1].cnt = cnt;
             m_redo[m_nfixed+1] = false;
-            m_status[m_nfixed+1].it = nodeselect(p.second, trie);
+            if(m_nfixed == 0){
+                m_status[m_nfixed+1].it[0] = nodeselect(p.second, trie);
+                m_status[m_nfixed+1].it[1] = nodeselect(p.second, m_tries[m_trie_i+1]);
+            }else{
+                m_status[m_nfixed+1].it[m_status_i] = nodeselect(p.second, trie);
+            }
             return true;
         }
 
         value_type leap(var_type var, size_type c = -1) { //Return the minimum in the range
             //If c=-1 we need to get the minimum value for the current level.
 
-            if(m_nfixed == 0) {
-                if (is_variable_subject(var)) {
-                    m_trie_i = 0;
-                } else if (is_variable_predicate(var)) {
-                    m_trie_i = 2;
-                } else {
-                    m_trie_i = 4;
-                }
-            }else if (m_nfixed == 1){
-                if (is_variable_subject(var)) { //Fix variables
-                    m_trie_i = (m_fixed[m_nfixed-1] == o) ? 4 : 3 ;
-                   // m_status_i = (m_fixed[m_nfixed-1] == o) ? 0 : 1;
-                } else if (is_variable_predicate(var)) {
-                    m_trie_i = (m_fixed[m_nfixed-1] == s) ? 0 : 5 ;
-                    //m_status_i = (m_fixed[m_nfixed-1] == s) ? 0 : 1;
-                } else {
-                    m_trie_i = (m_fixed[m_nfixed-1] == p) ? 2 : 1 ;
-                   // m_status_i = (m_fixed[m_nfixed-1] == p) ? 0 : 1;
-                }
-            }
 
-
-            std::cout << "Trie: " << m_trie_i << std::endl;
-            auto trie = m_tries[m_trie_i];
+            cltj::CompactTrieIV* trie;
             size_type beg, end, it;
             if(m_redo[m_nfixed+1]){ //First time of leap (after a down)
                 std::cout << "parent: " << parent() << std::endl;
+                state_type state = o;
+                if (is_variable_subject(var)) {
+                    state = s;
+                } else if (is_variable_predicate(var)) {
+                    state = p;
+                }
+                choose_trie(state);
+                trie = m_tries[m_trie_i];
                 auto cnt = trie->childrenCount(parent());
                 it = trie->child(parent(), 1);
                 beg = nodemap(it, trie);
                 end = beg + cnt -1;
                 m_status[m_nfixed+1].beg = beg;
                 m_status[m_nfixed+1].end = end;
-                m_status[m_nfixed+1].it  = it;
+                m_status[m_nfixed+1].it[0] = m_status[m_nfixed+1].it[1] = it;
                 m_status[m_nfixed+1].cnt  = cnt;
                 m_redo[m_nfixed+1] = false;
             }else{
+                trie = m_tries[m_trie_i];
                 beg = nodemap(current(), trie);
                 end = m_status[m_nfixed+1].end;
             }
@@ -421,7 +419,12 @@ namespace ltj {
             auto p  = trie->binary_search_seek(c, beg, end);
             if(p.second > end) return 0;
 
-            m_status[m_nfixed+1].it = nodeselect(p.second, trie); // pos in the trie
+            if(m_nfixed == 0){
+                m_status[m_nfixed+1].it[0] = nodeselect(p.second, trie);
+                m_status[m_nfixed+1].it[1] = nodeselect(p.second, m_tries[m_trie_i+1]);
+            }else{
+                m_status[m_nfixed+1].it[m_status_i] = nodeselect(p.second, trie);
+            }
             return p.first;
         }
 
