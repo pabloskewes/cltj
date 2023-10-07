@@ -389,18 +389,18 @@ namespace ltj {
             //If c=-1 we need to get the minimum value for the current level.
 
 
-            cltj::CompactTrieIV* trie;
+            state_type state = o;
+            if (is_variable_subject(var)) {
+                state = s;
+            } else if (is_variable_predicate(var)) {
+                state = p;
+            }
+            choose_trie(state);
+            cltj::CompactTrieIV* trie = m_tries[m_trie_i];
             size_type beg, end, it;
             if(m_redo[m_nfixed+1]){ //First time of leap (after a down)
                 std::cout << "parent: " << parent() << std::endl;
-                state_type state = o;
-                if (is_variable_subject(var)) {
-                    state = s;
-                } else if (is_variable_predicate(var)) {
-                    state = p;
-                }
-                choose_trie(state);
-                trie = m_tries[m_trie_i];
+
                 auto cnt = trie->childrenCount(parent());
                 it = trie->child(parent(), 1);
                 beg = nodemap(it, trie);
@@ -411,7 +411,6 @@ namespace ltj {
                 m_status[m_nfixed+1].cnt  = cnt;
                 m_redo[m_nfixed+1] = false;
             }else{
-                trie = m_tries[m_trie_i];
                 beg = nodemap(current(), trie);
                 end = m_status[m_nfixed+1].end;
             }
