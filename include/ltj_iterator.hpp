@@ -369,7 +369,7 @@ namespace ltj {
             }else{
                 m_status[m_nfixed+1].it[m_status_i] = nodeselect(p.second, trie);
             }
-            print_status();
+            //print_status();
             return p.first;
         }
 
