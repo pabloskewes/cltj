@@ -93,7 +93,7 @@ namespace ltj {
         void print_status(){
             std::cout << "fixed: " << m_nfixed << std::endl;
             for(int i = 0; i < m_status.size(); ++i){
-                std::cout << "it0=" << m_status[i].it[1] << " it1=" << m_status[i].it[1] << " cnt=" << m_status[i].cnt
+                std::cout << "it0=" << m_status[i].it[0] << " it1=" << m_status[i].it[1] << " cnt=" << m_status[i].cnt
                 << " beg=" << m_status[i].beg << " end=" << m_status[i].end << std::endl;
             }
         }
