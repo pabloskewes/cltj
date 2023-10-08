@@ -290,6 +290,7 @@ namespace ltj {
 
         void down(state_type state){
             ++m_nfixed;
+            std::cout << "n_fixed: " << m_nfixed << std::endl;
             m_fixed[m_nfixed-1] = state;
             m_redo[m_nfixed+1] = true;
             print_redo();
