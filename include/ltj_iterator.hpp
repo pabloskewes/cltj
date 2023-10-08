@@ -217,7 +217,7 @@ namespace ltj {
             m_status[0].cnt = 1;
             //m_status[1][0].it = 2;
             //m_status[1][0].last = 1;
-            m_redo[0] = false;
+            m_redo[0] = true;
             m_redo[1] = true;
             m_redo[2] = true;
             m_redo[3] = true;
@@ -292,7 +292,7 @@ namespace ltj {
             ++m_nfixed;
             std::cout << "n_fixed: " << m_nfixed << std::endl;
             m_fixed[m_nfixed-1] = state;
-            m_redo[m_nfixed+1] = true;
+            m_redo[m_nfixed] = true;
             print_redo();
         }
 
@@ -329,7 +329,7 @@ namespace ltj {
             m_status[m_nfixed+1].beg = beg;
             m_status[m_nfixed+1].end = end;
             m_status[m_nfixed+1].cnt = cnt;
-            m_redo[m_nfixed+1] = false;
+            m_redo[m_nfixed] = false;
             if(m_nfixed == 0){
                 m_status[m_nfixed+1].it[0] = nodeselect(p.second, trie);
                 m_status[m_nfixed+1].it[1] = nodeselect(p.second, m_tries[m_trie_i+1]);
@@ -354,7 +354,7 @@ namespace ltj {
             std::cout << "trie_i: " << m_trie_i << " status_i: " << m_status_i << std::endl;
             cltj::CompactTrieIV* trie = m_tries[m_trie_i];
             size_type beg, end, it;
-            if(m_redo[m_nfixed+1]){ //First time of leap (after a down)
+            if(m_redo[m_nfixed]){ //First time of leap (after a down)
                 std::cout << "Redoing" << std::endl;
                 auto cnt = trie->childrenCount(parent());
                 it = trie->child(parent(), 1);
@@ -364,7 +364,7 @@ namespace ltj {
                 m_status[m_nfixed+1].end = end;
                 m_status[m_nfixed+1].it[0] = m_status[m_nfixed+1].it[1] = it;
                 m_status[m_nfixed+1].cnt  = cnt;
-                m_redo[m_nfixed+1] = false;
+                m_redo[m_nfixed] = false;
             }else{
                 beg = nodemap(current(), trie);
                 end = m_status[m_nfixed+1].end;
