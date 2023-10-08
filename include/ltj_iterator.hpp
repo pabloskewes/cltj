@@ -162,7 +162,7 @@ namespace ltj {
             m_status[m_nfixed+1].end = end;
             m_status[m_nfixed+1].it[0] = m_status[m_nfixed+1].it[1] = it;
             m_status[m_nfixed+1].cnt  = cnt;
-            return {beg, end}
+            return {beg, end};
         }
 
     public:
