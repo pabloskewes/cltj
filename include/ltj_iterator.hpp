@@ -98,6 +98,13 @@ namespace ltj {
             }
         }
 
+        void print_redo(){
+            for(int i = 0; i < m_redo.size(); ++i){
+                std::cout << m_redo[i] << " ";
+            }
+            std::cout << std::endl;
+        }
+
         void process_constants(){
 
             if(!m_ptr_triple_pattern->s_is_variable()){
@@ -285,6 +292,7 @@ namespace ltj {
             ++m_nfixed;
             m_fixed[m_nfixed-1] = state;
             m_redo[m_nfixed+1] = true;
+            print_redo();
         }
 
         void down(var_type var, value_type c) { //Go down in the trie
@@ -346,7 +354,7 @@ namespace ltj {
             cltj::CompactTrieIV* trie = m_tries[m_trie_i];
             size_type beg, end, it;
             if(m_redo[m_nfixed+1]){ //First time of leap (after a down)
-                std::cout << "parent: " << parent() << std::endl;
+                std::cout << "Redoing" << std::endl;
                 auto cnt = trie->childrenCount(parent());
                 it = trie->child(parent(), 1);
                 beg = nodemap(it, trie);
