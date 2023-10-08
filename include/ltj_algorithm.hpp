@@ -274,11 +274,19 @@ namespace ltj {
                     c_i = itrs[i]->leap(x_j, c);
                 }
                 std::cout << "Gets " << (::uint64_t) c_i << std::endl;
-                if(c_i == 0) return 0; //Empty intersection
+                if(c_i == 0) {
+                    for(auto itr : itrs){
+                        itr->leap_done();
+                    }
+                    return 0; //Empty intersection
+                }
                 n_ok = (c_i == c_prev) ? n_ok + 1 : 1;
                 if(n_ok == itrs.size()) return c_i;
                 c = c_prev = c_i;
                 i = (i+1 == itrs.size()) ? 0 : i+1;
+            }
+            for(auto itr : itrs){
+                itr->leap_done();
             }
         }
 
