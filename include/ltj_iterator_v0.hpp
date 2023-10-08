@@ -152,19 +152,6 @@ namespace ltj {
             }
         }
 
-        std::pair<size_type, size_type> range_in_trie(cltj::CompactTrieIV* trie){
-            size_type beg, end;
-            auto cnt = trie->childrenCount(parent());
-            size_type it = trie->child(parent(), 1);
-            beg = nodemap(it, trie);
-            end = beg + cnt -1;
-            m_status[m_nfixed+1].beg = beg;
-            m_status[m_nfixed+1].end = end;
-            m_status[m_nfixed+1].it[0] = m_status[m_nfixed+1].it[1] = it;
-            m_status[m_nfixed+1].cnt  = cnt;
-            return {beg, end}
-        }
-
     public:
         /*
             Returns the key of the current position of the iterator
@@ -302,21 +289,11 @@ namespace ltj {
 
 
         void down(state_type state){
-            if(m_nfixed < 2){ //If nfixed == 2, we are in the last level
-                choose_trie(state);
-                auto trie = m_tries[m_trie_i];
-                size_type beg, end;
-                auto cnt = trie->childrenCount(current());
-                size_type it = trie->child(current(), 1);
-                beg = nodemap(it, trie);
-                end = beg + cnt -1;
-                m_status[m_nfixed+1].beg = beg;
-                m_status[m_nfixed+1].end = end;
-                m_status[m_nfixed+1].it[0] = m_status[m_nfixed+1].it[1] = it;
-                m_status[m_nfixed+1].cnt  = cnt;
-            }
             ++m_nfixed;
+            std::cout << "n_fixed: " << m_nfixed << std::endl;
             m_fixed[m_nfixed-1] = state;
+            m_redo[m_nfixed] = true;
+            print_redo();
         }
 
         void down(var_type var, value_type c) { //Go down in the trie
@@ -342,16 +319,17 @@ namespace ltj {
 
             choose_trie(state);
             auto trie = m_tries[m_trie_i];
+
             size_type beg, end;
             auto cnt = trie->childrenCount(parent());
-            size_type it = trie->child(parent(), 1);
-            beg = nodemap(it, trie);
+            beg = nodemap(trie->child(parent(), 1), trie);
             end = beg + cnt -1;
+            auto p = trie->binary_search_seek(c, beg, end);
+            if(p.second > end or p.first != c) return false;
             m_status[m_nfixed+1].beg = beg;
             m_status[m_nfixed+1].end = end;
-            m_status[m_nfixed+1].it[0] = m_status[m_nfixed+1].it[1] = it;
-            m_status[m_nfixed+1].cnt  = cnt;
-            auto p = trie->binary_search_seek(c, beg, end);
+            m_status[m_nfixed+1].cnt = cnt;
+            m_redo[m_nfixed] = false;
             if(m_nfixed == 0){
                 m_status[m_nfixed+1].it[0] = nodeselect(p.second, trie);
                 m_status[m_nfixed+1].it[1] = nodeselect(p.second, m_tries[m_trie_i+1]);
@@ -375,13 +353,21 @@ namespace ltj {
             choose_trie(state);
             std::cout << "trie_i: " << m_trie_i << " status_i: " << m_status_i << std::endl;
             cltj::CompactTrieIV* trie = m_tries[m_trie_i];
-            size_type beg, end;
+            size_type beg, end, it;
             std::cout << "Leap redo n_fixed:" << m_nfixed << std::endl;
             print_redo();
-            if(m_nfixed == 0){ //First time of leap (after a down)
-                //range_in_trie(trie, beg, end);
-                std::cout << "Pensar esto." << std::endl;
-                exit(0);
+            if(m_redo[m_nfixed]){ //First time of leap (after a down)
+                std::cout << "Redoing" << std::endl;
+                auto cnt = trie->childrenCount(parent());
+                it = trie->child(parent(), 1);
+                beg = nodemap(it, trie);
+                end = beg + cnt -1;
+                assert(m_nfixed+1 < 4);
+                m_status[m_nfixed+1].beg = beg;
+                m_status[m_nfixed+1].end = end;
+                m_status[m_nfixed+1].it[0] = m_status[m_nfixed+1].it[1] = it;
+                m_status[m_nfixed+1].cnt  = cnt;
+                m_redo[m_nfixed] = false;
             }else{
                 beg = nodemap(current(), trie);
                 end = m_status[m_nfixed+1].end;
@@ -389,6 +375,7 @@ namespace ltj {
             if(c == -1) return key();
             auto p  = trie->binary_search_seek(c, beg, end);
             if(p.second > end) return 0;
+
             if(m_nfixed == 0){
                 m_status[m_nfixed+1].it[0] = nodeselect(p.second, trie);
                 m_status[m_nfixed+1].it[1] = nodeselect(p.second, m_tries[m_trie_i+1]);
