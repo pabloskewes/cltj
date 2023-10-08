@@ -267,7 +267,7 @@ namespace ltj {
             value_type c_i, c_prev = 0, i = 0, n_ok = 0;
             while (true){
                 //Compute leap for each triple that contains x_j
-                std::cout << "Leap of " << (::uint64_t) x_j << std::endl;
+                std::cout << "Leap of " << (::uint64_t) x_j << " in iterator: " << i << std::endl;
                 if(c == -1){
                     c_i = itrs[i]->leap(x_j);
                 }else{
