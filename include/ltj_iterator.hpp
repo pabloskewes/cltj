@@ -362,6 +362,7 @@ namespace ltj {
                 it = trie->child(parent(), 1);
                 beg = nodemap(it, trie);
                 end = beg + cnt -1;
+                assert(m_nfixed+1 < 4);
                 m_status[m_nfixed+1].beg = beg;
                 m_status[m_nfixed+1].end = end;
                 m_status[m_nfixed+1].it[0] = m_status[m_nfixed+1].it[1] = it;
