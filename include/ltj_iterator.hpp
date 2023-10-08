@@ -354,7 +354,7 @@ namespace ltj {
             std::cout << "trie_i: " << m_trie_i << " status_i: " << m_status_i << std::endl;
             cltj::CompactTrieIV* trie = m_tries[m_trie_i];
             size_type beg, end, it;
-            std::cout << "Leap redo" << std::endl;
+            std::cout << "Leap redo n_fixed:" << m_nfixed << std::endl;
             print_redo();
             if(m_redo[m_nfixed]){ //First time of leap (after a down)
                 std::cout << "Redoing" << std::endl;
