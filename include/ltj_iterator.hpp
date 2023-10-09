@@ -131,7 +131,7 @@ namespace ltj {
                 down(o);
             }
 
-            std::cout << "Constants" << std::endl;
+            //std::cout << "Constants" << std::endl;
             //print_status();
         }
 
@@ -290,7 +290,7 @@ namespace ltj {
 
         void down(state_type state){
             ++m_nfixed;
-            std::cout << "n_fixed: " << m_nfixed << std::endl;
+            //std::cout << "n_fixed: " << m_nfixed << std::endl;
             m_fixed[m_nfixed-1] = state;
             //m_redo[m_nfixed] = true;
             //print_redo();
@@ -355,13 +355,13 @@ namespace ltj {
                 state = p;
             }
             choose_trie(state);
-            std::cout << "trie_i: " << m_trie_i << " status_i: " << m_status_i << std::endl;
+            //std::cout << "trie_i: " << m_trie_i << " status_i: " << m_status_i << std::endl;
             cltj::CompactTrieIV* trie = m_tries[m_trie_i];
             size_type beg, end, it;
-            std::cout << "Leap redo n_fixed:" << m_nfixed << std::endl;
-            print_redo();
-            if(m_redo[m_nfixed]){ //First time of leap (after a down)
-                std::cout << "Redoing" << std::endl;
+            //std::cout << "Leap redo n_fixed:" << m_nfixed << std::endl;
+            //print_redo();
+            if(m_redo[m_nfixed]){ //First time of leap
+                //std::cout << "Redoing" << std::endl;
                 auto cnt = trie->childrenCount(parent());
                 it = trie->child(parent(), 1);
                 beg = nodemap(it, trie);
