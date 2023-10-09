@@ -429,7 +429,7 @@ namespace ltj {
 
             size_type it = trie->child(it_parent, 1);
             size_type beg = nodemap(it, trie);
-            for(auto i = beg; i < beg + cnt; ++beg){
+            for(auto i = beg; i < beg + cnt; ++i){
                 results.emplace_back(trie->seq[i]);
             }
             return results;
