@@ -377,7 +377,7 @@ namespace ltj {
                 end = m_status[m_nfixed+1].end;
             }
             //if(c == -1) return key(); //TODO: improve this, we can get the key from beg
-            if(c == -1) trie->seq[beg];
+            if(c == -1) return trie->seq[beg];
             auto p  = trie->binary_search_seek(c, beg, end);
             if(p.second > end) return 0;
 
