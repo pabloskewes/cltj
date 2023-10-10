@@ -421,11 +421,6 @@ namespace ltj {
             auto trie = m_tries[m_trie_i];
             auto it_parent = parent();
             uint32_t cnt = trie->childrenCount(it_parent);
-           /* size_type it;
-            for(int i = 1; i <= cnt; ++i){ //TODO: improve this avoiding computing the child every time
-                it = trie->child(it_parent, i);
-                results.emplace_back(trie->key_at(it));
-            }*/
 
             size_type it = trie->child(it_parent, 1);
             size_type beg = nodemap(it, trie);

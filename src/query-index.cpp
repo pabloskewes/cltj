@@ -142,7 +142,7 @@ void query(const std::string &file, const std::string &queries, const uint64_t l
     std::ifstream ifs;
     uint64_t nQ = 0;
 
-    ::util::time::usage::usage_type start, stop;
+    //::util::time::usage::usage_type start, stop;
     uint64_t total_elapsed_time;
     uint64_t total_user_time;
 
@@ -175,10 +175,10 @@ void query(const std::string &file, const std::string &queries, const uint64_t l
             typedef std::vector<typename algorithm_type::tuple_type> results_type;
             results_type res;
 
-            start = ::util::time::usage::now();
+            auto start = std::chrono::high_resolution_clock::now();
             algorithm_type ltj(&query, &graph);
             ltj.join(res, limit, 600);
-            stop = ::util::time::usage::now();
+            auto stop = std::chrono::high_resolution_clock::now();
 
             total_elapsed_time = (uint64_t) duration_cast<nanoseconds>(stop.elapsed - start.elapsed);
             total_user_time = (uint64_t) duration_cast<nanoseconds>(stop.user - start.user);
@@ -193,7 +193,8 @@ void query(const std::string &file, const std::string &queries, const uint64_t l
             //ltj.print_gao(ht);
             //cout << "##########" << endl;
             //ltj.print_results(res, ht);
-            cout << nQ <<  ";" << res.size() << ";" << total_elapsed_time << ";" << total_user_time << endl;
+            auto time = std::chrono::duration_cast<std::chrono::nanoseconds> (stop - start).count();
+            cout << nQ <<  ";" << res.size() << ";" << time << endl;
             nQ++;
 
             // cout << std::chrono::duration_cast<std::chrono::nanoseconds> (end - begin).count() << std::endl;
