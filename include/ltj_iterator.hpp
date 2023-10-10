@@ -37,7 +37,7 @@ namespace ltj {
         typedef var_t var_type;
         typedef index_scheme_t index_scheme_type;
         typedef uint64_t size_type;
-        enum state_type {s = 0, p = 1, o = 2};
+
         typedef struct {
             std::array<size_type, 2> it;
             size_type cnt;

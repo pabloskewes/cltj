@@ -25,11 +25,11 @@
 #include <set>
 #include <cltj.hpp>
 #include <configuration.hpp>
+#include <ltj_iterator.hpp>
 
 namespace ltj {
 
     namespace util {
-
 
         /*template<class Iterator, class Ring>
         uint64_t get_size_interval(Ring* ptr_ring, const Iterator &iter) {
