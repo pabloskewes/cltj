@@ -180,9 +180,6 @@ void query(const std::string &file, const std::string &queries, const uint64_t l
             ltj.join(res, limit, 600);
             auto stop = std::chrono::high_resolution_clock::now();
 
-            total_elapsed_time = (uint64_t) duration_cast<nanoseconds>(stop.elapsed - start.elapsed);
-            total_user_time = (uint64_t) duration_cast<nanoseconds>(stop.user - start.user);
-
             /*std::unordered_map<uint8_t, std::string> ht;
             for(const auto &p : hash_table_vars){
                 ht.insert({p.second, p.first});
