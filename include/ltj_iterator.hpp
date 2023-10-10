@@ -352,7 +352,7 @@ namespace ltj {
                 state = p;
             }
             choose_trie(state);
-            //std::cout << "trie_i: " << m_trie_i << " status_i: " << m_status_i << std::endl;
+            std::cout << "trie_i: " << m_trie_i << " status_i: " << m_status_i << std::endl;
             cltj::CompactTrieIV* trie = m_tries[m_trie_i];
             size_type beg, end, it;
             //std::cout << "Leap redo n_fixed:" << m_nfixed << std::endl;
@@ -373,19 +373,30 @@ namespace ltj {
                 beg = nodemap(current(), trie);
                 end = m_status[m_nfixed+1].end;
             }
+            for(size_type i = beg; i <= end; ++i){
+                std::cout << trie->seq[i] << " ";
+            }
+            std::cout << std::endl;
             //if(c == -1) return key(); //TODO: improve this, we can get the key from beg
-            if(c == -1ULL) return trie->seq[beg];
-            auto p  = trie->binary_search_seek(c, beg, end);
-            if(p.second > end) return 0;
+            size_type value, pos;
+            if(c == -1ULL){
+                value =  trie->seq[beg];
+                pos = beg; //First position in the sequence
+            }else{
+                auto p  = trie->binary_search_seek(c, beg, end);
+                if(p.second > end) return 0;
+                value = p.first;
+                pos = p.second; //Position of the first value gt c
+            }
 
             if(m_nfixed == 0){
-                m_status[m_nfixed+1].it[0] = nodeselect(p.second, trie);
-                m_status[m_nfixed+1].it[1] = nodeselect(p.second, m_tries[m_trie_i+1]);
+                m_status[m_nfixed+1].it[0] = nodeselect(pos, trie);
+                m_status[m_nfixed+1].it[1] = nodeselect(pos, m_tries[m_trie_i+1]);
             }else{
-                m_status[m_nfixed+1].it[m_status_i] = nodeselect(p.second, trie);
+                m_status[m_nfixed+1].it[m_status_i] = nodeselect(pos, trie);
             }
             //print_status();
-            return p.first;
+            return value;
         }
 
 
