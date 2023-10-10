@@ -396,8 +396,24 @@ namespace ltj {
             return m_nfixed == 2;
         }
 
-        inline size_type children() const{
-            return m_status[m_nfixed+1].cnt;
+        inline size_type children(state_type state) const{
+            size_type t_i;
+            if(m_nfixed == 0) {
+                t_i = 2*state;
+            }else if (m_nfixed == 1){
+                if (state == s) { //Fix variables
+                    t_i = (m_fixed[0] == o) ? 4 : 3 ;
+                } else if (state == p) {
+                    t_i = (m_fixed[0] == s) ? 0 : 5 ;
+                } else {
+                    t_i = (m_fixed[0] == p) ? 2 : 1 ;
+                }
+            }else{
+                t_i = m_trie_i; //Previously decided
+            }
+            auto trie = m_tries[t_i];
+            auto p = parent();
+            return trie->childrenCount(p);
         }
 
         inline size_type subtree_size_d1() const { //TODO: review this

@@ -87,8 +87,11 @@ namespace ltj {
         struct trait_distinct {
 
             template<class Iterator>
-            static uint64_t get(Iterator &iter) {
+            static uint64_t subject(Iterator &iter) {
                 if(iter.nfixed==0) return -1ULL;
+                if(iter.nfixed == 1){
+
+                }
                 return iter.children();
             }
 
