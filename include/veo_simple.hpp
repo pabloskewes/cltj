@@ -159,19 +159,19 @@ namespace ltj {
                     if (triple_pattern.s_is_variable()) {
                         s = true;
                         var_s = (var_type) triple_pattern.term_s.value;
-                        size = veo_trait_type::get(m_ptr_iterators->at(i));
+                        size = veo_trait_type::subject(m_ptr_iterators->at(i));
                         var_to_vector(var_s, size, hash_table_position, var_info);
                     }
                     if (triple_pattern.p_is_variable()) {
                         p = true;
                         var_p = (var_type) triple_pattern.term_p.value;
-                        size = veo_trait_type::get(m_ptr_iterators->at(i));
+                        size = veo_trait_type::predicate(m_ptr_iterators->at(i));
                         var_to_vector(var_p, size, hash_table_position, var_info);
                     }
                     if (triple_pattern.o_is_variable()) {
                         o = true;
                         var_o = (var_type) triple_pattern.term_o.value;
-                        size = veo_trait_type::get(m_ptr_iterators->at(i));
+                        size = veo_trait_type::object(m_ptr_iterators->at(i));
                         var_to_vector(var_o, size, hash_table_position, var_info);
                     }
 

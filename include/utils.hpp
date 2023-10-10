@@ -74,12 +74,32 @@ namespace ltj {
         struct trait_size {
 
             template<class Iterator>
-            static uint64_t get(Iterator &iter) {
+            static uint64_t subject(Iterator &iter) {
                 if(iter.nfixed==0) return -1ULL;
                 if(iter.nfixed==1){
                     return iter.subtree_size_d1();
                 }else{
-                    return iter.children();
+                    return iter.children(s);
+                }
+            }
+
+            template<class Iterator>
+            static uint64_t predicate(Iterator &iter) {
+                if(iter.nfixed==0) return -1ULL;
+                if(iter.nfixed==1){
+                    return iter.subtree_size_d1();
+                }else{
+                    return iter.children(p);
+                }
+            }
+
+            template<class Iterator>
+            static uint64_t object(Iterator &iter) {
+                if(iter.nfixed==0) return -1ULL;
+                if(iter.nfixed==1){
+                    return iter.subtree_size_d1();
+                }else{
+                    return iter.children(o);
                 }
             }
         };
@@ -88,13 +108,18 @@ namespace ltj {
 
             template<class Iterator>
             static uint64_t subject(Iterator &iter) {
-                if(iter.nfixed==0) return -1ULL;
-                if(iter.nfixed == 1){
-
-                }
-                return iter.children();
+                return iter.children(s);
             }
 
+            template<class Iterator>
+            static uint64_t predicate(Iterator &iter) {
+                return iter.children(p);
+            }
+
+            template<class Iterator>
+            static uint64_t object(Iterator &iter) {
+                return iter.children(o);
+            }
         };
     }
 
