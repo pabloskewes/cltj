@@ -77,9 +77,9 @@ namespace ltj {
             static uint64_t subject(Iterator &iter) {
                 if(iter.nfixed==0) return -1ULL;
                 if(iter.nfixed==1){
-                    return iter.subtree_size_d1();
+                    return iter.subtree_size_fixed1(s);
                 }else{
-                    return iter.children(s);
+                    return iter.subtree_size_fixed2();
                 }
             }
 
@@ -87,9 +87,9 @@ namespace ltj {
             static uint64_t predicate(Iterator &iter) {
                 if(iter.nfixed==0) return -1ULL;
                 if(iter.nfixed==1){
-                    return iter.subtree_size_d1();
+                    return iter.subtree_size_fixed1(p);
                 }else{
-                    return iter.children(p);
+                    return iter.subtree_size_fixed2();
                 }
             }
 
@@ -97,9 +97,9 @@ namespace ltj {
             static uint64_t object(Iterator &iter) {
                 if(iter.nfixed==0) return -1ULL;
                 if(iter.nfixed==1){
-                    return iter.subtree_size_d1();
+                    return iter.subtree_size_fixed1(o);
                 }else{
-                    return iter.children(o);
+                    return iter.subtree_size_fixed2();
                 }
             }
         };

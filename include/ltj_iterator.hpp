@@ -397,30 +397,50 @@ namespace ltj {
         }
 
         inline size_type children(state_type state) const{
-            size_type t_i;
+            size_type t_i, s_i=0;
             if(m_nfixed == 0) {
                 t_i = 2*state;
             }else if (m_nfixed == 1){
                 if (state == s) { //Fix variables
-                    t_i = (m_fixed[0] == o) ? 4 : 3 ;
+                    t_i = (m_fixed[m_nfixed-1] == o) ? 4 : 3 ;
+                    s_i = (m_fixed[m_nfixed-1] == o) ? 0 : 1;
                 } else if (state == p) {
-                    t_i = (m_fixed[0] == s) ? 0 : 5 ;
+                    t_i = (m_fixed[m_nfixed-1] == s) ? 0 : 5 ;
+                    s_i = (m_fixed[m_nfixed-1] == s) ? 0 : 1;
                 } else {
-                    t_i = (m_fixed[0] == p) ? 2 : 1 ;
+                    t_i = (m_fixed[m_nfixed - 1] == p) ? 2 : 1;
+                    s_i = (m_fixed[m_nfixed - 1] == p) ? 0 : 1;
                 }
             }else{
                 t_i = m_trie_i; //Previously decided
+                s_i = m_status_i; //Previously decided
             }
             auto trie = m_tries[t_i];
-            auto p = parent();
-            return trie->childrenCount(p);
+            auto it = m_status[m_nfixed].it[s_i];
+            return trie->childrenCount(it);
         }
 
-        inline size_type subtree_size_d1() const { //TODO: review this
-            auto trie = m_tries[m_trie_i];
-            auto cnt = m_status[m_nfixed+1].cnt;
+        inline size_type subtree_size_fixed1(state_type state) const { //TODO: review this
+
+            size_type t_i, s_i=0;
+            if (state == s) { //Fix variables
+                t_i = (m_fixed[m_nfixed-1] == o) ? 4 : 3 ;
+                s_i = (m_fixed[m_nfixed-1] == o) ? 0 : 1;
+            } else if (state == p) {
+                t_i = (m_fixed[m_nfixed-1] == s) ? 0 : 5 ;
+                s_i = (m_fixed[m_nfixed-1] == s) ? 0 : 1;
+            } else {
+                t_i = (m_fixed[m_nfixed - 1] == p) ? 2 : 1;
+                s_i = (m_fixed[m_nfixed - 1] == p) ? 0 : 1;
+            }
+
+            auto trie = m_tries[t_i];
+            auto it = m_status[m_nfixed].it[s_i];
+
             size_type leftmost_leaf, rightmost_leaf;
-            auto it = current();
+
+            //Count children
+            auto cnt = trie->childrenCount(it);;
             //Leftmost
             leftmost_leaf = trie->child(trie->child(it, 1), 1);
             //Rightmost
@@ -428,6 +448,12 @@ namespace ltj {
             cnt = trie->childrenCount(it);
             rightmost_leaf = trie->child(it, cnt);
             return rightmost_leaf - leftmost_leaf + 1;
+        }
+
+        inline size_type subtree_size_fixed2() const { //TODO: review this
+            auto trie = m_tries[m_trie_i];
+            auto it = m_status[m_nfixed].it[m_status_i];
+            return trie->childrenCount(it);
         }
 
 
