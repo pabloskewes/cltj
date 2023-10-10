@@ -18,7 +18,7 @@ namespace cltj{
         // private:
             uint32_t dim;
             vector<string> orders;
-            map<string, CTrie*> orders_tries;
+            unordered_map<string, CTrie*> orders_tries;
             // vector<Iterator*> iterators;
             string folder = "../data/";
             bool loaded = false;

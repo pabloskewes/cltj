@@ -158,9 +158,6 @@ namespace ltj {
         */
         const size_type &nfixed = m_nfixed;
 
-        uint32_t key(){
-            return m_tries[m_trie_i]->key_at(current());
-        }
 
         inline bool is_variable_subject(var_type var) {
             return m_ptr_triple_pattern->term_s.is_variable && var == m_ptr_triple_pattern->term_s.value;
