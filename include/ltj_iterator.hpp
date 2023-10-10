@@ -341,7 +341,7 @@ namespace ltj {
             return true;
         }
 
-        value_type leap(var_type var, size_type c = -1) { //Return the minimum in the range
+        value_type leap(var_type var, size_type c = -1ULL) { //Return the minimum in the range
             //If c=-1 we need to get the minimum value for the current level.
 
 
@@ -374,7 +374,7 @@ namespace ltj {
                 end = m_status[m_nfixed+1].end;
             }
             //if(c == -1) return key(); //TODO: improve this, we can get the key from beg
-            if(c == -1) return trie->seq[beg];
+            if(c == -1ULL) return trie->seq[beg];
             auto p  = trie->binary_search_seek(c, beg, end);
             if(p.second > end) return 0;
 
