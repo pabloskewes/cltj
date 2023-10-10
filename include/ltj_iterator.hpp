@@ -352,7 +352,6 @@ namespace ltj {
                 state = p;
             }
             choose_trie(state);
-            std::cout << "trie_i: " << m_trie_i << " status_i: " << m_status_i << std::endl;
             cltj::CompactTrieIV* trie = m_tries[m_trie_i];
             size_type beg, end, it;
             //std::cout << "Leap redo n_fixed:" << m_nfixed << std::endl;
@@ -373,10 +372,6 @@ namespace ltj {
                 beg = nodemap(current(), trie);
                 end = m_status[m_nfixed+1].end;
             }
-            for(size_type i = beg; i <= end; ++i){
-                std::cout << trie->seq[i] << " ";
-            }
-            std::cout << std::endl;
             //if(c == -1) return key(); //TODO: improve this, we can get the key from beg
             size_type value, pos;
             if(c == -1ULL){
