@@ -190,7 +190,7 @@ void query(const std::string &file, const std::string &queries, const uint64_t l
             //ltj.print_gao(ht);
             //cout << "##########" << endl;
             //ltj.print_results(res, ht);
-            auto time = std::chrono::duration_cast<std::chrono::nanoseconds> (stop - start).count();
+            auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(stop - start).count();
             cout << nQ <<  ";" << res.size() << ";" << time << endl;
             nQ++;
 

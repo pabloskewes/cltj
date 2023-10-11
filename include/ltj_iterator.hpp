@@ -358,7 +358,7 @@ namespace ltj {
             //std::cout << "Leap redo n_fixed:" << m_nfixed << std::endl;
             //print_redo();
             if(m_redo[m_nfixed]){ //First time of leap
-                std::cout << "Redoing" << std::endl;
+                //std::cout << "Redoing" << std::endl;
                 auto cnt = trie->childrenCount(parent());
                 it = trie->child(parent(), 1);
                 beg = nodemap(it, trie);
@@ -370,7 +370,7 @@ namespace ltj {
                 m_status[m_nfixed+1].cnt  = cnt;
                 m_redo[m_nfixed] = false;
             }else{
-                std::cout << "Current: " << current() << std::endl;
+               // std::cout << "Current: " << current() << std::endl;
                 beg = nodemap(current(), trie);
                 end = m_status[m_nfixed+1].end;
             }
@@ -389,8 +389,8 @@ namespace ltj {
             if(m_nfixed == 0){
                 m_status[m_nfixed+1].it[0] = nodeselect(pos, trie);
                 m_status[m_nfixed+1].it[1] = nodeselect(pos, m_tries[m_trie_i+1]);
-                std::cout << "It0: " << m_status[m_nfixed+1].it[0] << " It1: " << m_status[m_nfixed+1].it[1] <<
-                " Trie: " << m_trie_i << " Status: " << m_status_i << std::endl;
+                //std::cout << "It0: " << m_status[m_nfixed+1].it[0] << " It1: " << m_status[m_nfixed+1].it[1] <<
+                //" Trie: " << m_trie_i << " Status: " << m_status_i << std::endl;
             }else{
                 m_status[m_nfixed+1].it[m_status_i] = nodeselect(pos, trie);
             }
