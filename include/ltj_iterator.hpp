@@ -138,6 +138,7 @@ namespace ltj {
         void choose_trie(state_type state){
             if(m_nfixed == 0) {
                 m_trie_i = 2*state;
+                m_status_i = 0;
             }else if (m_nfixed == 1){
                 if (state == s) { //Fix variables
                     m_trie_i = (m_fixed[m_nfixed-1] == o) ? 4 : 3 ;
@@ -388,7 +389,8 @@ namespace ltj {
             if(m_nfixed == 0){
                 m_status[m_nfixed+1].it[0] = nodeselect(pos, trie);
                 m_status[m_nfixed+1].it[1] = nodeselect(pos, m_tries[m_trie_i+1]);
-                std::cout << "It0: " << m_status[m_nfixed+1].it[0] << " It1: " << m_status[m_nfixed+1].it[1] << std::endl;
+                std::cout << "It0: " << m_status[m_nfixed+1].it[0] << " It1: " << m_status[m_nfixed+1].it[1] <<
+                " Trie: " << m_trie_i << " Status: " << m_status_i << std::endl;
             }else{
                 m_status[m_nfixed+1].it[m_status_i] = nodeselect(pos, trie);
             }
