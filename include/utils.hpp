@@ -75,7 +75,7 @@ namespace ltj {
 
             template<class Iterator>
             static uint64_t subject(Iterator &iter) {
-                if(iter.nfixed==0) return -1ULL;
+                if(iter.nfixed==0) return -1ULL -1;
                 if(iter.nfixed==1){
                     return iter.subtree_size_fixed1(s);
                 }else{
@@ -85,7 +85,7 @@ namespace ltj {
 
             template<class Iterator>
             static uint64_t predicate(Iterator &iter) {
-                if(iter.nfixed==0) return -1ULL;
+                if(iter.nfixed==0) return -1ULL -1;
                 if(iter.nfixed==1){
                     return iter.subtree_size_fixed1(p);
                 }else{
@@ -95,7 +95,7 @@ namespace ltj {
 
             template<class Iterator>
             static uint64_t object(Iterator &iter) {
-                if(iter.nfixed==0) return -1ULL;
+                if(iter.nfixed==0) return -1ULL -1;
                 if(iter.nfixed==1){
                     return iter.subtree_size_fixed1(o);
                 }else{
