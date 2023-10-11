@@ -369,6 +369,7 @@ namespace ltj {
                 m_status[m_nfixed+1].cnt  = cnt;
                 m_redo[m_nfixed] = false;
             }else{
+                std::cout << "Current: " << current() << std::endl;
                 beg = nodemap(current(), trie);
                 end = m_status[m_nfixed+1].end;
             }
