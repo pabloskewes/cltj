@@ -186,11 +186,17 @@ namespace ltj {
             if(timeout_seconds > 0){
                 time_point_type stop = chrono::high_resolution_clock::now();
                 auto sec = chrono::duration_cast<chrono::seconds>(stop-start).count();
-                if(sec > timeout_seconds) return false;
+                if(sec > timeout_seconds) {
+                    std::cout << "TIMEOUT: " << sec << std::endl;
+                    return false;
+                }
             }
 
             //(Optional) Check limit
-            if(limit_results > 0 && res.size() == limit_results) return false;
+            if(limit_results > 0 && res.size() == limit_results) {
+                std::cout << "LIMIT: " << res.size() << std::endl;
+                return false;
+            }
 
             if(j == m_veo.size()){
                 //Report results
