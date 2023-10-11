@@ -275,7 +275,7 @@ namespace ltj {
                 }
                 std::cout << "Gets " << (::uint64_t) c_i << std::endl;
                 if(c_i == 0) {
-                    for(auto itr : itrs){
+                    for(auto &itr : itrs){
                         itr->leap_done();
                     }
                     return 0; //Empty intersection
@@ -285,7 +285,7 @@ namespace ltj {
                 c = c_prev = c_i;
                 i = (i+1 == itrs.size()) ? 0 : i+1;
             }
-            for(auto itr : itrs){
+            for(auto &itr : itrs){
                 itr->leap_done();
             }
         }
