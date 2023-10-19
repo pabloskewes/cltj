@@ -139,6 +139,8 @@ void query(const std::string &file, const std::string &queries, const uint64_t l
     index_scheme_type graph;
     sdsl::load_from_file(graph, file);
 
+    std::cout << "Index loaded: " << sdsl::size_in_bytes(graph) << " bytes." << std::endl;
+
     std::ifstream ifs;
     uint64_t nQ = 0;
 
