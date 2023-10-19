@@ -48,6 +48,7 @@ namespace cltj {
                 size_type n_nodes = 1;
                 Trie* trie = create_trie(D, spo_orders[i], n_nodes);
                 m_tries[i] = compact_trie(trie, n_nodes);
+                delete trie;
             }
 
         }
