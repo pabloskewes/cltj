@@ -23,6 +23,8 @@
 #define RING_TRIPLE_PATTERN_HPP
 
 
+#include <unordered_map>
+
 namespace ltj {
 
 

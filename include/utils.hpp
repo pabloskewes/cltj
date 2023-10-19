@@ -23,7 +23,6 @@
 
 #include <iostream>
 #include <set>
-#include <cltj.hpp>
 #include <configuration.hpp>
 #include <ltj_iterator.hpp>
 

@@ -8,8 +8,7 @@
 #include <queue>
 #include <sdsl/vectors.hpp>
 #include <sdsl/select_support_mcl.hpp>
-#include "cltj_utils.hpp"
-#include "cltj_table_indexing.hpp"
+#include <cltj_regular_trie.hpp>
 
 namespace cltj {
 
@@ -44,10 +43,11 @@ namespace cltj {
 
         const sdsl::int_vector<>& seq = m_seq;
 
-        compact_trie(const Trie* trie, const uint64_t n_nodes){
-            auto total_bits = 2*n_nodes+1;
-            m_bv = sdsl::bit_vector(total_bits, 1);
+        compact_trie() = default;
 
+        compact_trie(const Trie* trie, const uint64_t n_nodes){
+            auto total_bits = 2*n_nodes+1; //2*n_nodes+1
+            m_bv = sdsl::bit_vector(total_bits, 1);
             std::vector<uint32_t> s;
             s.reserve(n_nodes);
 
@@ -57,7 +57,7 @@ namespace cltj {
             uint64_t pos_bv = 1;
             m_bv[1]=0;
             while(!q.empty()){
-                node = q.front();
+                node = q.front(); q.pop();
                 for(const auto &child: node->children){
                     s.push_back(child.first);
                     q.push(child.second);
@@ -120,8 +120,9 @@ namespace cltj {
             sdsl::util::swap_support(m_select0, o.m_select0, &m_bv, &o.m_bv);
         }
 
+
             /*
-                Recives index in bit vector
+                Receives index in bit vector
                 Returns index of next 0
             */
             uint32_t succ0(uint32_t it){
@@ -129,7 +130,7 @@ namespace cltj {
             }
             
             /*
-                Recives index in bit vector
+                Receives index in bit vector
                 Returns index of previous 0
             */
             uint32_t prev0(uint32_t it){
@@ -137,7 +138,7 @@ namespace cltj {
             }
 
             /*
-                Recives index of current node and the child that is required
+                Receives index of current node and the child that is required
                 Returns index of the nth child of current node
             */
             uint32_t child(uint32_t it, uint32_t n){
@@ -145,7 +146,7 @@ namespace cltj {
             }
 
             /*
-                Recives index of node whos children we want to count
+                Receives index of node whos children we want to count
                 Returns how many children said node has
             */
             uint32_t childrenCount(uint32_t it){

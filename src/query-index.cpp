@@ -19,7 +19,6 @@
 
 #include <iostream>
 #include <utility>
-#include "cltj.hpp"
 #include <chrono>
 #include <triple_pattern.hpp>
 #include <ltj_algorithm.hpp>
@@ -137,7 +136,8 @@ void query(const std::string &file, const std::string &queries, const uint64_t l
     vector<string> dummy_queries;
     bool result = get_file_content(queries, dummy_queries);
 
-    index_scheme_type graph(file);
+    index_scheme_type graph;
+    sdsl::load_from_file(graph, file);
 
     std::ifstream ifs;
     uint64_t nQ = 0;
@@ -207,7 +207,7 @@ void query(const std::string &file, const std::string &queries, const uint64_t l
 int main(int argc, char* argv[])
 {
 
-    typedef index_scheme::compactLTJ compactLTJ;
+    typedef cltj::cltj_index_spo compactLTJ;
     //typedef ring::c_ring ring_type;
     if(argc != 5){
         std::cout << "Usage: " << argv[0] << " <index> <queries> <limit> <type>" << std::endl;

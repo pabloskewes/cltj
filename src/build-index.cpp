@@ -1,5 +1,5 @@
 #include <iostream>
-#include <cltj_table_indexing.hpp>
+#include <cltj_index_spo.hpp>
 
 using namespace std;
 
@@ -9,33 +9,40 @@ using timer = std::chrono::high_resolution_clock;
 int main(int argc, char **argv){
     try{
 
-        if(argc <= 1){
-            cout<<"No extra command line argument given other that program name"<<endl;
+        if(argc != 2){
+            cout<< argv[0] << " <dataset>" <<endl;
             return 0;
         }
 
+        std::string dataset = argv[1];
+        std::string index_name = dataset + ".cltj";
+        vector<cltj::spo_triple> D;
 
-        cltj::TableIndexer ti = cltj::TableIndexer();
+        std::ifstream ifs(dataset);
+        uint64_t s, p , o;
+        cltj::spo_triple spo;
+        do {
+            ifs >> s >> p >> o;
+            spo[0] = s; spo[1] = p; spo[2] = o;
+            D.emplace_back(spo);
 
+        } while (!ifs.eof());
 
-        // for(int i=1; i<argc; i++){
+        D.shrink_to_fit();
 
-        // }
+        sdsl::memory_monitor::start();
 
-        string file_name = argv[1];
-        ti.readTable(file_name);
-        memory_monitor::start();
         auto start = timer::now();
-
-        ti.indexNewTable(file_name);
+        cltj::cltj_index_spo index(D);
         auto stop = timer::now();
-        memory_monitor::stop();
 
-        ti.saveIndex();
+        sdsl::memory_monitor::stop();
+
+        sdsl::store_to_file(index, index_name);
 
         cout << "Index saved" << endl;
         cout << duration_cast<seconds>(stop-start).count() << " seconds." << endl;
-        cout << memory_monitor::peak() << " bytes." << endl;
+        cout << sdsl::memory_monitor::peak() << " bytes." << endl;
         // ti.indexNewTable(file_name);
 
         // ind.save();

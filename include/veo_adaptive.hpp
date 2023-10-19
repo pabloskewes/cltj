@@ -21,7 +21,6 @@
 #ifndef RING_VEO_ADAPTIVE_HPP
 #define RING_VEO_ADAPTIVE_HPP
 
-#include <cltj.hpp>
 #include <ltj_iterator.hpp>
 #include <triple_pattern.hpp>
 #include <unordered_map>
@@ -30,13 +29,14 @@
 #include <unordered_set>
 #include <list>
 #include <configuration.hpp>
+#include <cltj_index_spo.hpp>
 
 namespace ltj {
 
     namespace veo {
 
 
-        template<class ltj_iterator_t = ltj_iterator <index_scheme::compactLTJ, uint8_t, uint64_t>,
+        template<class ltj_iterator_t = ltj_iterator <cltj::cltj_index_spo, uint8_t, uint64_t>,
                 class veo_trait_t = util::trait_size>
         class veo_adaptive {
 
