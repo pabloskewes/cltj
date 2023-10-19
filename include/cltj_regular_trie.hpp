@@ -24,7 +24,7 @@ namespace cltj{
                 }
             }
 
-            Trie* insert(uint32_t);
+            Trie* insert(uint32_t, uint64_t &n_nodes);
             void traverse();
             bool hasChildren();
             uint32_t childrenCount();
@@ -34,13 +34,14 @@ namespace cltj{
     /*
         Creates a new node in the trie if the tag wasn't already in the trie
     */
-    Trie* Trie::insert(uint32_t tag){
+    Trie* Trie::insert(uint32_t tag, uint64_t &n_nodes){
         has_children = true;
         it = children.find(tag);
         Trie* node;
         if(it == children.end()){
             node = new Trie();
             children[tag] = node;
+            ++n_nodes;
         }
         else{
             node = children[tag];

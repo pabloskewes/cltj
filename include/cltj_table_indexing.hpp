@@ -11,9 +11,9 @@
 #include <cltj_regular_trie.hpp>
 
 #include <sdsl/vectors.hpp>
-#include <cltj_iterator.hpp>
 #include <cltj_index.hpp>
 #include <cltj_utils.hpp>
+#include <cltj_compact_trie.hpp>
 #include <cltj_config.hpp>
 
 using namespace std;
@@ -33,7 +33,9 @@ namespace cltj{
         bit_vector B;
         string S;
         int_vector<> seq;
-        vector<CTrie *> compactTries;
+        uint64_t n_nodes = 0;
+        //TODO: adrian FIX
+        vector<cltj::compact_trie> compactTries;
         cltj_index* index;
         bool index_created = false;
 
@@ -68,53 +70,11 @@ namespace cltj{
             for(int j=0; j<table[0].size(); j++){
                 node = root;
                 for(int i=0; i<table.size(); i++){
-                    node = node->insert(table[idx[i]][j]);
+                    node = node->insert(table[idx[i]][j], n_nodes);
                 }
             }
         }
 
-        /*
-            Turns Trie into a bitvector B and a sequence S
-        */
-        void toCompactForm(){
-            vector<uint32_t> b;
-            vector<uint32_t> s;
-            map<uint32_t, Trie*> node_children;
-            queue<Trie*> q;
-            Trie* node;
-
-            q.push(root);
-            b.push_back(1);
-            b.push_back(0);
-
-            while(!q.empty()){
-                node = q.front();
-                q.pop();
-                if(node->hasChildren()){
-                    node_children = node->getChildren();
-                    for(const auto &child: node_children){
-                        s.push_back(child.first);
-                        b.push_back(1);
-                        q.push(child.second);
-                    }   
-                }
-                b.push_back(0);
-            }
-
-            toBitvector(b);
-
-            seq.resize(s.size());
-            for(auto i=0; i<s.size(); i++){
-                seq[i] = s[i];
-            } 
-
-            // cout<<"printing seq"<<endl;
-            // for(auto v: seq){
-            //     cout<<v<<" ";
-            // }
-            // cout<<endl;
-            // toSequence(s);
-        }
 
         /*
             Creates indexes for all the orders necessary 
@@ -129,8 +89,7 @@ namespace cltj{
                 }
                 root = new Trie();
                 createRegularTrie(idx);
-                toCompactForm();
-                CTrie *ct = new CTrie(B,seq);
+
                 // CompactTrie *ct = new CompactTrie(B,S);
                 compactTries.push_back(ct);
                 delete root;

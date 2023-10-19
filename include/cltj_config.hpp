@@ -2,9 +2,8 @@
 #define CLTJ_CONFIG_H
 
 #include <iostream>
-//#include "compact_trie_iterator.hpp"
+#include "cltj_compact_trie.hpp"
 
-#include "cltj_compact_trie_iv_iterator.hpp"
 
 namespace cltj{
     using namespace std;
@@ -15,7 +14,6 @@ namespace cltj{
 //typedef CompactTrieIterator CurrentIterator;
 //typedef CompactTrie CTrie;
 
-    typedef CompactTrieIVIterator CurrentIterator;
     typedef CompactTrieIV CTrie;
 }
 #endif

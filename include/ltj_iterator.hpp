@@ -25,6 +25,7 @@
 #include <vector>
 #include <utils.hpp>
 #include <string>
+#include <cltj_compact_trie.hpp>
 #define VERBOSE 0
 
 namespace ltj {
@@ -56,7 +57,7 @@ namespace ltj {
         //                                     SPO      SOP      POS      PSO     OSP      OPS
         //Penso que con esto debería ser suficiente (mais parte do de Diego)
         bool m_is_empty = false;
-        std::array<cltj::CTrie*, 6> m_tries;
+        std::array<cltj::compact_trie*, 6> m_tries;
         size_type m_nfixed = 0;
         std::array<state_type, 3> m_fixed;
 
@@ -181,14 +182,6 @@ namespace ltj {
 
         inline size_type current() const {
             return m_status[m_nfixed+1].it[m_status_i];
-        }
-
-        inline size_type nodemap(size_type i, cltj::CTrie* trie) const {
-            return trie->b_rank0(i)-2;
-        }
-
-        inline size_type nodeselect(size_type i, cltj::CTrie* trie) const {
-            return trie->b_sel0(i+2)+1;
         }
 
 
@@ -333,10 +326,10 @@ namespace ltj {
             m_status[m_nfixed+1].cnt = cnt;
             m_redo[m_nfixed] = false;
             if(m_nfixed == 0){
-                m_status[m_nfixed+1].it[0] = nodeselect(p.second, trie);
-                m_status[m_nfixed+1].it[1] = nodeselect(p.second, m_tries[m_trie_i+1]);
+                m_status[m_nfixed+1].it[0] = trie->nodeselect(p.second);
+                m_status[m_nfixed+1].it[1] = m_tries[m_trie_i+1]->nodeselect(p.second);
             }else{
-                m_status[m_nfixed+1].it[m_status_i] = nodeselect(p.second, trie);
+                m_status[m_nfixed+1].it[m_status_i] = trie->nodeselect(p.second);
             }
             //print_status();
             return true;
@@ -353,7 +346,7 @@ namespace ltj {
                 state = p;
             }
             choose_trie(state);
-            cltj::CompactTrieIV* trie = m_tries[m_trie_i];
+            cltj::compact_trie* trie = m_tries[m_trie_i];
             size_type beg, end, it;
             //std::cout << "Leap redo n_fixed:" << m_nfixed << std::endl;
             //print_redo();
@@ -361,7 +354,7 @@ namespace ltj {
                 //std::cout << "Redoing" << std::endl;
                 auto cnt = trie->childrenCount(parent());
                 it = trie->child(parent(), 1);
-                beg = nodemap(it, trie);
+                beg = trie->nodemap(it);
                 end = beg + cnt -1;
                 assert(m_nfixed+1 < 4);
                 m_status[m_nfixed+1].beg = beg;
@@ -387,12 +380,12 @@ namespace ltj {
             }
 
             if(m_nfixed == 0){
-                m_status[m_nfixed+1].it[0] = nodeselect(pos, trie);
-                m_status[m_nfixed+1].it[1] = nodeselect(pos, m_tries[m_trie_i+1]);
+                m_status[m_nfixed+1].it[0] = trie->nodeselect(pos);
+                m_status[m_nfixed+1].it[1] = m_tries[m_trie_i+1]->nodeselect(pos);
                 //std::cout << "It0: " << m_status[m_nfixed+1].it[0] << " It1: " << m_status[m_nfixed+1].it[1] <<
                 //" Trie: " << m_trie_i << " Status: " << m_status_i << std::endl;
             }else{
-                m_status[m_nfixed+1].it[m_status_i] = nodeselect(pos, trie);
+                m_status[m_nfixed+1].it[m_status_i] = trie->nodeselect(pos);
             }
             //print_status();
             return value;
@@ -447,7 +440,7 @@ namespace ltj {
             size_type leftmost_leaf, rightmost_leaf;
 
             //Count children
-            auto cnt = trie->childrenCount(it);;
+            auto cnt = trie->childrenCount(it);
             //Leftmost
             leftmost_leaf = trie->child(trie->child(it, 1), 1);
             //Rightmost
@@ -472,7 +465,7 @@ namespace ltj {
             uint32_t cnt = trie->childrenCount(it_parent);
 
             size_type it = trie->child(it_parent, 1);
-            size_type beg = nodemap(it, trie);
+            size_type beg = trie->nodemap(it);
             for(auto i = beg; i < beg + cnt; ++i){
                 results.emplace_back(trie->seq[i]);
             }
