@@ -21,7 +21,6 @@
 #ifndef RING_VEO_SIMPLE_HPP
 #define RING_VEO_SIMPLE_HPP
 
-#include <ltj_iterator.hpp>
 #include <triple_pattern.hpp>
 #include <unordered_map>
 #include <vector>
@@ -35,7 +34,7 @@ namespace ltj {
     namespace veo {
 
 
-        template<class ltj_iterator_t = ltj_iterator <cltj::cltj_index_spo, uint8_t, uint64_t>,
+        template<class ltj_iterator_t = ltj_iterator_v2<cltj::cltj_index_spo, uint8_t, uint64_t>,
                 class veo_trait_t = util::trait_size>
         class veo_simple {
 

@@ -1,5 +1,5 @@
-#ifndef CLTJ_COMPACT_TRIE_IV_H
-#define CLTJ_COMPACT_TRIE_IV_H
+#ifndef CLTJ_COMPACT_TRIE_V2_H
+#define CLTJ_COMPACT_TRIE_V2_H
 
 #include <vector>
 #include <iostream>
@@ -12,7 +12,7 @@
 
 namespace cltj {
 
-    class compact_trie {
+    class compact_trie_v2 {
 
 
     public:
@@ -26,7 +26,7 @@ namespace cltj {
         sdsl::rank_support_v<1> m_rank1;
         sdsl::select_support_mcl<0> m_select0;
 
-        void copy(const compact_trie &o) {
+        void copy(const compact_trie_v2 &o) {
             m_bv = o.m_bv;
             m_seq = o.m_seq;
             m_rank1 = o.m_rank1;
@@ -41,42 +41,42 @@ namespace cltj {
 
     public:
 
-        const sdsl::int_vector<> &seq = m_seq;
+        const sdsl::int_vector<>& seq = m_seq;
 
-        compact_trie() = default;
+        compact_trie_v2() = default;
 
-        compact_trie(const Trie *trie, const uint64_t n_nodes) {
-            auto total_bits = 2 * n_nodes + 1; //2*n_nodes+1
+        compact_trie_v2(const Trie* trie, const uint64_t n_nodes){
+            auto total_bits = 2*n_nodes+1; //2*n_nodes+1
             m_bv = sdsl::bit_vector(total_bits, 1);
             std::vector<uint32_t> s;
             s.reserve(n_nodes);
 
-            const Trie *node;
-            std::queue<const Trie *> q;
+            const Trie* node;
+            std::queue<const Trie*> q;
             q.push(trie);
-            uint64_t pos_bv = 1;
-            m_bv[1] = 0;
-            while (!q.empty()) {
-                node = q.front();
-                q.pop();
-                for (const auto &child: node->children) {
+            m_bv[0]=0;
+            uint64_t pos_bv = 0;
+            while(!q.empty()){
+                node = q.front(); q.pop();
+                for(const auto &child: node->children){
                     s.push_back(child.first);
-                    q.push(child.second);
+                    if(!child.second->children.empty()){ //Check if it is a leaf
+                        q.push(child.second);
+                    }
                 }
-                pos_bv = pos_bv + node->children.size() + 1;
-                //TODO: por ahora +1, despois quitar esto e ollo cos calculos
-                m_bv[pos_bv] = 0;
+                pos_bv = pos_bv + node->children.size();
+                m_bv[pos_bv]=0;
             }
             std::cout << "n_nodes=" << n_nodes << " s.size()=" << s.size() << " pos_bv=" << pos_bv << std::endl;
             //TODO: penso que podo reducir e non ter que gardar os 0s das follas
+            m_bv.resize(pos_bv+1);
 
-            m_seq = sdsl::int_vector<>(n_nodes);
-            for (auto i = 0; i < n_nodes; ++i) {
+            m_seq = sdsl::int_vector<>(s.size());
+            for(auto i = 0; i < s.size(); ++i){
                 m_seq[i] = s[i];
             }
             //Clear s
-            s.clear();
-            s.shrink_to_fit();
+            s.clear(); s.shrink_to_fit();
 
             sdsl::util::bit_compress(m_seq);
             sdsl::util::init_support(m_rank1, &m_bv);
@@ -85,17 +85,17 @@ namespace cltj {
         }
 
         //! Copy constructor
-        compact_trie(const compact_trie &o) {
+        compact_trie_v2(const compact_trie_v2 &o) {
             copy(o);
         }
 
         //! Move constructor
-        compact_trie(compact_trie &&o) {
+        compact_trie_v2(compact_trie_v2 &&o) {
             *this = std::move(o);
         }
 
         //! Copy Operator=
-        compact_trie &operator=(const compact_trie &o) {
+        compact_trie_v2 &operator=(const compact_trie_v2 &o) {
             if (this != &o) {
                 copy(o);
             }
@@ -103,7 +103,7 @@ namespace cltj {
         }
 
         //! Move Operator=
-        compact_trie &operator=(compact_trie &&o) {
+        compact_trie_v2 &operator=(compact_trie_v2 &&o) {
             if (this != &o) {
                 m_bv = std::move(o.m_bv);
                 m_seq = std::move(o.m_seq);
@@ -115,7 +115,7 @@ namespace cltj {
             return *this;
         }
 
-        void swap(compact_trie &o) {
+        void swap(compact_trie_v2 &o) {
             // m_bp.swap(bp_support.m_bp); use set_vector to set the supported bit_vector
             std::swap(m_bv, o.m_bv);
             std::swap(m_seq, o.m_seq);
@@ -124,52 +124,52 @@ namespace cltj {
         }
 
 
-        /*
-            Receives index in bit vector
-            Returns index of next 0
-        */
-        uint32_t succ0(uint32_t it) {
-            return m_select0(rank0(it) + 1);
-        }
-
-        /*
-            Receives index of current node and the child that is required
-            Returns index of the nth child of current node
-        */
-        uint32_t child(uint32_t it, uint32_t n) {
-            return m_select0(m_rank1(it + n)) + 1;
-        }
-
-        /*
-            Receives index of node whos children we want to count
-            Returns how many children said node has
-        */
-        uint32_t childrenCount(uint32_t it) {
-            return succ0(it) - it;
-        }
-
-
-        inline size_type nodemap(size_type i) const {
-            return rank0(i) - 2;
-        }
-
-        inline size_type nodeselect(size_type i) const {
-            return m_select0(i + 2) + 1;
-        }
-
-        pair<uint32_t, uint32_t> binary_search_seek(uint32_t val, uint32_t i, uint32_t f) const {
-            if (m_seq[f] < val) return make_pair(0, f + 1);
-            uint32_t mid;
-            while (i < f) {
-                mid = (i + f) / 2;
-                if (m_seq[mid] < val) {
-                    i = mid + 1;
-                } else {
-                    f = mid;
-                }
+            /*
+                Receives index in bit vector
+                Returns index of next 0
+            */
+            inline uint32_t succ0(uint32_t it) const{
+                return m_select0(rank0(it) + 1);
             }
-            return make_pair(m_seq[i], i);
-        }
+
+            /*
+                Receives index of current node and the child that is required
+                Returns index of the nth child of current node
+            */
+            inline size_type child(uint32_t it, uint32_t n) const{
+                return m_select0(it+n);
+            }
+
+            /*
+                Receives index of node whos children we want to count
+                Returns how many children said node has
+            */
+            size_type children(size_type i) const{
+                return succ0(i+1) - i;
+            }
+
+            size_type first_child(size_type i) const{
+                return i;
+            }
+
+            inline size_type nodeselect(size_type i) const {
+                return m_select0(i + 2);
+            }
+
+
+            pair<uint32_t, uint32_t> binary_search_seek(uint32_t val, uint32_t i, uint32_t f) const{
+                if(m_seq[f]<val) return make_pair(0,f+1);
+                uint32_t mid; 
+                while(i<f){
+                    mid = (i + f)/2;
+                    if(m_seq[mid]<val){
+                        i = mid+1;
+                    } else {
+                        f = mid;
+                    }
+                }
+                return make_pair(m_seq[i], i);
+            }
 
         //! Serializes the data structure into the given ostream
         size_type serialize(std::ostream &out, sdsl::structure_tree_node *v = nullptr, std::string name = "") const {

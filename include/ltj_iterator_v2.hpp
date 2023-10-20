@@ -25,7 +25,7 @@
 #include <vector>
 #include <utils.hpp>
 #include <string>
-#include <cltj_compact_trie.hpp>
+#include <cltj_compact_trie_v2.hpp>
 #define VERBOSE 0
 
 namespace ltj {
@@ -178,20 +178,16 @@ namespace ltj {
             return m_status[m_nfixed].it[m_status_i];
         }
 
-        inline size_type current() const {
-            return m_status[m_nfixed+1].it[m_status_i];
-        }
-
 
         ltj_iterator_v2() = default;
         ltj_iterator_v2(const triple_pattern *triple, index_scheme_type *index) {
             m_ptr_triple_pattern = triple;
             m_ptr_index = index;
 
-            m_status[0].it[0] = 2;
-            m_status[0].it[1] = 2;
-            m_status[0].beg = 2;
-            m_status[0].end = 1;
+            m_status[0].it[0] = 0;
+            m_status[0].it[1] = 0;
+            m_status[0].beg = 1;
+            m_status[0].end = 0;
             m_status[0].cnt = 1;
             //m_status[1][0].it = 2;
             //m_status[1][0].last = 1;
@@ -266,13 +262,16 @@ namespace ltj {
             ++m_nfixed;
             //std::cout << "n_fixed: " << m_nfixed << std::endl;
             m_fixed[m_nfixed-1] = state;
-            const cltj::compact_trie* trie = m_ptr_index->get_trie(m_trie_i);
-            auto pos = m_status[m_nfixed].beg;
+
             if(m_nfixed == 1){
+                const cltj::compact_trie_v2* trie = m_ptr_index->get_trie(m_trie_i);
+                auto pos = m_status[m_nfixed].beg;
                 m_status[m_nfixed].it[0] = trie->nodeselect(pos);
                 trie = m_ptr_index->get_trie(m_trie_i+1);
                 m_status[m_nfixed].it[1] = trie->nodeselect(pos);
             }else if (m_nfixed == 2){
+                const cltj::compact_trie_v2* trie = m_ptr_index->get_trie(m_trie_i);
+                auto pos = m_status[m_nfixed].beg;
                 m_status[m_nfixed].it[m_status_i] = trie->nodeselect(pos);
             }
             //m_redo[m_nfixed] = true;
@@ -305,16 +304,16 @@ namespace ltj {
         bool exists(state_type state, size_type c) { //Return the minimum in the range
 
             choose_trie(state);
-            const cltj::compact_trie* trie = m_ptr_index->get_trie(m_trie_i);
+            const cltj::compact_trie_v2* trie = m_ptr_index->get_trie(m_trie_i);
 
             size_type beg, end;
-            auto cnt = trie->childrenCount(parent());
+            auto cnt = trie->children(parent());
             //auto child = trie->child(parent(), 1)
-            beg = trie->nodemap(trie->child(parent(), 1));
+            beg = trie->first_child(parent());
             end = beg + cnt -1;
             auto p = trie->binary_search_seek(c, beg, end);
             if(p.second > end or p.first != c) return false;
-            m_status[m_nfixed+1].beg = beg;
+            m_status[m_nfixed+1].beg = p.second;
             m_status[m_nfixed+1].end = end;
             m_status[m_nfixed+1].cnt = cnt;
             m_redo[m_nfixed] = false;
@@ -333,17 +332,15 @@ namespace ltj {
                 state = p;
             }
             choose_trie(state);
-            const cltj::compact_trie* trie = m_ptr_index->get_trie(m_trie_i);
+            const cltj::compact_trie_v2* trie = m_ptr_index->get_trie(m_trie_i);
             size_type beg, end, it;
             //std::cout << "Leap redo n_fixed:" << m_nfixed << std::endl;
             //print_redo();
             if(m_redo[m_nfixed]){ //First time of leap
                 //std::cout << "Redoing" << std::endl;
-                auto cnt = trie->childrenCount(parent());
-                it = trie->child(parent(), 1);
-                beg = trie->nodemap(it);
+                auto cnt = trie->children(parent());
+                beg = trie->first_child(parent());
                 end = beg + cnt -1;
-                assert(m_nfixed+1 < 4);
                 m_status[m_nfixed+1].beg = beg;
                 m_status[m_nfixed+1].end = end;
                 //m_status[m_nfixed+1].it[0] = m_status[m_nfixed+1].it[1] = it;
@@ -354,19 +351,16 @@ namespace ltj {
                 beg = m_status[m_nfixed+1].beg;
                 end = m_status[m_nfixed+1].end;
             }
-            //if(c == -1) return key(); //TODO: improve this, we can get the key from beg
-            size_type value, pos;
+            size_type value;
             if(c == -1ULL){
                 value = trie->seq[beg];
-                pos = beg; //First position in the sequence
+                m_status[m_nfixed+1].beg = beg; //First position in the sequence
             }else{
-                auto p  = trie->binary_search_seek(c, beg, end);
+                const auto p  = trie->binary_search_seek(c, beg, end);
                 if(p.second > end) return 0;
                 value = p.first;
-                pos = p.second; //Position of the first value gt c
+                m_status[m_nfixed+1].beg = p.second; //Position of the first value gt c
             }
-            m_status[m_nfixed+1].beg = pos;
-
 
             //print_status();
             return value;
@@ -398,10 +392,10 @@ namespace ltj {
             }
             auto trie = m_ptr_index->get_trie(t_i);
             auto it = m_status[m_nfixed].it[s_i];
-            return trie->childrenCount(it);
+            return trie->children(it);
         }
 
-        inline size_type subtree_size_fixed1(state_type state) const { //TODO: review this
+        inline size_type subtree_size_fixed1(state_type state) const {
 
             size_type t_i, s_i;
             if (state == s) { //Fix variables
@@ -415,38 +409,35 @@ namespace ltj {
                 s_i = (m_fixed[m_nfixed - 1] == p) ? 0 : 1;
             }
 
-            auto trie =  m_ptr_index->get_trie(t_i);
+            const cltj::compact_trie_v2* trie =  m_ptr_index->get_trie(t_i);
             auto it = m_status[m_nfixed].it[s_i];
 
             size_type leftmost_leaf, rightmost_leaf;
 
             //Count children
-            auto cnt = trie->childrenCount(it);
+            auto cnt = trie->children(it);
             //Leftmost
-            leftmost_leaf = trie->child(trie->child(it, 1), 1);
+            leftmost_leaf = trie->first_child(trie->child(it, 1));
             //Rightmost
             it = trie->child(it, cnt);
-            cnt = trie->childrenCount(it);
-            rightmost_leaf = trie->child(it, cnt);
+            cnt = trie->children(it);
+            rightmost_leaf = trie->first_child(it) + cnt;
             return rightmost_leaf - leftmost_leaf + 1;
         }
 
-        inline size_type subtree_size_fixed2() const { //TODO: review this
-            auto trie =  m_ptr_index->get_trie(m_trie_i);
+        inline size_type subtree_size_fixed2() const {
+            const cltj::compact_trie_v2* trie =  m_ptr_index->get_trie(m_trie_i);
             auto it = m_status[m_nfixed].it[m_status_i];
-            return trie->childrenCount(it);
+            return trie->children(it);
         }
 
 
 
         std::vector<uint64_t> seek_all(var_type x_j){
             std::vector<uint64_t> results;
-            auto trie = m_ptr_index->get_trie(m_trie_i);
-            auto it_parent = parent();
-            uint32_t cnt = trie->childrenCount(it_parent);
-
-            size_type it = trie->child(it_parent, 1);
-            size_type beg = trie->nodemap(it);
+            const cltj::compact_trie_v2* trie = m_ptr_index->get_trie(m_trie_i);
+            uint32_t cnt = trie->children(parent());
+            size_type beg = trie->first_child(parent());
             for(auto i = beg; i < beg + cnt; ++i){
                 results.emplace_back(trie->seq[i]);
             }

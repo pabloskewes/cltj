@@ -5,7 +5,7 @@
 #ifndef CLTJ_CLTJ_INDEX_SPO_HPP
 #define CLTJ_CLTJ_INDEX_SPO_HPP
 
-#include <cltj_compact_trie.hpp>
+#include <cltj_compact_trie_v2.hpp>
 #include <cltj_config.hpp>
 
 namespace cltj {
@@ -17,7 +17,7 @@ namespace cltj {
         typedef uint32_t value_type;
 
     private:
-        std::array<compact_trie, 6> m_tries;
+        std::array<compact_trie_v2, 6> m_tries;
 
         Trie* create_trie(const vector<spo_triple> &D, const spo_order_type &order, size_type &n_nodes){
             Trie* root = new Trie();
@@ -39,7 +39,7 @@ namespace cltj {
 
     public:
 
-        const std::array<compact_trie, 6> &tries = m_tries;
+        const std::array<compact_trie_v2, 6> &tries = m_tries;
         cltj_index_spo() = default;
 
         cltj_index_spo(const vector<spo_triple> &D){
@@ -47,7 +47,7 @@ namespace cltj {
             for(size_type i = 0; i < 6; ++i){
                 size_type n_nodes = 1;
                 Trie* trie = create_trie(D, spo_orders[i], n_nodes);
-                m_tries[i] = compact_trie(trie, n_nodes);
+                m_tries[i] = compact_trie_v2(trie, n_nodes);
                 delete trie;
             }
 
@@ -84,7 +84,7 @@ namespace cltj {
             std::swap(m_tries, o.m_tries);
         }
 
-        inline compact_trie* get_trie(size_type i){
+        inline compact_trie_v2* get_trie(size_type i){
             return &m_tries[i];
         }
 
