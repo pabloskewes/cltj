@@ -48,8 +48,6 @@ namespace cltj {
         compact_trie_v2(const Trie* trie, const uint64_t n_nodes){
             m_bv = sdsl::bit_vector(n_nodes, 1);
             m_seq = sdsl::int_vector<>(n_nodes-1);
-            std::vector<uint32_t> s;
-            s.reserve(n_nodes);
 
             const Trie* node;
             std::queue<const Trie*> q;
