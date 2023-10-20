@@ -46,8 +46,8 @@ namespace cltj {
         compact_trie_v2() = default;
 
         compact_trie_v2(const Trie* trie, const uint64_t n_nodes){
-            auto total_bits = 2*n_nodes+1; //2*n_nodes+1
-            m_bv = sdsl::bit_vector(total_bits, 1);
+            m_bv = sdsl::bit_vector(n_nodes, 1);
+            m_seq = sdsl::int_vector<>(n_nodes-1);
             std::vector<uint32_t> s;
             s.reserve(n_nodes);
 
@@ -55,11 +55,12 @@ namespace cltj {
             std::queue<const Trie*> q;
             q.push(trie);
             m_bv[0]=0;
-            uint64_t pos_bv = 0;
+            uint64_t pos_bv = 0, pos_seq = 0;
             while(!q.empty()){
                 node = q.front(); q.pop();
                 for(const auto &child: node->children){
-                    s.push_back(child.first);
+                    m_seq[pos_seq] = child.first;
+                    ++pos_seq;
                     if(!child.second->children.empty()){ //Check if it is a leaf
                         q.push(child.second);
                     }
@@ -68,15 +69,7 @@ namespace cltj {
                 m_bv[pos_bv]=0;
             }
             std::cout << "n_nodes=" << n_nodes << " s.size()=" << s.size() << " pos_bv=" << pos_bv << std::endl;
-            //TODO: penso que podo reducir e non ter que gardar os 0s das follas
-            m_bv.resize(pos_bv+1);
-
-            m_seq = sdsl::int_vector<>(s.size());
-            for(auto i = 0; i < s.size(); ++i){
-                m_seq[i] = s[i];
-            }
-            //Clear s
-            s.clear(); s.shrink_to_fit();
+            //m_bv.resize(pos_bv+1);
 
             sdsl::util::bit_compress(m_seq);
             sdsl::util::init_support(m_rank1, &m_bv);
