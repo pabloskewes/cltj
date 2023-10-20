@@ -24,13 +24,14 @@
 
 
 #include <triple_pattern.hpp>
-#include <ltj_iterator.hpp>
+//#include <ltj_iterator.hpp>
+#include <ltj_iterator_v2.hpp>
 #include <veo_simple.hpp>
 #include <veo_adaptive.hpp>
 
 namespace ltj {
 
-    template<class iterator_t = ltj_iterator<cltj::cltj_index_spo, uint8_t, uint64_t>,
+    template<class iterator_t = ltj_iterator_v2<cltj::cltj_index_spo, uint8_t, uint64_t>,
              class veo_t = veo::veo_adaptive<iterator_t, util::trait_size> >
     class ltj_algorithm {
 
