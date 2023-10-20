@@ -266,13 +266,13 @@ namespace ltj {
             ++m_nfixed;
             //std::cout << "n_fixed: " << m_nfixed << std::endl;
             m_fixed[m_nfixed-1] = state;
-            cltj::compact_trie* trie = m_ptr_index->get_trie(m_trie_i);
+            const cltj::compact_trie* trie = m_ptr_index->get_trie(m_trie_i);
             auto pos = m_status[m_nfixed].beg;
             if(m_nfixed == 1){
                 m_status[m_nfixed].it[0] = trie->nodeselect(pos);
                 trie = m_ptr_index->get_trie(m_trie_i+1);
                 m_status[m_nfixed].it[1] = trie->nodeselect(pos);
-            }else{
+            }else if (m_nfixed == 2){
                 m_status[m_nfixed].it[m_status_i] = trie->nodeselect(pos);
             }
             //m_redo[m_nfixed] = true;
@@ -305,7 +305,7 @@ namespace ltj {
         bool exists(state_type state, size_type c) { //Return the minimum in the range
 
             choose_trie(state);
-            cltj::compact_trie* trie = m_ptr_index->get_trie(m_trie_i);
+            const cltj::compact_trie* trie = m_ptr_index->get_trie(m_trie_i);
 
             size_type beg, end;
             auto cnt = trie->childrenCount(parent());
@@ -333,7 +333,7 @@ namespace ltj {
                 state = p;
             }
             choose_trie(state);
-            cltj::compact_trie* trie = m_ptr_index->get_trie(m_trie_i);
+            const cltj::compact_trie* trie = m_ptr_index->get_trie(m_trie_i);
             size_type beg, end, it;
             //std::cout << "Leap redo n_fixed:" << m_nfixed << std::endl;
             //print_redo();

@@ -84,7 +84,7 @@ namespace cltj {
             std::swap(m_tries, o.m_tries);
         }
 
-        compact_trie* get_trie(size_type i){
+        inline compact_trie* get_trie(size_type i){
             return &m_tries[i];
         }
 

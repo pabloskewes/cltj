@@ -128,14 +128,6 @@ namespace cltj {
             uint32_t succ0(uint32_t it){
                 return m_select0(rank0(it) + 1);
             }
-            
-            /*
-                Receives index in bit vector
-                Returns index of previous 0
-            */
-            uint32_t prev0(uint32_t it){
-                return m_select0(rank0(it));
-            }
 
             /*
                 Receives index of current node and the child that is required
@@ -152,23 +144,7 @@ namespace cltj {
             uint32_t childrenCount(uint32_t it){
                 return succ0(it) - it;
             }
-            // subtree size assuming a node at depth 1
-            // depth -1 node is just n (flag m_at_root)
-            // depth 0 node is the same as children count
-            // depth 2 is just 1
-            //**** This function only handles depth 1. ****
-             uint64_t subtree_size(uint64_t it){
-                uint64_t n_children = childrenCount(it);
 
-                uint64_t leftmost_leaf, rightmost_leaf;
-
-                leftmost_leaf = child(child(it, 1), 1);
-                it = child(it, n_children);
-
-                n_children = childrenCount(it);
-                rightmost_leaf = child(it, n_children);
-                return rightmost_leaf - leftmost_leaf + 1;
-            }
 
             inline size_type nodemap(size_type i) const {
                 return rank0(i)-2;
@@ -178,7 +154,7 @@ namespace cltj {
                 return m_select0(i+2)+1;
             }
 
-            pair<uint32_t, uint32_t> binary_search_seek(uint32_t val, uint32_t i, uint32_t f){
+            pair<uint32_t, uint32_t> binary_search_seek(uint32_t val, uint32_t i, uint32_t f) const{
                 if(m_seq[f]<val)return make_pair(0,f+1);
                 uint32_t mid; 
                 while(i<f){
