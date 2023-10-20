@@ -66,7 +66,7 @@ namespace cltj {
                 pos_bv = pos_bv + node->children.size();
                 m_bv[pos_bv]=0;
             }
-            std::cout << "n_nodes=" << n_nodes << " s.size()=" << s.size() << " pos_bv=" << pos_bv << std::endl;
+            std::cout << "n_nodes=" << n_nodes << " pos_bv=" << pos_bv << std::endl;
             //m_bv.resize(pos_bv+1);
 
             sdsl::util::bit_compress(m_seq);
