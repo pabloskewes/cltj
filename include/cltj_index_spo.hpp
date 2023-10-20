@@ -19,13 +19,13 @@ namespace cltj {
     private:
         std::array<compact_trie, 6> m_tries;
 
-        Trie* create_trie(const vector<spo_triple> &D, const std::array<size_type, 3> &order, size_type &n_nodes){
+        Trie* create_trie(const vector<spo_triple> &D, const spo_order_type &order, size_type &n_nodes){
             Trie* root = new Trie();
             Trie* node;
             bool ok;
             for(const auto &spo: D){
                 node = root;
-                for(size_type i = 0; i < order.size(); ++i){
+                for(size_type i = 0; i < 3; ++i){
                     node = node->insert(spo[order[i]], ok);
                     if(ok) ++n_nodes;
                 }
@@ -44,7 +44,7 @@ namespace cltj {
 
         cltj_index_spo(const vector<spo_triple> &D){
 
-            for(size_type i = 0; i < spo_orders.size(); ++i){
+            for(size_type i = 0; i < 6; ++i){
                 size_type n_nodes = 1;
                 Trie* trie = create_trie(D, spo_orders[i], n_nodes);
                 m_tries[i] = compact_trie(trie, n_nodes);

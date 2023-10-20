@@ -14,12 +14,16 @@ namespace cltj{
 //typedef CompactTrieIterator CurrentIterator;
 //typedef CompactTrie CTrie;
 
-    typedef compact_trie CTrie;
     typedef std::array<uint32_t, 3> spo_triple;
-    typedef std::array<std::array<uint64_t, 3>, 6> orders_type;
+    typedef uint8_t spo_order_type[3];
+    typedef spo_order_type spo_orders_type[6];
 
-    const static orders_type spo_orders = {{{0, 1, 2}, {0, 2, 1}, {1, 2, 0}, {1, 0, 2}, {2, 0, 1}, {2, 1, 0}}};
-    //                                         SPO       SOP        POS        PSO        OSP        OPS;
+    const static spo_orders_type spo_orders = {{0, 1, 2}, //SPO
+                                              {0, 2, 1}, //SOP
+                                              {1, 2, 0}, //POS
+                                              {1, 0, 2}, //PSO
+                                              {2, 0, 1}, //OSP
+                                              {2, 1, 0}}; //OPS
 
 }
 
