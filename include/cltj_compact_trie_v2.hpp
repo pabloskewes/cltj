@@ -8,7 +8,7 @@
 #include <queue>
 #include <sdsl/vectors.hpp>
 #include <sdsl/select_support_mcl.hpp>
-#include <cltj_regular_trie.hpp>
+#include <cltj_regular_trie_v2.hpp>
 #include <succ_support_v.hpp>
 
 namespace cltj {
@@ -49,22 +49,24 @@ namespace cltj {
 
         compact_trie_v2() = default;
 
-        compact_trie_v2(const Trie* trie, const uint64_t n_nodes){
+        compact_trie_v2(const TrieV2* trie, const uint64_t n_nodes){
             m_bv = sdsl::bit_vector(n_nodes, 1);
             m_seq = sdsl::int_vector<>(n_nodes-1);
 
-            const Trie* node;
-            std::queue<const Trie*> q;
+            const TrieV2* node;
+            std::queue<const TrieV2*> q;
             q.push(trie);
             m_bv[0]=0;
             uint64_t pos_bv = 0, pos_seq = 0;
             while(!q.empty()){
                 node = q.front(); q.pop();
-                for(const auto &child: node->children){
-                    m_seq[pos_seq] = child.first;
+                auto children = node->get_children();
+                for(const auto &c: children){
+                    m_seq[pos_seq] = c;
                     ++pos_seq;
-                    if(!child.second->children.empty()){ //Check if it is a leaf
-                        q.push(child.second);
+                    const TrieV2* child = node->to_child(c);
+                    if(!child->children.empty()){ //Check if it is a leaf
+                        q.push(child);
                     }
                 }
                 pos_bv = pos_bv + node->children.size();

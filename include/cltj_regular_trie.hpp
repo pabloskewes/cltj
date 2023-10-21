@@ -9,7 +9,6 @@ namespace cltj{
     class Trie{
         public:
             map<uint32_t, Trie*> children;
-            map<uint32_t, Trie*>::iterator it;
 
             ~Trie(){
                 for(auto &child: children){
@@ -22,7 +21,7 @@ namespace cltj{
 
 
     Trie* Trie::insert(uint32_t value, bool &inserted){
-        it = children.find(value);
+        auto it = children.find(value);
         Trie* node;
         if(it == children.end()){
             node = new Trie();
