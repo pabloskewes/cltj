@@ -19,7 +19,7 @@ int main(int argc, char **argv){
         vector<cltj::spo_triple> D;
 
         std::ifstream ifs(dataset);
-        uint64_t s, p , o;
+        uint32_t s, p , o;
         cltj::spo_triple spo;
         do {
             ifs >> s >> p >> o;
@@ -29,14 +29,14 @@ int main(int argc, char **argv){
         } while (!ifs.eof());
 
         D.shrink_to_fit();
-
-        sdsl::memory_monitor::start();
+        std::cout << "Dataset: " << 3*D.size()*sizeof(::uint32_t) << " bytes." << std::endl;
+        //sdsl::memory_monitor::start();
 
         auto start = timer::now();
         cltj::cltj_index_spo index(D);
         auto stop = timer::now();
 
-        sdsl::memory_monitor::stop();
+        //sdsl::memory_monitor::stop();
 
         sdsl::store_to_file(index, index_name);
 

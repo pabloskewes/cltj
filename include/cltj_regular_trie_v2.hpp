@@ -14,6 +14,7 @@ namespace cltj{
                 for(auto &child: children){
                     delete child.second;
                 }
+                children.clear();
             }
 
             TrieV2* insert(uint32_t value, bool &inserted){
