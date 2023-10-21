@@ -9,6 +9,7 @@
 #include <sdsl/vectors.hpp>
 #include <sdsl/select_support_mcl.hpp>
 #include <cltj_regular_trie.hpp>
+#include <succ_support_v.hpp>
 
 namespace cltj {
 
@@ -23,21 +24,24 @@ namespace cltj {
     private:
         sdsl::bit_vector m_bv;
         sdsl::int_vector<> m_seq;
-        sdsl::rank_support_v<1> m_rank1;
+        //sdsl::rank_support_v<1> m_rank1;
+        cds::succ_support_v<0> m_succ0;
         sdsl::select_support_mcl<0> m_select0;
 
         void copy(const compact_trie_v2 &o) {
             m_bv = o.m_bv;
             m_seq = o.m_seq;
-            m_rank1 = o.m_rank1;
-            m_rank1.set_vector(&m_bv);
+            //m_rank1 = o.m_rank1;
+            //m_rank1.set_vector(&m_bv);
+            m_succ0 = o.m_succ0;
+            m_succ0.set_vector(&m_bv);
             m_select0 = o.m_select0;
             m_select0.set_vector(&m_bv);
         }
 
-        inline size_type rank0(const size_type i) const {
+        /*inline size_type rank0(const size_type i) const {
             return i - m_rank1(i);
-        }
+        }*/
 
     public:
 
@@ -70,7 +74,7 @@ namespace cltj {
             //m_bv.resize(pos_bv+1);
 
             sdsl::util::bit_compress(m_seq);
-            sdsl::util::init_support(m_rank1, &m_bv);
+            sdsl::util::init_support(m_succ0, &m_bv);
             sdsl::util::init_support(m_select0, &m_bv);
 
         }
@@ -98,8 +102,10 @@ namespace cltj {
             if (this != &o) {
                 m_bv = std::move(o.m_bv);
                 m_seq = std::move(o.m_seq);
-                m_rank1 = std::move(o.m_rank1);
-                m_rank1.set_vector(&m_bv);
+                //m_rank1 = std::move(o.m_rank1);
+                m_succ0 = std::move(o.m_succ0);
+                //m_rank1.set_vector(&m_bv);
+                m_succ0.set_vector(&m_bv);
                 m_select0 = std::move(o.m_select0);
                 m_select0.set_vector(&m_bv);
             }
@@ -110,7 +116,7 @@ namespace cltj {
             // m_bp.swap(bp_support.m_bp); use set_vector to set the supported bit_vector
             std::swap(m_bv, o.m_bv);
             std::swap(m_seq, o.m_seq);
-            sdsl::util::swap_support(m_rank1, o.m_rank1, &m_bv, &o.m_bv);
+            sdsl::util::swap_support(m_succ0, o.m_succ0, &m_bv, &o.m_bv);
             sdsl::util::swap_support(m_select0, o.m_select0, &m_bv, &o.m_bv);
         }
 
@@ -119,9 +125,9 @@ namespace cltj {
                 Receives index in bit vector
                 Returns index of next 0
             */
-            inline uint32_t succ0(uint32_t it) const{
+            /*inline uint32_t succ0(uint32_t it) const{
                 return m_select0(rank0(it) + 1);
-            }
+            }*/
 
             /*
                 Receives index of current node and the child that is required
@@ -136,7 +142,7 @@ namespace cltj {
                 Returns how many children said node has
             */
             size_type children(size_type i) const{
-                return succ0(i+1) - i;
+                return m_succ0(i+1) - i;
             }
 
             size_type first_child(size_type i) const{
@@ -168,7 +174,7 @@ namespace cltj {
             size_type written_bytes = 0;
             written_bytes += m_bv.serialize(out, child, "bv");
             written_bytes += m_seq.serialize(out, child, "seq");
-            written_bytes += m_rank1.serialize(out, child, "rank1");
+            written_bytes += m_succ0.serialize(out, child, "succ0");
             written_bytes += m_select0.serialize(out, child, "select0");
             sdsl::structure_tree::add_size(child, written_bytes);
             return written_bytes;
@@ -177,7 +183,7 @@ namespace cltj {
         void load(std::istream &in) {
             m_bv.load(in);
             m_seq.load(in);
-            m_rank1.load(in, &m_bv);
+            m_succ0.load(in, &m_bv);
             m_select0.load(in, &m_bv);
         }
 
