@@ -130,14 +130,14 @@ namespace ltj {
                 down(o);
             }
 
-            for(auto i = 0; i < 6; ++i){
+            /*for(auto i = 0; i < 6; ++i){
                 std::cout << "Order: ";
                 for(auto j = 0; j < 3; ++j){
                     std::cout << (uint) cltj::spo_orders[i][j];
                 }
                 std::cout << std::endl;
                 m_ptr_index->tries[i].print();
-            }
+            }*/
             //std::cout << "Constants" << std::endl;
             //print_status();
         }
