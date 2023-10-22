@@ -22,10 +22,10 @@ namespace cltj{
                 TrieV2* node;
                 if(it == children.end()){
                     node = new TrieV2();
-                    children[value] = node;
+                    it->second = node;
                     inserted = true;
                 }else {
-                    node = children[value];
+                    node = it->second;
                     inserted = false;
                 }
                 return node;

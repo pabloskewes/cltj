@@ -45,32 +45,33 @@ namespace cltj {
 
     public:
 
-        const sdsl::int_vector<>& seq = m_seq;
+        const sdsl::int_vector<> &seq = m_seq;
 
         compact_trie_v2() = default;
 
-        compact_trie_v2(const TrieV2* trie, const uint64_t n_nodes){
+        compact_trie_v2(const TrieV2 *trie, const uint64_t n_nodes) {
             m_bv = sdsl::bit_vector(n_nodes, 1);
-            m_seq = sdsl::int_vector<>(n_nodes-1);
+            m_seq = sdsl::int_vector<>(n_nodes - 1);
 
-            const TrieV2* node;
-            std::queue<const TrieV2*> q;
+            const TrieV2 *node;
+            std::queue<const TrieV2 *> q;
             q.push(trie);
-            m_bv[0]=0;
+            m_bv[0] = 0;
             uint64_t pos_bv = 0, pos_seq = 0;
-            while(!q.empty()){
-                node = q.front(); q.pop();
+            while (!q.empty()) {
+                node = q.front();
+                q.pop();
                 auto children = node->get_children();
-                for(const auto &c: children){
+                for (const auto &c: children) {
                     m_seq[pos_seq] = c;
                     ++pos_seq;
-                    const TrieV2* child = node->to_child(c);
-                    if(!child->children.empty()){ //Check if it is a leaf
+                    const TrieV2 *child = node->to_child(c);
+                    if (!child->children.empty()) { //Check if it is a leaf
                         q.push(child);
                     }
                 }
                 pos_bv = pos_bv + node->children.size();
-                m_bv[pos_bv]=0;
+                m_bv[pos_bv] = 0;
             }
             std::cout << "n_nodes=" << n_nodes << " pos_bv=" << pos_bv << std::endl;
             //m_bv.resize(pos_bv+1);
@@ -123,52 +124,60 @@ namespace cltj {
         }
 
 
-            /*
-                Receives index in bit vector
-                Returns index of next 0
-            */
-            /*inline uint32_t succ0(uint32_t it) const{
-                return m_select0(rank0(it) + 1);
-            }*/
+        /*
+            Receives index in bit vector
+            Returns index of next 0
+        */
+        /*inline uint32_t succ0(uint32_t it) const{
+            return m_select0(rank0(it) + 1);
+        }*/
 
-            /*
-                Receives index of current node and the child that is required
-                Returns index of the nth child of current node
-            */
-            inline size_type child(uint32_t it, uint32_t n) const{
-                return m_select0(it+n);
-            }
+        /*
+            Receives index of current node and the child that is required
+            Returns index of the nth child of current node
+        */
+        inline size_type child(uint32_t it, uint32_t n) const {
+            return m_select0(it + 1 + n);
+        }
 
-            /*
-                Receives index of node whos children we want to count
-                Returns how many children said node has
-            */
-            size_type children(size_type i) const{
-                return m_succ0(i+1) - i;
-            }
+        /*
+            Receives index of node whos children we want to count
+            Returns how many children said node has
+        */
+        size_type children(size_type i) const {
+            return m_succ0(i + 1) - i;
+        }
 
-            size_type first_child(size_type i) const{
-                return i;
-            }
+        size_type first_child(size_type i) const {
+            return i;
+        }
 
-            inline size_type nodeselect(size_type i) const {
-                return m_select0(i + 2);
-            }
+        inline size_type nodeselect(size_type i) const {
+            return m_select0(i + 2);
+        }
 
 
-            pair<uint32_t, uint32_t> binary_search_seek(uint32_t val, uint32_t i, uint32_t f) const{
-                if(m_seq[f]<val) return make_pair(0,f+1);
-                uint32_t mid; 
-                while(i<f){
-                    mid = (i + f)/2;
-                    if(m_seq[mid]<val){
-                        i = mid+1;
-                    } else {
-                        f = mid;
-                    }
+        pair<uint32_t, uint32_t> binary_search_seek(uint32_t val, uint32_t i, uint32_t f) const {
+            if (m_seq[f] < val) return make_pair(0, f + 1);
+            uint32_t mid;
+            while (i < f) {
+                mid = (i + f) / 2;
+                if (m_seq[mid] < val) {
+                    i = mid + 1;
+                } else {
+                    f = mid;
                 }
-                return make_pair(m_seq[i], i);
             }
+            return make_pair(m_seq[i], i);
+        }
+
+
+        void print() const {
+            for (auto i = 0; i < m_bv.size(); ++i) {
+                std::cout << (uint) m_bv[i];
+            }
+            std::cout << std::endl;
+        }
 
         //! Serializes the data structure into the given ostream
         size_type serialize(std::ostream &out, sdsl::structure_tree_node *v = nullptr, std::string name = "") const {

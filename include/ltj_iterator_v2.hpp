@@ -130,6 +130,14 @@ namespace ltj {
                 down(o);
             }
 
+            for(auto i = 0; i < 6; ++i){
+                std::cout << "Order: ";
+                for(auto j = 0; j < 3; ++j){
+                    std::cout << (uint) cltj::spo_orders[i][j];
+                }
+                std::cout << std::endl;
+                m_ptr_index->tries[i].print();
+            }
             //std::cout << "Constants" << std::endl;
             //print_status();
         }
@@ -421,7 +429,7 @@ namespace ltj {
             //Rightmost
             it = trie->child(it, cnt);
             cnt = trie->children(it);
-            rightmost_leaf = trie->first_child(it) + cnt;
+            rightmost_leaf = trie->first_child(it) + cnt - 1;
             return rightmost_leaf - leftmost_leaf + 1;
         }
 
