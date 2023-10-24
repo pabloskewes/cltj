@@ -28,6 +28,7 @@
 #include <ltj_iterator_v2.hpp>
 #include <veo_simple.hpp>
 #include <veo_adaptive.hpp>
+#include <results_collector.hpp>
 
 namespace ltj {
 
@@ -46,6 +47,7 @@ namespace ltj {
         typedef unordered_map<var_type, vector<ltj_iter_type*>> var_to_iterators_type;
         typedef vector<pair<var_type, value_type>> tuple_type;
         typedef chrono::high_resolution_clock::time_point time_point_type;
+        typedef ::util::results_collector<tuple_type> results_type;
 
     private:
         const vector<triple_pattern>* m_ptr_triple_patterns;
@@ -160,7 +162,8 @@ namespace ltj {
         * @param limit_results     Limit of results
         * @param timeout_seconds   Timeout in seconds
         */
-        void join(vector<tuple_type> &res,
+        void join(/*vector<tuple_type> &res,*/
+                  results_type &res,
                   const size_type limit_results = 0, const size_type timeout_seconds = 0){
             if(m_is_empty) return;
             time_point_type start = chrono::high_resolution_clock::now();
@@ -178,7 +181,7 @@ namespace ltj {
          * @param limit_results     Limit of results
          * @param timeout_seconds   Timeout in seconds
          */
-        bool search(const size_type j, tuple_type &tuple, vector<tuple_type> &res,
+        bool search(const size_type j, tuple_type &tuple, results_type &res,
                     const time_point_type start,
                     const size_type limit_results = 0, const size_type timeout_seconds = 0){
 
@@ -198,7 +201,8 @@ namespace ltj {
 
             if(j == m_veo.size()){
                 //Report results
-                res.emplace_back(tuple);
+                //res.emplace_back(tuple);
+                res.add(tuple);
                 /*cout << "Add result" << endl;
                 for(const auto &dat : tuple){
                     cout << "{" << (uint64_t) dat.first << "=" << dat.second << "} ";
