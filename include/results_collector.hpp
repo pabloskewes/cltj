@@ -17,11 +17,11 @@ namespace util {
     public:
         typedef Type value_type;
         typedef uint64_t size_type;
-        constexpr static size_type buckets = (1ULL << 20);
+        constexpr static size_type buckets = (1ULL << 4);
 
     private:
 
-        std::array<value_type, buckets> m_results;
+        value_type* m_results;
         size_type m_cnt = 0;
 
         void copy(const results_collector &o) {
@@ -31,7 +31,13 @@ namespace util {
 
     public:
 
-        results_collector() = default;
+        results_collector(){
+            m_results = new value_type[buckets];
+        }
+
+        ~results_collector(){
+            delete [] m_results;
+        }
 
         inline void add(const value_type &val){
             m_results[(m_cnt & (buckets-1))] = val;
