@@ -68,7 +68,7 @@ namespace cltj {
             sdsl::util::bit_compress(m_seq);
             sdsl::util::bit_compress(m_ptr);
 
-            for(size_type i = 0; i < m_seq.size(); ++i){
+            /*for(size_type i = 0; i < m_seq.size(); ++i){
                 std::cout << m_seq[i] << ", ";
             }
             std::cout << std::endl;
@@ -76,7 +76,7 @@ namespace cltj {
             for(size_type i = 0; i < m_ptr.size(); ++i){
                 std::cout << m_ptr[i] << ", ";
             }
-            std::cout << std::endl;
+            std::cout << std::endl;*/
 
         }
 
