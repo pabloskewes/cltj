@@ -443,9 +443,7 @@ namespace ltj {
         std::vector<uint64_t> seek_all(var_type x_j){
             std::vector<uint64_t> results;
             const auto* trie = m_ptr_index->get_trie(m_trie_i);
-            std::cout << "Parent: " << parent() << std::endl;
             uint32_t cnt = trie->children(parent());
-            std::cout << "Count parent: " << cnt << std::endl;
             size_type beg = trie->first_child(parent());
             for(auto i = beg; i < beg + cnt; ++i){
                 results.emplace_back(trie->seq[i]);
