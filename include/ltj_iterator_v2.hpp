@@ -26,7 +26,7 @@
 #include <utils.hpp>
 #include <string>
 #include <cltj_compact_trie_v2.hpp>
-#include "cltj_index_spo.hpp"
+#include <cltj_index_spo.hpp>
 
 #define VERBOSE 0
 

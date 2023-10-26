@@ -22,7 +22,6 @@
 #include <chrono>
 #include <triple_pattern.hpp>
 #include <ltj_algorithm.hpp>
-#include <ltj_iterator_uncltj.hpp>
 #include "utils.hpp"
 #include <time.hpp>
 
