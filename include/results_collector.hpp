@@ -17,7 +17,7 @@ namespace util {
     public:
         typedef Type value_type;
         typedef uint64_t size_type;
-        constexpr static size_type buckets = (1ULL << 10);
+        constexpr static size_type buckets = (1ULL << 20);
 
     private:
 
