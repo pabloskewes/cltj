@@ -22,6 +22,7 @@
 #include <chrono>
 #include <triple_pattern.hpp>
 #include <ltj_algorithm.hpp>
+#include <ltj_iterator_uncltj.hpp>
 #include "utils.hpp"
 #include <time.hpp>
 
@@ -222,9 +223,9 @@ int main(int argc, char* argv[])
     std::string type = argv[4];
 
     if(type == "normal"){
-        query<cltj::compact_ltj, ltj::util::trait_distinct>(index, queries, limit);
+        query<cltj::uncompact_ltj, ltj::util::trait_distinct>(index, queries, limit);
     }else if (type == "star"){
-        query<cltj::compact_ltj, ltj::util::trait_size>(index, queries, limit);
+        query<cltj::uncompact_ltj, ltj::util::trait_size>(index, queries, limit);
     }else{
         std::cout << "Type of index: " << type << " is not supported." << std::endl;
     }

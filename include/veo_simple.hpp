@@ -34,7 +34,7 @@ namespace ltj {
     namespace veo {
 
 
-        template<class ltj_iterator_t = ltj_iterator_v2<cltj::cltj_index_spo, uint8_t, uint64_t>,
+        template<class ltj_iterator_t = ltj_iterator_v2<cltj::compact_ltj , uint8_t, uint64_t>,
                 class veo_trait_t = util::trait_size>
         class veo_simple {
 

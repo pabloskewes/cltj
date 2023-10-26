@@ -17,7 +17,7 @@ namespace util {
     public:
         typedef Type value_type;
         typedef uint64_t size_type;
-        constexpr static size_type buckets = (1ULL << 20);
+        constexpr static size_type buckets = (1ULL << 10);
 
     private:
 
@@ -25,7 +25,9 @@ namespace util {
         size_type m_cnt = 0;
 
         void copy(const results_collector &o) {
-            m_results = o.m_results;
+            for(size_type i = 0; i < buckets; ++i){
+                m_results[i] = o.m_results[i];
+            }
             m_cnt = o.m_cnt;
         }
 

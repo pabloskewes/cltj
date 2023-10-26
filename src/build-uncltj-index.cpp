@@ -15,7 +15,7 @@ int main(int argc, char **argv){
         }
 
         std::string dataset = argv[1];
-        std::string index_name = dataset + ".cltj";
+        std::string index_name = dataset + ".uncltj";
         vector<cltj::spo_triple> D;
 
         std::ifstream ifs(dataset);
@@ -33,7 +33,7 @@ int main(int argc, char **argv){
         //sdsl::memory_monitor::start();
 
         auto start = timer::now();
-        cltj::cltj_index_spo<cltj::compact_trie_v2> index(D);
+        cltj::uncompact_ltj index(D);
         auto stop = timer::now();
 
         //sdsl::memory_monitor::stop();

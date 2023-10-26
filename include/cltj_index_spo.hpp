@@ -5,19 +5,23 @@
 #ifndef CLTJ_CLTJ_INDEX_SPO_HPP
 #define CLTJ_CLTJ_INDEX_SPO_HPP
 
+
 #include <cltj_compact_trie_v2.hpp>
+#include <cltj_uncompact_trie_v2.hpp>
 #include <cltj_config.hpp>
 
 namespace cltj {
 
+    template<class Trie>
     class cltj_index_spo {
 
     public:
         typedef uint64_t size_type;
         typedef uint32_t value_type;
+        typedef Trie trie_type;
 
     private:
-        std::array<compact_trie_v2, 6> m_tries;
+        std::array<trie_type, 6> m_tries;
 
         TrieV2* create_trie(const vector<spo_triple> &D, const spo_order_type &order, size_type &n_nodes){
             TrieV2* root = new TrieV2();
@@ -39,7 +43,7 @@ namespace cltj {
 
     public:
 
-        const std::array<compact_trie_v2, 6> &tries = m_tries;
+        const std::array<trie_type, 6> &tries = m_tries;
         cltj_index_spo() = default;
 
         cltj_index_spo(const vector<spo_triple> &D){
@@ -47,7 +51,7 @@ namespace cltj {
             for(size_type i = 0; i < 6; ++i){
                 size_type n_nodes = 1;
                 TrieV2* trie = create_trie(D, spo_orders[i], n_nodes);
-                m_tries[i] = compact_trie_v2(trie, n_nodes);
+                m_tries[i] = trie_type(trie, n_nodes);
                 delete trie;
             }
 
@@ -84,7 +88,7 @@ namespace cltj {
             std::swap(m_tries, o.m_tries);
         }
 
-        inline compact_trie_v2* get_trie(size_type i){
+        inline trie_type* get_trie(size_type i){
             return &m_tries[i];
         }
 
@@ -105,6 +109,9 @@ namespace cltj {
         }
 
     };
+
+    typedef cltj::cltj_index_spo<cltj::compact_trie_v2> compact_ltj;
+    typedef cltj::cltj_index_spo<cltj::uncompact_trie_v2> uncompact_ltj;
 
 }
 

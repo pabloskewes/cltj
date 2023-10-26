@@ -2,7 +2,6 @@
 #define CLTJ_CONFIG_H
 
 #include <iostream>
-#include <cltj_compact_trie.hpp>
 
 
 namespace cltj{
@@ -17,13 +16,14 @@ namespace cltj{
     typedef std::array<uint32_t, 3> spo_triple;
     typedef uint8_t spo_order_type[3];
     typedef spo_order_type spo_orders_type[6];
-
     const static spo_orders_type spo_orders = {{0, 1, 2}, //SPO
                                               {0, 2, 1}, //SOP
                                               {1, 2, 0}, //POS
                                               {1, 0, 2}, //PSO
                                               {2, 0, 1}, //OSP
                                               {2, 1, 0}}; //OPS
+
+
 
 }
 

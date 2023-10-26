@@ -22,7 +22,7 @@ namespace cltj{
                 TrieV2* node;
                 if(it == children.end()){
                     node = new TrieV2();
-                    it->second = node;
+                    children.insert({value, node});
                     inserted = true;
                 }else {
                     node = it->second;
