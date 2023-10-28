@@ -30,6 +30,8 @@
 #include <veo_adaptive.hpp>
 #include <results_collector.hpp>
 
+#define EXPT_TIME_SOL 1
+
 namespace ltj {
 
     template<class iterator_t = ltj_iterator_v2<cltj::compact_ltj, uint8_t, uint64_t>,
@@ -203,6 +205,13 @@ namespace ltj {
                 //Report results
                 //res.emplace_back(tuple);
                 res.add(tuple);
+#if EXPT_TIME_SOL
+                if(res.size() % 1000 == 0){
+                    time_point_type stop = chrono::high_resolution_clock::now();
+                    auto sec = chrono::duration_cast<chrono::seconds>(stop-start).count();
+                    std::cerr << res.size() << ";" << sec << std::endl;
+                }
+#endif
                 /*cout << "Add result" << endl;
                 for(const auto &dat : tuple){
                     cout << "{" << (uint64_t) dat.first << "=" << dat.second << "} ";
