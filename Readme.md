@@ -1,6 +1,6 @@
-# Ring
+# CompactLTJ
 
-Repository for the source code of the engine presented in the paper Worst-case Optimal Graph Joins in Almost No Space.
+Repository for the source code of the engine presented in the paper New Techniques and Compact Indices for Worst-Case Optimal Graph Joins.
 
 ## Instructions
 
@@ -28,11 +28,10 @@ Now put the .dat file inside a folder.
 3. Building the index. After compiling the code we should have an executable called `build-index` in `build`. Now run:
 
 ```Bash
-./build-index <absolute-path-to-the-.dat-file> <type-ring>
+./build-index <absolute-path-to-the-.dat-file>
 ```
-
-`<type-ring>` can take two values: `ring` or `c-ring`. Both are implementations of our ring index but using plain and compressed bitvectors, respectively.
-This will generate the index in the folder where the `.dat` file is located. The index is suffixed with `.ring` or `.c-ring` according to the second argument.
+  
+This will generate the index in the folder where the `.dat` file is located.
 
 4. Querying the index. In `build` folder, you should find another executable file called `query-index`. To solve the queries you should run:
 
@@ -48,7 +47,3 @@ Note that the second argument is the path to a file that contains all the querie
 After running that command, you should see the number of the query, the number of results, and the elapsed time of each one of the queries with the following format:
 ```Bash
 <query number>;<number of results>;<elapsed time>
-```
----
-
-At the moment, we can find the rest of the complementary material at [this webpage](http://compact-leapfrog.tk/). Note that we will find instructions to run the code there, and although the instructions are different from the ones in this repository, they should work too.
