@@ -17,21 +17,23 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LTJ_ITERATOR_HPP
-#define LTJ_ITERATOR_HPP
+#ifndef LTJ_ITERATOR_V2_HPP
+#define LTJ_ITERATOR_V2_HPP
 
 #include <triple_pattern.hpp>
 #include <cltj_config.hpp>
 #include <vector>
 #include <utils.hpp>
 #include <string>
-#include <cltj_compact_trie.hpp>
+#include <cltj_compact_trie_v2.hpp>
+#include <cltj_index_spo.hpp>
+
 #define VERBOSE 0
 
 namespace ltj {
 
     template<class index_scheme_t, class var_t, class cons_t>
-    class ltj_iterator {//TODO: if CLTJ is eventually integrated with the ring to form a Compact Index Schemes project then this class has to be renamed to CLTJ_iterator, for instance.
+    class ltj_iterator_v2 {//TODO: if CLTJ is eventually integrated with the ring to form a Compact Index Schemes project then this class has to be renamed to CLTJ_iterator, for instance.
 
     public:
         typedef cons_t value_type;
@@ -77,7 +79,7 @@ namespace ltj {
         //std::array<size_type, 2> m_parent_it_v = {0, 0}; // NEW DIEGO
         //std::array<size_type, 2> m_pos_in_parent_v = {1,1}; // NEW DIEGO
 
-        void copy(const ltj_iterator &o) {
+        void copy(const ltj_iterator_v2 &o) {
             m_ptr_triple_pattern = o.m_ptr_triple_pattern;
             m_ptr_index = o.m_ptr_index;
             m_nfixed = o.m_nfixed;
@@ -130,6 +132,14 @@ namespace ltj {
                 down(o);
             }
 
+            /*for(auto i = 0; i < 6; ++i){
+                std::cout << "Order: ";
+                for(auto j = 0; j < 3; ++j){
+                    std::cout << (uint) cltj::spo_orders[i][j];
+                }
+                std::cout << std::endl;
+                m_ptr_index->tries[i].print();
+            }*/
             //std::cout << "Constants" << std::endl;
             //print_status();
         }
@@ -174,24 +184,18 @@ namespace ltj {
             return m_is_empty;
         }
 
-        inline size_type parent() const{
-            return m_status[m_nfixed].it[m_status_i];
-        }
-
-        inline size_type current() const {
-            return m_status[m_nfixed+1].it[m_status_i];
-        }
+        inline size_type parent() const;
 
 
-        ltj_iterator() = default;
-        ltj_iterator(const triple_pattern *triple, index_scheme_type *index) {
+        ltj_iterator_v2() = default;
+        ltj_iterator_v2(const triple_pattern *triple, index_scheme_type *index) {
             m_ptr_triple_pattern = triple;
             m_ptr_index = index;
 
-            m_status[0].it[0] = 2;
-            m_status[0].it[1] = 2;
-            m_status[0].beg = 2;
-            m_status[0].end = 1;
+            m_status[0].it[0] = 0;
+            m_status[0].it[1] = 0;
+            m_status[0].beg = 1;
+            m_status[0].end = 0;
             m_status[0].cnt = 1;
             //m_status[1][0].it = 2;
             //m_status[1][0].last = 1;
@@ -215,17 +219,17 @@ namespace ltj {
             return m_ptr_triple_pattern;
         }
         //! Copy constructor
-        ltj_iterator(const ltj_iterator &o) {
+        ltj_iterator_v2(const ltj_iterator_v2 &o) {
             copy(o);
         }
 
         //! Move constructor
-        ltj_iterator(ltj_iterator &&o) {
+        ltj_iterator_v2(ltj_iterator_v2 &&o) {
             *this = std::move(o);
         }
 
         //! Copy Operator=
-        ltj_iterator &operator=(const ltj_iterator &o) {
+        ltj_iterator_v2 &operator=(const ltj_iterator_v2 &o) {
             if (this != &o) {
                 copy(o);
             }
@@ -233,7 +237,7 @@ namespace ltj {
         }
 
         //! Move Operator=
-        ltj_iterator &operator=(ltj_iterator &&o) {
+        ltj_iterator_v2 &operator=(ltj_iterator_v2 &&o) {
             if (this != &o) {
                 m_ptr_triple_pattern = std::move(o.m_ptr_triple_pattern);
                 m_ptr_index = std::move(o.m_ptr_index);
@@ -248,7 +252,7 @@ namespace ltj {
             return *this;
         }
 
-        void swap(ltj_iterator &o) {
+        void swap(ltj_iterator_v2 &o) {
             // m_bp.swap(bp_support.m_bp); use set_vector to set the supported bit_vector
             std::swap(m_ptr_triple_pattern, o.m_ptr_triple_pattern);
             std::swap(m_ptr_index, o.m_ptr_index);
@@ -264,8 +268,20 @@ namespace ltj {
 
         void down(state_type state){
             ++m_nfixed;
-            //std::cout << "n_fixed: " << m_nfixed << std::endl;
             m_fixed[m_nfixed-1] = state;
+
+            if(m_nfixed == 1){
+                const auto* trie = m_ptr_index->get_trie(m_trie_i);
+                auto pos = m_status[m_nfixed].beg;
+                m_status[m_nfixed].it[0] = trie->nodeselect(pos);
+                trie = m_ptr_index->get_trie(m_trie_i+1);
+                m_status[m_nfixed].it[1] = trie->nodeselect(pos);
+            }else if (m_nfixed == 2){
+                const auto* trie = m_ptr_index->get_trie(m_trie_i);
+                auto pos = m_status[m_nfixed].beg;
+                m_status[m_nfixed].it[m_status_i] = trie->nodeselect(pos);
+            }
+            //print_status();
             //m_redo[m_nfixed] = true;
             //print_redo();
         }
@@ -296,26 +312,19 @@ namespace ltj {
         bool exists(state_type state, size_type c) { //Return the minimum in the range
 
             choose_trie(state);
-            cltj::compact_trie* trie = m_ptr_index->get_trie(m_trie_i);
+            const auto* trie = m_ptr_index->get_trie(m_trie_i);
 
             size_type beg, end;
-            auto cnt = trie->childrenCount(parent());
+            auto cnt = trie->children(parent());
             //auto child = trie->child(parent(), 1)
-            beg = trie->nodemap(trie->child(parent(), 1));
+            beg = trie->first_child(parent());
             end = beg + cnt -1;
             auto p = trie->binary_search_seek(c, beg, end);
             if(p.second > end or p.first != c) return false;
-            m_status[m_nfixed+1].beg = beg;
+            m_status[m_nfixed+1].beg = p.second;
             m_status[m_nfixed+1].end = end;
             m_status[m_nfixed+1].cnt = cnt;
             m_redo[m_nfixed] = false;
-            if(m_nfixed == 0){
-                m_status[m_nfixed+1].it[0] = trie->nodeselect(p.second);
-                auto n_trie = m_ptr_index->get_trie(m_trie_i+1);
-                m_status[m_nfixed+1].it[1] = n_trie->nodeselect(p.second);
-            }else{
-                m_status[m_nfixed+1].it[m_status_i] = trie->nodeselect(p.second);
-            }
             //print_status();
             return true;
         }
@@ -331,48 +340,35 @@ namespace ltj {
                 state = p;
             }
             choose_trie(state);
-            cltj::compact_trie* trie = m_ptr_index->get_trie(m_trie_i);
+            const auto* trie = m_ptr_index->get_trie(m_trie_i);
             size_type beg, end, it;
             //std::cout << "Leap redo n_fixed:" << m_nfixed << std::endl;
             //print_redo();
             if(m_redo[m_nfixed]){ //First time of leap
-                //std::cout << "Redoing" << std::endl;
-                auto cnt = trie->childrenCount(parent());
-                it = trie->child(parent(), 1);
-                beg = trie->nodemap(it);
+                auto cnt = trie->children(parent());
+                beg = trie->first_child(parent());
                 end = beg + cnt -1;
-                assert(m_nfixed+1 < 4);
                 m_status[m_nfixed+1].beg = beg;
                 m_status[m_nfixed+1].end = end;
-                m_status[m_nfixed+1].it[0] = m_status[m_nfixed+1].it[1] = it;
+                //m_status[m_nfixed+1].it[0] = m_status[m_nfixed+1].it[1] = it;
                 m_status[m_nfixed+1].cnt  = cnt;
                 m_redo[m_nfixed] = false;
             }else{
                // std::cout << "Current: " << current() << std::endl;
-                beg = trie->nodemap(current());
+                beg = m_status[m_nfixed+1].beg;
                 end = m_status[m_nfixed+1].end;
             }
-            //if(c == -1) return key(); //TODO: improve this, we can get the key from beg
-            size_type value, pos;
+            size_type value;
             if(c == -1ULL){
                 value = trie->seq[beg];
-                pos = beg; //First position in the sequence
+                m_status[m_nfixed+1].beg = beg; //First position in the sequence
             }else{
-                auto p  = trie->binary_search_seek(c, beg, end);
+                const auto p  = trie->binary_search_seek(c, beg, end);
                 if(p.second > end) return 0;
                 value = p.first;
-                pos = p.second; //Position of the first value gt c
+                m_status[m_nfixed+1].beg = p.second; //Position of the first value gt c
             }
 
-            if(m_nfixed == 0){
-                m_status[m_nfixed+1].it[0] = trie->nodeselect(pos);
-                auto n_trie = m_ptr_index->get_trie(m_trie_i+1);
-                m_status[m_nfixed+1].it[1] = n_trie->nodeselect(pos);
-                //std::cout << "It0: " << m_status[m_nfixed+1].it[0] << " It1: " << m_status[m_nfixed+1].it[1] <<
-                //" Trie: " << m_trie_i << " Status: " << m_status_i << std::endl;
-            }else{
-                m_status[m_nfixed+1].it[m_status_i] = trie->nodeselect(pos);
-            }
             //print_status();
             return value;
         }
@@ -403,11 +399,10 @@ namespace ltj {
             }
             auto trie = m_ptr_index->get_trie(t_i);
             auto it = m_status[m_nfixed].it[s_i];
-            return trie->childrenCount(it);
+            return trie->children(it);
         }
 
-        inline size_type subtree_size_fixed1(state_type state) const { //TODO: review this
-
+        inline size_type subtree_size_fixed1(state_type state) const {
             size_type t_i, s_i;
             if (state == s) { //Fix variables
                 t_i = (m_fixed[m_nfixed-1] == o) ? 4 : 3 ;
@@ -420,44 +415,47 @@ namespace ltj {
                 s_i = (m_fixed[m_nfixed - 1] == p) ? 0 : 1;
             }
 
-            auto trie =  m_ptr_index->get_trie(t_i);
+            const auto* trie =  m_ptr_index->get_trie(t_i);
             auto it = m_status[m_nfixed].it[s_i];
 
             size_type leftmost_leaf, rightmost_leaf;
 
             //Count children
-            auto cnt = trie->childrenCount(it);
+            auto cnt = trie->children(it);
             //Leftmost
-            leftmost_leaf = trie->child(trie->child(it, 1), 1);
+            auto first = trie->child(it, 1);
+            leftmost_leaf = trie->first_child(first);
             //Rightmost
             it = trie->child(it, cnt);
-            cnt = trie->childrenCount(it);
-            rightmost_leaf = trie->child(it, cnt);
+            cnt = trie->children(it);
+            rightmost_leaf = trie->first_child(it) + cnt - 1;
             return rightmost_leaf - leftmost_leaf + 1;
         }
 
-        inline size_type subtree_size_fixed2() const { //TODO: review this
-            auto trie =  m_ptr_index->get_trie(m_trie_i);
+        inline size_type subtree_size_fixed2() const {
+            const auto* trie =  m_ptr_index->get_trie(m_trie_i);
             auto it = m_status[m_nfixed].it[m_status_i];
-            return trie->childrenCount(it);
+            return trie->children(it);
         }
 
 
 
         std::vector<uint64_t> seek_all(var_type x_j){
             std::vector<uint64_t> results;
-            auto trie = m_ptr_index->get_trie(m_trie_i);
-            auto it_parent = parent();
-            uint32_t cnt = trie->childrenCount(it_parent);
-
-            size_type it = trie->child(it_parent, 1);
-            size_type beg = trie->nodemap(it);
+            const auto* trie = m_ptr_index->get_trie(m_trie_i);
+            uint32_t cnt = trie->children(parent());
+            size_type beg = trie->first_child(parent());
             for(auto i = beg; i < beg + cnt; ++i){
                 results.emplace_back(trie->seq[i]);
             }
             return results;
         }
     };
+
+    template<class index_scheme_t, class var_t, class cons_t>
+    uint64_t ltj_iterator_v2<index_scheme_t, var_t, cons_t>::parent() const {
+        return m_status[m_nfixed].it[m_status_i];
+    }
 
 }
 
