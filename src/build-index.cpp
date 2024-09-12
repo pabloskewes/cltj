@@ -33,7 +33,7 @@ int main(int argc, char **argv){
         //sdsl::memory_monitor::start();
 
         auto start = timer::now();
-        cltj::cltj_index_spo<cltj::compact_trie_v2> index(D);
+        cltj::cltj_index_spo<cltj::compact_trie_v3> index(D);
         auto stop = timer::now();
 
         //sdsl::memory_monitor::stop();
