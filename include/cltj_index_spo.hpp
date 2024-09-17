@@ -54,11 +54,18 @@ namespace cltj {
             for(size_type i = 0; i < 6; ++i){
                 size_type n_nodes = 1;
                 TrieV2* trie = create_trie(D, spo_orders[i], n_nodes);
+                if(i % 2 == 1) n_nodes = n_nodes - trie->children.size();
                 m_tries[i] = trie_type(trie, n_nodes, i % 2);
                 if(i % 2 == 0) {
                     m_gaps[i/2] = trie->children.size();
                 }
                 delete trie;
+                sdsl::store_to_file(m_tries[i], "t"+std::to_string(i));
+                sdsl::util::clear(m_tries[i]);
+            }
+            for(size_type i = 0; i < 6; ++i) {
+                sdsl::load_from_file(m_tries[i], "t"+to_string(i));
+                sdsl::remove("t"+to_string(i));
             }
 
         }
