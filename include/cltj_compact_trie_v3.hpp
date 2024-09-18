@@ -91,6 +91,30 @@ namespace cltj {
 
         }
 
+        compact_trie_v3(const std::vector<uint32_t> &syms, const std::vector<size_type> &lengths) {
+            m_bv = sdsl::bit_vector(syms.size()+1, 1);
+            m_seq = sdsl::int_vector<>(syms.size());
+            m_bv[0] = 0;
+            uint64_t pos_bv = 0, pos_seq = 0;
+            for(const auto &sym : syms) {
+                m_seq[pos_seq] = sym;
+                ++pos_seq;
+            }
+            for(const auto &len : lengths) {
+                pos_bv = pos_bv + len;
+                m_bv[pos_bv] = 0;
+            }
+
+            //m_bv.resize(pos_bv+1);
+            //m_seq.resize(pos_seq);
+            std::cout << "n_nodes=" << syms.size() << " pos_seq=" << pos_seq << " pos_bv=" << pos_bv << std::endl;
+
+            sdsl::util::bit_compress(m_seq);
+            sdsl::util::init_support(m_succ0, &m_bv);
+            sdsl::util::init_support(m_select0, &m_bv);
+
+        }
+
         //! Copy constructor
         compact_trie_v3(const compact_trie_v3 &o) {
             copy(o);
