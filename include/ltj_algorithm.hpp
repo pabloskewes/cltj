@@ -30,7 +30,7 @@
 #include <veo_adaptive.hpp>
 #include <results_collector.hpp>
 
-#define EXPT_TIME_SOL 1
+#define EXPT_TIME_SOL 0
 
 namespace ltj {
 
