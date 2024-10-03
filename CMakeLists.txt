@@ -44,13 +44,21 @@ else()
 endif()
 
 include_directories(~/include
+                    ${CMAKE_HOME_DIRECTORY}/lib/hybridBV/include
                     ${CMAKE_HOME_DIRECTORY}/include)
 
-link_directories(~/lib)
+#link_directories(~/lib)
+add_subdirectory(lib/hybridBV)
 
-
-add_executable(build-index src/build-index.cpp)
+add_executable(build-index src/build-index.cpp
+        src/main.cpp)
 target_link_libraries(build-index sdsl divsufsort divsufsort64)
+
+add_executable(build-index-dyn src/build-index-dyn.cpp)
+target_link_libraries(build-index-dyn sdsl divsufsort divsufsort64 hybridbv_gn)
+
+add_executable(main src/main.cpp)
+target_link_libraries(main sdsl divsufsort divsufsort64 hybridbv_gn)
 
 add_executable(build-uncltj-index src/build-uncltj-index.cpp)
 target_link_libraries(build-uncltj-index sdsl divsufsort divsufsort64)

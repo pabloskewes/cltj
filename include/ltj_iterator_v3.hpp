@@ -423,7 +423,7 @@ namespace ltj {
             //Count children
             auto cnt = trie->children(it);
             //Leftmost
-            auto first = trie->child(it, s_i != 0, 1); //root -> gap = 1; no root -> gap = 0
+            auto first = trie->child(it, !s_i, 1); //root -> gap = 1; no root -> gap = 0
             leftmost_leaf = trie->first_child(first);
             //Rightmost
             it = trie->child(it, s_i ? m_ptr_index->gaps[t_i/2] : 1, cnt); //jump the root or the whole first level
