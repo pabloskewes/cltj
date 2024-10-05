@@ -29,7 +29,7 @@ namespace dyn_cds {
 
         dyn_array() = default;
 
-        dyn_array(uint width ) {
+        dyn_array(uint width){
             m_B = hybridIdCreate(width);
         }
 

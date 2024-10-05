@@ -37,7 +37,14 @@ namespace cltj {
 
         const dyn_cds::dyn_array &seq = m_seq;
 
-        compact_trie_dyn() = default;
+        compact_trie_dyn() {
+            m_dyn_bv = dyn_cds::dyn_bit_vector();
+            m_seq = dyn_cds::dyn_array(28);
+        };
+
+        compact_trie_dyn(uint width) {
+            m_seq = dyn_cds::dyn_array(width);
+        }
 
         compact_trie_dyn(const std::vector<uint32_t> &syms, const std::vector<size_type> &lengths) {
             auto bv = sdsl::bit_vector(syms.size()+1, 0);

@@ -57,6 +57,9 @@ target_link_libraries(build-index sdsl divsufsort divsufsort64)
 add_executable(build-index-dyn src/build-index-dyn.cpp)
 target_link_libraries(build-index-dyn sdsl divsufsort divsufsort64 hybridbv_gn)
 
+add_executable(test-index-dyn src/test-index-dyn.cpp)
+target_link_libraries(test-index-dyn sdsl divsufsort divsufsort64 hybridbv_gn)
+
 add_executable(main src/main.cpp)
 target_link_libraries(main sdsl divsufsort divsufsort64 hybridbv_gn)
 

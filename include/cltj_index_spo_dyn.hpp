@@ -41,6 +41,15 @@ namespace cltj {
 
         void sym_level(const vector<spo_triple> &D, const spo_order_type &order, size_type level,
                       std::vector<uint32_t> &syms, std::vector<size_type> &lengths){
+
+            if(D.empty()) return;
+            if(D.size() == 1) {
+                for(uint32_t l = level; l < 3; ++l) {
+                    lengths.push_back(1);
+                    syms.push_back(D[0][order[l]]);
+                }
+                return;
+            }
             spo_triple prev, curr;
             size_type children;
             std::vector<size_type> res;
@@ -210,6 +219,29 @@ namespace cltj {
                 m_gaps[i] -= dec_gaps[i]; //updating gaps because of deletions in the first level
             }
             return true;
+        }
+
+        //Checks if the triple exists, it returns the number of tries where it appears
+        //The only possible outputs should be 6 or 0.
+        uint64_t test_exists(spo_triple &triple) {
+            size_type r = 0;
+            std::array<size_type, 4> states;
+            states[0] = 0;
+            size_type b, e, gap, l;
+            for(size_type i = 0; i < m_tries.size(); ++i) {
+                bool skip_level = i & 0x1;
+                for(l = skip_level; l < 3; ++l) {
+                    gap = 1;
+                    if(skip_level) gap = (l==1) ? 0 : m_gaps[i/2];
+                    b = (l==0) ? 0 : m_tries[i].child(states[l], 1, gap);
+                    e = b+m_tries[i].children(b)-1;
+                    auto bs = m_tries[i].binary_search(triple[spo_orders[i][l]], b, e);
+                    if(!bs.second) break;
+                    states[l+1] = bs.first;
+                }
+                r += (l == 3);
+            }
+            return r;
         }
 
         size_type serialize(std::ostream &out, sdsl::structure_tree_node *v = nullptr, std::string name = "") const {

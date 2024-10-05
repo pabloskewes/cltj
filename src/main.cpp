@@ -9,7 +9,7 @@ int main() {
 
 
 
-    if(1) {
+    if(0) {
         std::vector<cltj::spo_triple> D;
         cltj::spo_triple t1{5, 8, 2};
         cltj::spo_triple t2{5, 8, 3};
@@ -23,9 +23,11 @@ int main() {
         std::cout << "============" << std::endl;
         cltj::spo_triple t3{4, 8, 2};
         index.insert(t3);
+        std::cout << index.test_exists(t3) << std::endl;
         index.print();
         std::cout << "======" << std::endl;
         index.remove(t1);
+        std::cout << index.test_exists(t1) << std::endl;
         index.print();
         std::cout << "======" << std::endl;
         index.remove(t2);
@@ -38,7 +40,7 @@ int main() {
         std::cout << "Done" << std::endl;
     }
 
-    if(0) {
+    if(1) {
         std::vector<cltj::spo_triple> D;
         cltj::spo_triple t1{5, 8, 2};
         cltj::spo_triple t2{5, 8, 3};
