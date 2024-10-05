@@ -381,10 +381,12 @@ void hybridSave(hybridBV B, FILE *file) {
         myfwrite(&B->bv.stat->size, sizeof(uint64_t), 1, file);
         staticSave(B->bv.stat, file);
     } else {
-        myfwrite(&B->bv.leaf->size, sizeof(uint64_t), 1, file);
+        uint64_t size = B->bv.leaf->size;
+        myfwrite(&size, sizeof(uint64_t), 1, file);
         leafSave(B->bv.leaf, file);
     }
 }
+
 
 // loads hybridBV from file, which must be opened for reading
 

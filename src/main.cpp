@@ -9,27 +9,62 @@ int main() {
 
 
 
-    std::vector<cltj::spo_triple> D;
-    cltj::spo_triple t1{5, 8, 2};
-    cltj::spo_triple t2{5, 8, 3};
-    D.push_back(t1);
-    D.push_back(t2);
-    cltj::cltj_index_spo_dyn<cltj::compact_trie_dyn> index(D);
-    cltj::spo_triple t3{4, 8, 2};
-    index.insert(t3);
-    index.print();
-    std::cout << "======" << std::endl;
-    index.remove(t1);
-    index.print();
-    std::cout << "======" << std::endl;
-    index.remove(t2);
-    index.print();
-    cltj::spo_triple t4{4, 8, 1};
-    index.remove(t4);
-    std::cout << "======" << std::endl;
-    index.remove(t3);
-    index.print();
-    std::cout << "Done" << std::endl;
+    if(1) {
+        std::vector<cltj::spo_triple> D;
+        cltj::spo_triple t1{5, 8, 2};
+        cltj::spo_triple t2{5, 8, 3};
+        D.push_back(t1);
+        D.push_back(t2);
+        cltj::cltj_index_spo_dyn<cltj::compact_trie_dyn> index(D);
+        index.print();
+        std::cout << "============" << std::endl;
+        index.insert(t2);
+        index.print();
+        std::cout << "============" << std::endl;
+        cltj::spo_triple t3{4, 8, 2};
+        index.insert(t3);
+        index.print();
+        std::cout << "======" << std::endl;
+        index.remove(t1);
+        index.print();
+        std::cout << "======" << std::endl;
+        index.remove(t2);
+        index.print();
+        cltj::spo_triple t4{4, 8, 1};
+        index.remove(t4);
+        std::cout << "======" << std::endl;
+        index.remove(t3);
+        index.print();
+        std::cout << "Done" << std::endl;
+    }
+
+    if(0) {
+        std::vector<cltj::spo_triple> D;
+        cltj::spo_triple t1{5, 8, 2};
+        cltj::spo_triple t2{5, 8, 3};
+        cltj::spo_triple t3{4, 8, 2};
+        cltj::spo_triple t4{4, 7, 1};
+        D.push_back(t1);
+        D.push_back(t2);
+        cltj::cltj_index_spo_dyn<cltj::compact_trie_dyn> index(D);
+        index.insert(t3);
+        index.insert(t4);
+        std::cout << "====== IN MEMORY =====" << std::endl;
+        index.print();
+        std::cout << "======================" << std::endl;
+        std::cout << "Size in bytes: " << sdsl::size_in_bytes(index) << std::endl;
+        std::cout << "Write into a file" << std::flush;
+        sdsl::store_to_file(index, "proba.txt");
+        std::cout << " done." << std::endl;
+        sdsl::load_from_file(index, "proba.txt");
+        std::cout << "Size in bytes: " << sdsl::size_in_bytes(index) << std::endl;
+        std::cout << "====== IN MEMORY =====" << std::endl;
+        index.print();
+        std::cout << "======================" << std::endl;
+        index.remove(t3);
+        index.print();
+    }
+
 
 
 

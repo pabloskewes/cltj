@@ -93,4 +93,5 @@ uint64_t hybridRank (hybridBV B, uint64_t i);
 	// computes select_1(B,j), zero-based, assumes j is right
 uint64_t hybridSelect (hybridBV B, uint64_t j);
 
+
 #endif

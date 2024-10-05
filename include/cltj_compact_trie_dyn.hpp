@@ -21,16 +21,12 @@ namespace cltj {
         typedef uint32_t value_type;
 
     private:
-        //sdsl::int_vector<> m_seq;
-        //sdsl::rank_support_v<1> m_rank1;
         dyn_cds::dyn_array m_seq;
         dyn_cds::dyn_bit_vector m_dyn_bv;
 
         void copy(const compact_trie_dyn &o) {
             m_dyn_bv = o.m_dyn_bv;
             m_seq = o.m_seq;
-            //m_rank1 = o.m_rank1;
-            //m_rank1.set_vector(&m_bv);
         }
 
         /*inline size_type rank0(const size_type i) const {
@@ -57,8 +53,6 @@ namespace cltj {
                 bv[pos_bv] = 1;
             }
 
-            //m_bv.resize(pos_bv+1);
-            //m_seq.resize(pos_seq);
             std::cout << "n_nodes=" << syms.size() << " pos_seq=" << pos_seq << " pos_bv=" << pos_bv << std::endl;
             m_dyn_bv = dyn_cds::dyn_bit_vector(bv.data(), bv.size());
             m_seq = dyn_cds::dyn_array(s.data(), s.size(), s.width());
@@ -186,23 +180,19 @@ namespace cltj {
         }
 
         //! Serializes the data structure into the given ostream
-        /*size_type serialize(std::ostream &out, sdsl::structure_tree_node *v = nullptr, std::string name = "") const {
+        size_type serialize(std::ostream &out, sdsl::structure_tree_node *v = nullptr, std::string name = "") const {
             sdsl::structure_tree_node *child = sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
             size_type written_bytes = 0;
-            written_bytes += m_bv.serialize(out, child, "bv");
+            written_bytes += m_dyn_bv.serialize(out, child, "bv");
             written_bytes += m_seq.serialize(out, child, "seq");
-            written_bytes += m_succ.serialize(out, child, "succ0");
-            written_bytes += m_select.serialize(out, child, "select0");
             sdsl::structure_tree::add_size(child, written_bytes);
             return written_bytes;
         }
 
         void load(std::istream &in) {
-            m_bv.load(in);
+            m_dyn_bv.load(in);
             m_seq.load(in);
-            m_succ.load(in, &m_bv);
-            m_select.load(in, &m_bv);
-        }*/
+        }
 
     };
 }

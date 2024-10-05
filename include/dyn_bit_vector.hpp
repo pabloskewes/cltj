@@ -4,6 +4,7 @@
 
 #ifndef DYN_BIT_VECTOR_HPP
 #define DYN_BIT_VECTOR_HPP
+#include <file.hpp>
 
 namespace dyn_cds {
 
@@ -22,6 +23,7 @@ namespace dyn_cds {
         hybridBV m_B = nullptr;
 
         void copy(const dyn_bit_vector &o) {
+            std::cout << "copy" << std::endl;
             m_B = hybridClone(o.m_B);
         }
 
@@ -105,6 +107,29 @@ namespace dyn_cds {
         void swap(dyn_bit_vector &o) {
             std::swap(m_B, o.m_B);
         }
+        size_type serialize(std::ostream &out, sdsl::structure_tree_node *v = nullptr, std::string name = "") const {
+            sdsl::structure_tree_node *child = sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
+            size_type written_bytes = hybridSpace(m_B);
+            FILE* f = util::file::create_c_file();
+            hybridSave(m_B, f);
+            util::file::begin_c_file(f);
+            util::file::c_file_to_ostream(f, out);
+            util::file::close_c_file(f);
+            sdsl::structure_tree::add_size(child, written_bytes);
+            return written_bytes;
+        }
+
+        void load(std::istream &in) {
+            FILE* f = util::file::create_c_file();
+            int64_t pos = in.tellg();
+            util::file::istream_to_c_file(f, in);
+            util::file::begin_c_file(f);
+            m_B = hybridLoad(f);
+            int64_t offset = ftell(f);
+            in.seekg(pos + offset, std::istream::beg);
+            util::file::close_c_file(f);
+        }
+
 
 
     };
