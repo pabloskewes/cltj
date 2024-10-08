@@ -13,7 +13,7 @@
 
 namespace cltj {
 
-    template<uint default_width = 18>
+    template<uint default_width = 32>
     class compact_trie_dyn {
 
 
