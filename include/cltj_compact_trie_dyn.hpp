@@ -72,7 +72,7 @@ namespace cltj {
 
             std::cout << "n_nodes=" << syms.size() << " pos_seq=" << pos_seq << " pos_bv=" << pos_bv << std::endl;
             m_dyn_bv = dyn_cds::dyn_bit_vector(bv.data(), bv.size());
-            m_seq = dyn_cds::dyn_array(s.data(), s.size(), s.width());
+            m_seq = dyn_cds::dyn_array(s.data(), s.size(), width);
             //sdsl::util::bit_compress(m_seq);
 
         }

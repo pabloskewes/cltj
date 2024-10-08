@@ -39,9 +39,10 @@ int main(int argc, char **argv) {
 
     cltj::cltj_index_spo_dyn<cltj::compact_trie_dyn<>> index;
 
-    uint64_t block_size = D.size() / 10;
+    uint64_t block_size = D.size() / 100;
     //sdsl::memory_monitor::stop();
-    for (uint64_t beg = 0; beg < D.size(); beg += block_size) {
+    uint64_t beg = 0;
+    for (uint64_t k = 0; k < 20; ++k ) {
         uint64_t last = std::min(beg+block_size, D.size()-1);
         std::cout << "=======================================" << std::endl;
         std::cout << "Working with range [" << 0 << ", " << last - 1 << "]" << std::endl;
@@ -123,6 +124,7 @@ int main(int argc, char **argv) {
         std::cout << "insertions: 100% (" << last-beg << "/" << last-beg << ") takes" << ms_time << " ms" << std::endl;
         std::cout << "size: " << sdsl::size_in_bytes(index) << " bytes" << std::endl;
         std::cout << "=======================================" << std::endl << std::endl;
+        beg += block_size;
     }
 
     sdsl::store_to_file(index, index_name);
