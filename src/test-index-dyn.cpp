@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
 
     std::random_device rd;
     std::mt19937 g(rd());
-    std::shuffle(D.begin(), D.end(), g);
+    //std::shuffle(D.begin(), D.end(), g);
 
     cltj::cltj_index_spo_dyn<cltj::compact_trie_dyn<>> index;
 
@@ -66,8 +66,8 @@ int main(int argc, char **argv) {
             auto q = std::min(rand() % block_size + beg, D.size());
             auto r = index.test_exists(D[q]);
             if (r < 6) {
-                std::cout << "Error looking for (" << D[q][0] << ", " << D[q][1] << ", " << D[q][2] << ") appears in "
-                        << r << "tries." << std::endl;
+                std::cout << "Error looking for D[" << q << "]=(" << D[q][0] << ", " << D[q][1] << ", " << D[q][2] << ") appears in "
+                        << r << " tries." << std::endl;
                 exit(0);
             }
             if(i % 1000 == 0) {
@@ -98,8 +98,8 @@ int main(int argc, char **argv) {
             auto q = std::min(rand() % block_size + beg, D.size()-1);
             auto r = index.test_exists(D[q]);
             if (r > 0) {
-                std::cout << "Error looking for (" << D[q][0] << ", " << D[q][1] << ", " << D[q][2] << ") appears in "
-                        << r << "tries." << std::endl;
+                std::cout << "Error looking for D[" << q << "]=(" << D[q][0] << ", " << D[q][1] << ", " << D[q][2] << ") appears in "
+                        << r << " tries." << std::endl;
                 exit(0);
             }
             if((i-beg) % 1000 == 0) {
@@ -125,7 +125,7 @@ int main(int argc, char **argv) {
         std::cout << "\r insertions: 100% (" << last-beg << "/" << last-beg << ") takes " << ms_time << " ms" << std::endl;
         std::cout << "size: " << sdsl::size_in_bytes(index) << " bytes" << std::endl;
         std::cout << "=======================================" << std::endl << std::endl;
-        beg += block_size;
+        beg  = last;
     }
 
     sdsl::store_to_file(index, index_name);
