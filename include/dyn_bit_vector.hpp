@@ -23,7 +23,6 @@ namespace dyn_cds {
         hybridBV m_B = nullptr;
 
         void copy(const dyn_bit_vector &o) {
-            std::cout << "copy" << std::endl;
             m_B = hybridClone(o.m_B);
         }
 

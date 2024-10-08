@@ -15,7 +15,7 @@ int main() {
         cltj::spo_triple t2{5, 8, 3};
         D.push_back(t1);
         D.push_back(t2);
-        cltj::cltj_index_spo_dyn<cltj::compact_trie_dyn> index(D);
+        cltj::cltj_index_spo_dyn<cltj::compact_trie_dyn<>> index(D);
         index.print();
         std::cout << "============" << std::endl;
         index.insert(t2);
@@ -46,11 +46,22 @@ int main() {
         cltj::spo_triple t2{5, 8, 3};
         cltj::spo_triple t3{4, 8, 2};
         cltj::spo_triple t4{4, 7, 1};
-        D.push_back(t1);
+        D.push_back(t3);
         D.push_back(t2);
-        cltj::cltj_index_spo_dyn<cltj::compact_trie_dyn> index(D);
+        cltj::cltj_index_spo_dyn<cltj::compact_trie_dyn<>> index(D);
         index.insert(t3);
-        index.insert(t4);
+        index.print();
+        std::cout << "===============" << std::endl;
+        index.insert(t2);
+        index.print();
+        std::cout << "===============" << std::endl;
+        index.insert(t1);
+        index.insert(t2);
+        /*for(auto i = 0; i < 100; ++i) {
+            auto t = t3;
+            t[2] = i;
+            index.insert(t);
+        }*/
         std::cout << "====== IN MEMORY =====" << std::endl;
         index.print();
         std::cout << "======================" << std::endl;
@@ -58,6 +69,9 @@ int main() {
         std::cout << "Write into a file" << std::flush;
         sdsl::store_to_file(index, "proba.txt");
         std::cout << " done." << std::endl;
+        std::cout << "===============" << std::endl;
+        index.remove(t3);
+        index.print();
         sdsl::load_from_file(index, "proba.txt");
         std::cout << "Size in bytes: " << sdsl::size_in_bytes(index) << std::endl;
         std::cout << "====== IN MEMORY =====" << std::endl;

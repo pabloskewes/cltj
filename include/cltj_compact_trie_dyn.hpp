@@ -1,5 +1,5 @@
-#ifndef CLTJ_COMPACT_TRIE_DYN_H
-#define CLTJ_COMPACT_TRIE_DYN_H
+#ifndef CLTJ_COMPACT_TRIE_DYN_HPP
+#define CLTJ_COMPACT_TRIE_DYN_HPP
 
 #include <vector>
 #include <iostream>
@@ -9,9 +9,11 @@
 #include <sdsl/bit_vectors.hpp>
 #include <dyn_bit_vector.hpp>
 #include <dyn_array.hpp>
+#include <cltj_config.hpp>
 
 namespace cltj {
 
+    template<uint default_width = 18>
     class compact_trie_dyn {
 
 
@@ -37,16 +39,24 @@ namespace cltj {
 
         const dyn_cds::dyn_array &seq = m_seq;
 
-        compact_trie_dyn() {
-            m_dyn_bv = dyn_cds::dyn_bit_vector();
-            m_seq = dyn_cds::dyn_array(28);
-        };
 
-        compact_trie_dyn(uint width) {
+        compact_trie_dyn(const uint width = default_width) {
             m_seq = dyn_cds::dyn_array(width);
         }
 
-        compact_trie_dyn(const std::vector<uint32_t> &syms, const std::vector<size_type> &lengths) {
+        compact_trie_dyn(const spo_triple &triple, const spo_order_type &order,
+                         const bool skip_level, const uint width = default_width) {
+            sdsl::int_vector<> s(2+!skip_level);
+            for(uint64_t l = 0; l < s.size(); ++l) {
+                s[l] = triple[order[l+skip_level]];
+            }
+            auto bv = sdsl::bit_vector(2+!skip_level+1, 1);
+            m_dyn_bv = dyn_cds::dyn_bit_vector(bv.data(), bv.size());
+            m_seq = dyn_cds::dyn_array(s.data(), s.size(), width);
+        }
+
+        compact_trie_dyn(const std::vector<uint32_t> &syms, const std::vector<size_type> &lengths,
+                         const uint width = default_width) {
             auto bv = sdsl::bit_vector(syms.size()+1, 0);
             sdsl::int_vector<> s(syms.size());
             bv[0] = 1;
@@ -100,9 +110,9 @@ namespace cltj {
             std::swap(m_seq, o.m_seq);
         }
 
-        void insert(size_type node_pos, value_type value, bool first_child) {
-            m_dyn_bv.insert(node_pos + !first_child, first_child); //+new_node to avoid problems with 0s before 1s
-            m_seq.insert(node_pos, value);
+        void insert(size_type node_pos, value_type v_seq, bool v_bv, bool f_child) {
+            m_dyn_bv.insert(node_pos + f_child, v_bv); //+new_node to avoid problems with 0s before 1s
+            m_seq.insert(node_pos, v_seq);
         }
 
 

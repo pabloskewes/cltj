@@ -24,6 +24,7 @@ namespace cltj {
     private:
         std::array<trie_type, 6> m_tries;
         std::array<size_type, 3> m_gaps;
+        size_type m_n_triples = 0;
 
         bool equal(const spo_triple &a, const spo_triple &b, const spo_order_type &order, const size_type l){
             for(size_type i = 0; i <= l; ++i){
@@ -67,7 +68,7 @@ namespace cltj {
                         }
                     }
                 }
-                syms.emplace_back(D[D.size()-1][order[l]]);
+                syms.emplace_back(curr[order[l]]);
                 lengths.emplace_back(children);
             }
 
@@ -80,6 +81,7 @@ namespace cltj {
         void copy(const cltj_index_spo_dyn &o){
             m_tries = o.m_tries;
             m_gaps = o.m_gaps;
+            m_n_triples = o.m_n_triples;
         }
 
     public:
@@ -89,7 +91,7 @@ namespace cltj {
         cltj_index_spo_dyn() = default;
 
         cltj_index_spo_dyn(vector<spo_triple> &D){
-
+            if(D.empty()) return;
             for(size_type i = 0; i < 6; ++i){
                 std::sort(D.begin(), D.end(), comparator_order(i));
                 std::vector<uint32_t> syms;
@@ -100,7 +102,7 @@ namespace cltj {
                 }
                 m_tries[i] = trie_type(syms, lengths);
             }
-
+            m_n_triples = D.size();
         }
 
         //! Copy constructor
@@ -126,6 +128,7 @@ namespace cltj {
             if (this != &o) {
                 m_tries = std::move(o.m_tries);
                 m_gaps = std::move(o.m_gaps);
+                m_n_triples = std::move(o.m_n_triples);
             }
             return *this;
         }
@@ -134,6 +137,7 @@ namespace cltj {
             // m_bp.swap(bp_support.m_bp); use set_vector to set the supported bit_vector
             std::swap(m_tries, o.m_tries);
             std::swap(m_gaps, o.m_gaps);
+            std::swap(m_n_triples, o.m_n_triples);
         }
 
         inline trie_type* get_trie(size_type i){
@@ -143,10 +147,22 @@ namespace cltj {
 
 
         void insert(spo_triple &triple) {
-            typedef std::pair<size_type, bool> state_type ;
+            if(!m_n_triples) {
+                for(size_type i = 0; i < m_tries.size(); ++i) {
+                    m_tries[i] = trie_type(triple, spo_orders[i], i & 0x1);
+                }
+                m_gaps = {1,1,1};
+                ++m_n_triples;
+                return;
+            }
+            typedef struct {
+                size_type pos;
+                bool first_child; //pos contains the first_child of the current level
+                bool ins;
+            } state_type ;
             std::array<state_type, 4> states;
             std::array<bool, 3> inc_gaps = {false, false, false};
-            states[0].first = 0; states[0].second = true;
+            states[0].pos = 0; states[0].first_child = false; states[0].ins = false;
             size_type b, e, gap;
             for(size_type i = 0; i < m_tries.size(); ++i) {
                 //std::cout << "Dealing with: " << i << std::endl;
@@ -155,20 +171,24 @@ namespace cltj {
                 for(size_type l = skip_level; l < 3; ++l) {
                     gap = 1;
                     if(skip_level) gap = (l==1) ? 0 : m_gaps[i/2];
-                    if(states[l].second) {
-                        b = (l==0) ? 0 : m_tries[i].child(states[l].first, 1, gap);
+                    if(!states[l].ins) {
+                        b = (l==0) ? 0 : m_tries[i].child(states[l].pos, 1, gap);
                         e = b+m_tries[i].children(b)-1;
-                        states[l+1] = m_tries[i].binary_search(triple[spo_orders[i][l]], b, e);
+                        auto bs = m_tries[i].binary_search(triple[spo_orders[i][l]], b, e);
+                        states[l+1].pos = bs.first;
+                        states[l+1].first_child = (b==bs.first);
+                        states[l+1].ins = !bs.second;
                     } else {
-                        states[l+1].first = m_tries[i].child(states[l].first, 1, gap);
-                        states[l+1].second = false;
+                        states[l+1].pos = m_tries[i].child(states[l].pos, 1, gap);
+                        states[l+1].first_child = false; //it is not the first child of the current range
+                        states[l+1].ins = true;
                     }
                 }
                 for(int64_t j = 3; j >= 1+skip_level; --j) {
                     //When the triple is not found in the previous level, it means that we are in the first child (1-bit) of the current level.
                     //Otherwise, we have to add a new child to the current level, thus we add a 0-bit.
-                    if(!states[j].second) {
-                        m_tries[i].insert(states[j].first, triple[spo_orders[i][j-1]], !states[j-1].second);
+                    if(states[j].ins) {
+                        m_tries[i].insert(states[j].pos, triple[spo_orders[i][j-1]], states[j-1].ins, states[j].first_child);
                         if(j == 1) inc_gaps[i/2] = true;
                     }
                 }
@@ -176,13 +196,14 @@ namespace cltj {
             for(auto i = 0; i < 3; ++i) {
                 m_gaps[i] += inc_gaps[i]; //updating gaps because of insertions in the first level
             }
-
+            ++m_n_triples;
             /*for(uint64_t i = 0; i < 6; ++i) {
                 m_tries[i].print();
             }*/
         }
 
         bool remove(spo_triple &triple) {
+            if(!m_n_triples) return false;
             typedef struct {
                 size_type pos;
                 bool first_child;
@@ -218,6 +239,7 @@ namespace cltj {
             for(auto i = 0; i < 3; ++i) {
                 m_gaps[i] -= dec_gaps[i]; //updating gaps because of deletions in the first level
             }
+            --m_n_triples;
             return true;
         }
 
@@ -253,6 +275,7 @@ namespace cltj {
             for(const auto & gap : m_gaps) {
                 written_bytes += sdsl::write_member(gap, out, child, "gaps");
             }
+            written_bytes += sdsl::write_member(m_n_triples, out, child, "n_triples");
             sdsl::structure_tree::add_size(child, written_bytes);
             return written_bytes;
         }
@@ -264,6 +287,7 @@ namespace cltj {
             for(auto & gap : m_gaps){
                 sdsl::read_member(gap, in);
             }
+            sdsl::read_member(m_n_triples, in);
         }
 
         void print() {
@@ -274,7 +298,7 @@ namespace cltj {
 
     };
 
-    typedef cltj::cltj_index_spo_dyn<cltj::compact_trie_dyn> compact_dyn_ltj;
+    typedef cltj::cltj_index_spo_dyn<cltj::compact_trie_dyn<>> compact_dyn_ltj;
    // typedef cltj::cltj_index_spo_dyn<cltj::uncompact_trie_v2> uncompact_dyn_ltj;
 
 }

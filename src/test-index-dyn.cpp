@@ -37,7 +37,7 @@ int main(int argc, char **argv) {
     std::mt19937 g(rd());
     std::shuffle(D.begin(), D.end(), g);
 
-    cltj::cltj_index_spo_dyn<cltj::compact_trie_dyn> index;
+    cltj::cltj_index_spo_dyn<cltj::compact_trie_dyn<>> index;
 
     uint64_t block_size = D.size() / 10;
     //sdsl::memory_monitor::stop();
