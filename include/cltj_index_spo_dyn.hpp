@@ -267,6 +267,31 @@ namespace cltj {
             }
             return r;
         }
+        //Checks if the triple exists, it returns the number of tries where it appears
+        //The only possible outputs should be 6 or 0.
+        uint64_t test_exists_error(spo_triple &triple) {
+            if(m_n_triples == 0) return 0;
+            size_type r = 0;
+            std::array<size_type, 4> states;
+            states[0] = 0;
+            size_type b, e, gap, l;
+            for(size_type i = 0; i < m_tries.size(); ++i) {
+                bool skip_level = i & 0x1;
+                for(l = skip_level; l < 3; ++l) {
+                    gap = 1;
+                    if(skip_level) gap = (l==1) ? 0 : m_gaps[i/2];
+                    b = (l==0) ? 0 : m_tries[i].child(states[l], 1, gap);
+                    e = b+m_tries[i].children(b)-1;
+                    auto bs = m_tries[i].binary_search(triple[spo_orders[i][l]], b, e);
+                    if(!bs.second) break;
+                    states[l+1] = bs.first;
+                }
+                std::cout << "trie=" << i << " l=" << l << std::endl;
+                r += (l == 3);
+            }
+            return r;
+        }
+
 
         size_type serialize(std::ostream &out, sdsl::structure_tree_node *v = nullptr, std::string name = "") const {
             sdsl::structure_tree_node *child = sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));

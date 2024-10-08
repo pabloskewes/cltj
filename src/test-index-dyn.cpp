@@ -89,7 +89,7 @@ int main(int argc, char **argv) {
                 exit(0);
             }
             if(i % 1000 == 0) {
-                float per = (i / (float) (last-beg)) * 100;
+                float per = ((i-beg) / (float) (last-beg)) * 100;
                 std::cout << "\r check_insertions: " << per <<  "% (" << (i-beg) << "/" << (last-beg) << ")" << std::flush;
             }
         }
@@ -136,10 +136,11 @@ int main(int argc, char **argv) {
             if (r > 0) {
                 std::cout << "Error looking for D[" << i << "]=(" << D[i][0] << ", " << D[i][1] << ", " << D[i][2] << ") appears in "
                         << r << " tries." << std::endl;
+                index.test_exists_error(D[i]);
                 exit(0);
             }
             if((i-beg) % 1000 == 0) {
-                float per = (i / (float) (last-beg)) * 100;
+                float per = ((i-beg) / (float) (last-beg)) * 100;
                 std::cout << "\r check_remove: " << per <<  "% (" << i << "/" << last-beg << ")" << std::flush;
             }
         }
