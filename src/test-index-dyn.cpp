@@ -57,9 +57,9 @@ int main(int argc, char **argv) {
         }
         auto stop = timer::now();
         auto ms_time = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
-        std::cout << " insertions: 100% (" << last-beg << "/" << last-beg << ") takes" << ms_time << " ms" << std::endl;
+        std::cout << "\r insertions: 100% (" << last-beg << "/" << last-beg << ") takes " << ms_time << " ms" << std::endl;
 
-        std::cout << "\r check_insertions: 0% (0/" << last-beg << ")" << std::flush;
+        std::cout << "\r check_insertions: 0% (0/" << queries << ")" << std::flush;
         start = timer::now();
         for (uint64_t i = 0; i < queries; ++i) {
             auto q = std::min(rand() % block_size + beg, D.size());
@@ -69,14 +69,14 @@ int main(int argc, char **argv) {
                         << r << "tries." << std::endl;
                 exit(0);
             }
-            if((i-beg) % 1000 == 0) {
-                float per = ((i-beg) / (float) (last-beg+1)) * 100;
-                std::cout << "\r check_insertions:: " << per <<  "% (" << (i-beg) << "/" << last-beg << ")" << std::flush;
+            if(i % 1000 == 0) {
+                float per = (i / (float) queries) * 100;
+                std::cout << "\r check_insertions: " << per <<  "% (" << i << "/" << queries << ")" << std::flush;
             }
         }
         stop = timer::now();
         ms_time = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
-        std::cout << "check_insertions: 100% (" << last-beg << "/" << last-beg << ") takes" << ms_time << " ms" << std::endl;
+        std::cout << "\r check_insertions: 100% (" << last-beg << "/" << last-beg << ") takes" << ms_time << " ms in " << queries << " queries" << std::endl;
 
         std::cout << "\r remove: 0% (0/" << last-beg << ")" << std::flush;
         start = timer::now();
@@ -89,9 +89,9 @@ int main(int argc, char **argv) {
         }
         stop = timer::now();
         ms_time = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
-        std::cout << "remove: 100% (" << last-beg << "/" << last-beg << ") takes" << ms_time << " ms" << std::endl;
+        std::cout << "\r remove: 100% (" << last-beg << "/" << last-beg << ") takes " << ms_time << " ms" << std::endl;
 
-        std::cout << "\r check_remove: 0% (0/" << last-beg << ")" << std::flush;
+        std::cout << "\r check_remove: 0% (0/" << queries << ")" << std::flush;
         start = timer::now();
         for (uint64_t i = 0; i < queries; ++i) {
             auto q = std::min(rand() % block_size + beg, D.size()-1);
@@ -102,13 +102,13 @@ int main(int argc, char **argv) {
                 exit(0);
             }
             if((i-beg) % 1000 == 0) {
-                float per = ((i-beg) / (float) (last-beg+1)) * 100;
-                std::cout << "\r check_remove: " << per <<  "% (" << (i-beg) << "/" << last-beg << ")" << std::flush;
+                float per = (i / (float) queries) * 100;
+                std::cout << "\r check_remove: " << per <<  "% (" << i << "/" << queries << ")" << std::flush;
             }
         }
         stop = timer::now();
         ms_time = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
-        std::cout << "check_remove: 100% (" << last-beg << "/" << last-beg << ") ms=" << ms_time << std::endl;
+        std::cout << "\r check_remove: 100% (" << queries << "/" << queries << ") takes " << ms_time << " ms in " << queries << "queries" << std::endl;
 
         std::cout << "\r insertions: 0% (0/" << last-beg << ")\r" << std::flush;
         start = timer::now();
@@ -121,7 +121,7 @@ int main(int argc, char **argv) {
         }
         stop = timer::now();
         ms_time = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
-        std::cout << "insertions: 100% (" << last-beg << "/" << last-beg << ") takes" << ms_time << " ms" << std::endl;
+        std::cout << "\r insertions: 100% (" << last-beg << "/" << last-beg << ") takes " << ms_time << " ms" << std::endl;
         std::cout << "size: " << sdsl::size_in_bytes(index) << " bytes" << std::endl;
         std::cout << "=======================================" << std::endl << std::endl;
         beg += block_size;
