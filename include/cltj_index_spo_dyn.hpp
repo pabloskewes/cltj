@@ -252,16 +252,22 @@ namespace cltj {
             std::array<size_type, 4> states;
             states[0] = 0;
             size_type b, e, gap, l;
+            bool exists_l0 = true;
             for(size_type i = 0; i < m_tries.size(); ++i) {
                 bool skip_level = i & 0x1;
+                if(skip_level && !exists_l0) continue;
                 for(l = skip_level; l < 3; ++l) {
                     gap = 1;
                     if(skip_level) gap = (l==1) ? 0 : m_gaps[i/2];
                     b = (l==0) ? 0 : m_tries[i].child(states[l], 1, gap);
                     e = b+m_tries[i].children(b)-1;
                     auto bs = m_tries[i].binary_search(triple[spo_orders[i][l]], b, e);
-                    if(!bs.second) break;
+                    if(!bs.second) {
+                        if(l == 0) exists_l0 = false;
+                        break;
+                    }
                     states[l+1] = bs.first;
+                    if(l == 0) exists_l0 = true;
                 }
                 r += (l == 3);
             }
@@ -275,16 +281,22 @@ namespace cltj {
             std::array<size_type, 4> states;
             states[0] = 0;
             size_type b, e, gap, l;
+            bool exists_l0 = true;
             for(size_type i = 0; i < m_tries.size(); ++i) {
                 bool skip_level = i & 0x1;
+                if(skip_level && !exists_l0) continue;
                 for(l = skip_level; l < 3; ++l) {
                     gap = 1;
                     if(skip_level) gap = (l==1) ? 0 : m_gaps[i/2];
                     b = (l==0) ? 0 : m_tries[i].child(states[l], 1, gap);
                     e = b+m_tries[i].children(b)-1;
                     auto bs = m_tries[i].binary_search(triple[spo_orders[i][l]], b, e);
-                    if(!bs.second) break;
+                    if(!bs.second) {
+                        if(l == 0) exists_l0 = false;
+                        break;
+                    }
                     states[l+1] = bs.first;
+                    if(l == 0) exists_l0 = true;
                 }
                 std::cout << "trie=" << i << " l=" << l << std::endl;
                 r += (l == 3);

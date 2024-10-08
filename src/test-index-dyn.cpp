@@ -41,6 +41,7 @@ int main(int argc, char **argv) {
     cltj::cltj_index_spo_dyn<cltj::compact_trie_dyn<>> index;
 
     uint64_t block_size = D.size() / 100;
+    //uint64_t block_size = 100;
     //sdsl::memory_monitor::stop();
     uint64_t beg = 0;
     for (uint64_t k = 0; k < steps; ++k ) {
