@@ -89,7 +89,7 @@ int main(int argc, char **argv) {
                 exit(0);
             }
             if(i % 1000 == 0) {
-                float per = (i / (float) queries) * 100;
+                float per = (i / (float) (last-beg)) * 100;
                 std::cout << "\r check_insertions: " << per <<  "% (" << i << "/" << queries << ")" << std::flush;
             }
         }
@@ -139,7 +139,7 @@ int main(int argc, char **argv) {
                 exit(0);
             }
             if((i-beg) % 1000 == 0) {
-                float per = (i / (float) queries) * 100;
+                float per = (i / (float) (last-beg)) * 100;
                 std::cout << "\r check_remove: " << per <<  "% (" << i << "/" << queries << ")" << std::flush;
             }
         }
