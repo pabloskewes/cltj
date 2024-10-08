@@ -14,7 +14,8 @@ int main(int argc, char **argv) {
 
     std::string dataset = argv[1];
     std::string index_name = dataset + ".cltj";
-    uint64_t queries = 10000;
+    uint64_t queries = 100000;
+    uint64_t steps = 20;
 
     vector<cltj::spo_triple> D;
 
@@ -42,7 +43,7 @@ int main(int argc, char **argv) {
     uint64_t block_size = D.size() / 100;
     //sdsl::memory_monitor::stop();
     uint64_t beg = 0;
-    for (uint64_t k = 0; k < 20; ++k ) {
+    for (uint64_t k = 0; k < steps; ++k ) {
         uint64_t last = std::min(beg+block_size, D.size()-1);
         std::cout << "=======================================" << std::endl;
         std::cout << "Working with range [" << 0 << ", " << last - 1 << "]" << std::endl;
@@ -76,7 +77,7 @@ int main(int argc, char **argv) {
         }
         stop = timer::now();
         ms_time = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
-        std::cout << "\r check_insertions: 100% (" << last-beg << "/" << last-beg << ") takes" << ms_time << " ms in " << queries << " queries" << std::endl;
+        std::cout << "\r check_insertions: 100% (" << queries << "/" << queries << ") takes " << ms_time << " ms in " << queries << " queries" << std::endl;
 
         std::cout << "\r remove: 0% (0/" << last-beg << ")" << std::flush;
         start = timer::now();
@@ -108,7 +109,7 @@ int main(int argc, char **argv) {
         }
         stop = timer::now();
         ms_time = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
-        std::cout << "\r check_remove: 100% (" << queries << "/" << queries << ") takes " << ms_time << " ms in " << queries << "queries" << std::endl;
+        std::cout << "\r check_remove: 100% (" << queries << "/" << queries << ") takes " << ms_time << " ms in " << queries << " queries" << std::endl;
 
         std::cout << "\r insertions: 0% (0/" << last-beg << ")\r" << std::flush;
         start = timer::now();
