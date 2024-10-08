@@ -58,7 +58,7 @@ int main(int argc, char **argv) {
         }
         auto stop = timer::now();
         auto ms_time = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
-        std::cout << "\r insertions: 100% (" << last-beg << "/" << last-beg << ") takes " << ms_time << " ms" << std::endl;
+        std::cout << "\r insertions: 100% (" << last-beg << "/" << last-beg << ") takes " << ms_time << " ms [" << index.n_triples << "]" << std::endl;
 
         /*std::cout << "\r check_insertions: 0% (0/" << queries << ")" << std::flush;
         start = timer::now();
@@ -108,7 +108,7 @@ int main(int argc, char **argv) {
         }
         stop = timer::now();
         ms_time = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
-        std::cout << "\r remove: 100% (" << last-beg << "/" << last-beg << ") takes " << ms_time << " ms" << std::endl;
+        std::cout << "\r remove: 100% (" << last-beg << "/" << last-beg << ") takes " << ms_time << " ms [" << index.n_triples << "]" << std::endl;
 
         /*std::cout << "\r check_remove: 0% (0/" << queries << ")" << std::flush;
         start = timer::now();
