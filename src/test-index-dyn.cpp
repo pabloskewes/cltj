@@ -60,13 +60,31 @@ int main(int argc, char **argv) {
         auto ms_time = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
         std::cout << "\r insertions: 100% (" << last-beg << "/" << last-beg << ") takes " << ms_time << " ms" << std::endl;
 
-        std::cout << "\r check_insertions: 0% (0/" << queries << ")" << std::flush;
+        /*std::cout << "\r check_insertions: 0% (0/" << queries << ")" << std::flush;
         start = timer::now();
         for (uint64_t i = 0; i < queries; ++i) {
             auto q = std::min(rand() % block_size + beg, D.size());
             auto r = index.test_exists(D[q]);
             if (r < 6) {
                 std::cout << "Error looking for D[" << q << "]=(" << D[q][0] << ", " << D[q][1] << ", " << D[q][2] << ") appears in "
+                        << r << " tries." << std::endl;
+                exit(0);
+            }
+            if(i % 1000 == 0) {
+                float per = (i / (float) queries) * 100;
+                std::cout << "\r check_insertions: " << per <<  "% (" << i << "/" << queries << ")" << std::flush;
+            }
+        }
+        stop = timer::now();
+        ms_time = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
+        std::cout << "\r check_insertions: 100% (" << queries << "/" << queries << ") takes " << ms_time << " ms in " << queries << " queries" << std::endl;*/
+
+        std::cout << "\r check_insertions: 0% (0/" << last-beg << ")" << std::flush;
+        start = timer::now();
+        for (uint64_t i = beg; i < last; ++i) {
+            auto r = index.test_exists(D[i]);
+            if (r < 6) {
+                std::cout << "Error looking for D[" << i << "]=(" << D[i][0] << ", " << D[i][1] << ", " << D[i][2] << ") appears in "
                         << r << " tries." << std::endl;
                 exit(0);
             }
@@ -84,7 +102,7 @@ int main(int argc, char **argv) {
         for (uint64_t i = beg; i < last; ++i) {
             index.remove(D[i]);
             if((i-beg) % 1000 == 0) {
-                float per = ((i-beg) / (float) (last-beg+1)) * 100;
+                float per = ((i-beg) / (float) (last-beg)) * 100;
                 std::cout << "\r remove: " << per <<  "% (" << (i-beg) << "/" << last-beg << ")\r" << std::flush;
             }
         }
@@ -92,13 +110,31 @@ int main(int argc, char **argv) {
         ms_time = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
         std::cout << "\r remove: 100% (" << last-beg << "/" << last-beg << ") takes " << ms_time << " ms" << std::endl;
 
-        std::cout << "\r check_remove: 0% (0/" << queries << ")" << std::flush;
+        /*std::cout << "\r check_remove: 0% (0/" << queries << ")" << std::flush;
         start = timer::now();
         for (uint64_t i = 0; i < queries; ++i) {
             auto q = std::min(rand() % block_size + beg, D.size()-1);
             auto r = index.test_exists(D[q]);
             if (r > 0) {
                 std::cout << "Error looking for D[" << q << "]=(" << D[q][0] << ", " << D[q][1] << ", " << D[q][2] << ") appears in "
+                        << r << " tries." << std::endl;
+                exit(0);
+            }
+            if((i-beg) % 1000 == 0) {
+                float per = (i / (float) queries) * 100;
+                std::cout << "\r check_remove: " << per <<  "% (" << i << "/" << queries << ")" << std::flush;
+            }
+        }
+        stop = timer::now();
+        ms_time = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
+        std::cout << "\r check_remove: 100% (" << queries << "/" << queries << ") takes " << ms_time << " ms in " << queries << " queries" << std::endl;*/
+
+        std::cout << "\r check_remove: 0% (0/" << queries << ")" << std::flush;
+        start = timer::now();
+        for (uint64_t i = beg; i < last ; ++i) {
+            auto r = index.test_exists(D[i]);
+            if (r > 0) {
+                std::cout << "Error looking for D[" << i << "]=(" << D[i][0] << ", " << D[i][1] << ", " << D[i][2] << ") appears in "
                         << r << " tries." << std::endl;
                 exit(0);
             }
