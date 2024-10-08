@@ -88,6 +88,7 @@ namespace cltj {
 
         const std::array<trie_type, 6> &tries = m_tries;
         const std::array<size_type, 3> &gaps = m_gaps;
+        const size_type &n_triples = m_n_triples;
         cltj_index_spo_dyn() = default;
 
         cltj_index_spo_dyn(vector<spo_triple> &D){
@@ -246,6 +247,7 @@ namespace cltj {
         //Checks if the triple exists, it returns the number of tries where it appears
         //The only possible outputs should be 6 or 0.
         uint64_t test_exists(spo_triple &triple) {
+            if(m_n_triples == 0) return 0;
             size_type r = 0;
             std::array<size_type, 4> states;
             states[0] = 0;
