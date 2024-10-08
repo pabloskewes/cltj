@@ -90,12 +90,12 @@ int main(int argc, char **argv) {
             }
             if(i % 1000 == 0) {
                 float per = (i / (float) (last-beg)) * 100;
-                std::cout << "\r check_insertions: " << per <<  "% (" << i << "/" << queries << ")" << std::flush;
+                std::cout << "\r check_insertions: " << per <<  "% (" << (i-beg) << "/" << (last-beg) << ")" << std::flush;
             }
         }
         stop = timer::now();
         ms_time = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
-        std::cout << "\r check_insertions: 100% (" << queries << "/" << queries << ") takes " << ms_time << " ms in " << queries << " queries" << std::endl;
+        std::cout << "\r check_insertions: 100% (" << last-beg << "/" << last-beg << ") takes " << ms_time << " ms in " << last-beg << " queries" << std::endl;
 
         std::cout << "\r remove: 0% (0/" << last-beg << ")" << std::flush;
         start = timer::now();
@@ -140,12 +140,12 @@ int main(int argc, char **argv) {
             }
             if((i-beg) % 1000 == 0) {
                 float per = (i / (float) (last-beg)) * 100;
-                std::cout << "\r check_remove: " << per <<  "% (" << i << "/" << queries << ")" << std::flush;
+                std::cout << "\r check_remove: " << per <<  "% (" << i << "/" << last-beg << ")" << std::flush;
             }
         }
         stop = timer::now();
         ms_time = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
-        std::cout << "\r check_remove: 100% (" << queries << "/" << queries << ") takes " << ms_time << " ms in " << queries << " queries" << std::endl;
+        std::cout << "\r check_remove: 100% (" << last-beg << "/" << last-beg << ") takes " << ms_time << " ms in " << last-beg << " queries" << std::endl;
 
         std::cout << "\r insertions: 0% (0/" << last-beg << ")\r" << std::flush;
         start = timer::now();
