@@ -32,22 +32,19 @@ using namespace std;
 
 using namespace ::util::time;
 
-bool get_file_content(string filename, vector<string> & vector_of_strings)
-{
+bool get_file_content(string filename, vector<string> &vector_of_strings) {
     // Open the File
     ifstream in(filename.c_str());
     // Check if object is valid
-    if(!in)
-    {
+    if (!in) {
         cerr << "Cannot open the File : " << filename << endl;
         return false;
     }
     string str;
     // Read the next line from File until it reaches the end.
-    while (getline(in, str))
-    {
+    while (getline(in, str)) {
         // Line contains string of length > 0 then save it in vector
-        if(str.size() > 0)
+        if (str.size() > 0)
             vector_of_strings.push_back(str);
     }
     //Close The File
@@ -55,14 +52,12 @@ bool get_file_content(string filename, vector<string> & vector_of_strings)
     return true;
 }
 
-std::string ltrim(const std::string &s)
-{
+std::string ltrim(const std::string &s) {
     size_t start = s.find_first_not_of(' ');
     return (start == std::string::npos) ? "" : s.substr(start);
 }
 
-std::string rtrim(const std::string &s)
-{
+std::string rtrim(const std::string &s) {
     size_t end = s.find_last_not_of(' ');
     return (end == std::string::npos) ? "" : s.substr(0, end + 1);
 }
@@ -71,67 +66,66 @@ std::string trim(const std::string &s) {
     return rtrim(ltrim(s));
 }
 
-std::vector<std::string> tokenizer(const std::string &input, const char &delimiter){
+std::vector<std::string> tokenizer(const std::string &input, const char &delimiter) {
     std::stringstream stream(input);
     std::string token;
     std::vector<std::string> res;
-    while(getline(stream, token, delimiter)){
+    while (getline(stream, token, delimiter)) {
         res.emplace_back(trim(token));
     }
     return res;
 }
 
-bool is_variable(string & s)
-{
+bool is_variable(string &s) {
     return (s.at(0) == '?');
 }
 
-uint8_t get_variable(string &s, std::unordered_map<std::string, uint8_t> &hash_table_vars){
+uint8_t get_variable(string &s, std::unordered_map<std::string, uint8_t> &hash_table_vars) {
     auto var = s.substr(1);
     auto it = hash_table_vars.find(var);
-    if(it == hash_table_vars.end()){
+    if (it == hash_table_vars.end()) {
         uint8_t id = hash_table_vars.size();
-        hash_table_vars.insert({var, id });
+        hash_table_vars.insert({var, id});
         return id;
-    }else{
+    } else {
         return it->second;
     }
 }
 
-uint64_t get_constant(string &s){
+uint64_t get_constant(string &s) {
     return std::stoull(s);
 }
 
-ltj::triple_pattern get_triple(string & s, std::unordered_map<std::string, uint8_t> &hash_table_vars) {
+ltj::triple_pattern get_triple(string &s, std::unordered_map<std::string, uint8_t> &hash_table_vars) {
     vector<string> terms = tokenizer(s, ' ');
 
     ltj::triple_pattern triple;
-    if(is_variable(terms[0])){
+    if (is_variable(terms[0])) {
         triple.var_s(get_variable(terms[0], hash_table_vars));
-    }else{
+    } else {
         triple.const_s(get_constant(terms[0]));
     }
-    if(is_variable(terms[1])){
+    if (is_variable(terms[1])) {
         triple.var_p(get_variable(terms[1], hash_table_vars));
-    }else{
+    } else {
         triple.const_p(get_constant(terms[1]));
     }
-    if(is_variable(terms[2])){
+    if (is_variable(terms[2])) {
         triple.var_o(get_variable(terms[2], hash_table_vars));
-    }else{
+    } else {
         triple.const_o(get_constant(terms[2]));
     }
     return triple;
 }
 
-std::string get_type(const std::string &file){
+std::string get_type(const std::string &file) {
     auto p = file.find_last_of('.');
-    return file.substr(p+1);
+    return file.substr(p + 1);
 }
 
 
 template<class index_scheme_type, class trait_type>
-void query(const std::string &file, const std::string &queries, const uint64_t limit){
+void query(const std::string &file, const std::string &queries, const uint64_t limit) {
     vector<string> dummy_queries;
     bool result = get_file_content(queries, dummy_queries);
 
@@ -147,27 +141,24 @@ void query(const std::string &file, const std::string &queries, const uint64_t l
     uint64_t total_elapsed_time;
     uint64_t total_user_time;
 
-    if(result)
-    {
-
+    if (result) {
         int count = 1;
-        for (string& query_string : dummy_queries) {
-
+        for (string &query_string: dummy_queries) {
             //vector<Term*> terms_created;
             //vector<Triple*> query;
             std::unordered_map<std::string, uint8_t> hash_table_vars;
             std::vector<ltj::triple_pattern> query;
             vector<string> tokens_query = tokenizer(query_string, '.');
-            for (string& token : tokens_query) {
+            for (string &token: tokens_query) {
                 auto triple_pattern = get_triple(token, hash_table_vars);
                 query.push_back(triple_pattern);
             }
 
 
-            typedef ltj::ltj_iterator_v2<index_scheme_type, uint8_t, uint64_t> iterator_type;
+            typedef ltj::ltj_iterator_lite<index_scheme_type, uint8_t, uint64_t> iterator_type;
 #if ADAPTIVE
             typedef ltj::ltj_algorithm<iterator_type,
-                    ltj::veo::veo_adaptive<iterator_type, trait_type>> algorithm_type;
+                ltj::veo::veo_adaptive<iterator_type, trait_type> > algorithm_type;
 
 #else
             typedef ltj::ltj_algorithm<iterator_type,
@@ -194,7 +185,7 @@ void query(const std::string &file, const std::string &queries, const uint64_t l
             //cout << "##########" << endl;
             //ltj.print_results(res, ht);
             auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(stop - start).count();
-            cout << nQ <<  ";" << res.size() << ";" << time << endl;
+            cout << nQ << ";" << res.size() << ";" << time << endl;
             nQ++;
 
             // cout << std::chrono::duration_cast<std::chrono::nanoseconds> (end - begin).count() << std::endl;
@@ -202,16 +193,13 @@ void query(const std::string &file, const std::string &queries, const uint64_t l
             //cout << "RESULTS QUERY " << count << ": " << number_of_results << endl;
             count += 1;
         }
-
     }
 }
 
 
-int main(int argc, char* argv[])
-{
-
+int main(int argc, char *argv[]) {
     //typedef ring::c_ring ring_type;
-    if(argc != 5){
+    if (argc != 5) {
         std::cout << "Usage: " << argv[0] << " <index> <queries> <limit> <type>" << std::endl;
         return 0;
     }
@@ -221,16 +209,15 @@ int main(int argc, char* argv[])
     uint64_t limit = std::atoll(argv[3]);
     std::string type = argv[4];
 
-    if(type == "normal"){
+    if (type == "normal") {
         query<cltj::uncompact_ltj, ltj::util::trait_distinct>(index, queries, limit);
-    }else if (type == "star"){
+    } else if (type == "star") {
         query<cltj::uncompact_ltj, ltj::util::trait_size>(index, queries, limit);
-    }else{
+    } else {
         std::cout << "Type of index: " << type << " is not supported." << std::endl;
     }
 
 
-
-	return 0;
+    return 0;
 }
 

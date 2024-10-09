@@ -6,14 +6,10 @@
 #include <fstream>
 #include <string>
 #include <queue>
-#include <sdsl/vectors.hpp>
-#include <sdsl/select_support_mcl.hpp>
-#include <cltj_regular_trie_v2.hpp>
-#include <succ_support_v.hpp>
 
 namespace cltj {
 
-    class uncompact_trie_v2 {
+    class uncompact_trie {
 
 
     public:
@@ -24,7 +20,7 @@ namespace cltj {
         sdsl::int_vector<> m_ptr;
         sdsl::int_vector<> m_seq;
 
-        void copy(const uncompact_trie_v2 &o) {
+        void copy(const uncompact_trie &o) {
             m_ptr = o.m_ptr;
             m_seq = o.m_seq;
         }
@@ -37,61 +33,42 @@ namespace cltj {
 
         const sdsl::int_vector<> &seq = m_seq;
 
-        uncompact_trie_v2() = default;
+        uncompact_trie() = default;
 
-        uncompact_trie_v2(const TrieV2 *trie, const uint64_t n_nodes) {
-            m_ptr = sdsl::int_vector<>(n_nodes);
-            m_seq = sdsl::int_vector<>(n_nodes);
-
-            const TrieV2 *node;
-            std::queue<const TrieV2 *> q;
-            q.push(trie);
+        uncompact_trie(const std::vector<uint32_t> &syms, const std::vector<size_type> &lengths) {
+            m_ptr = sdsl::int_vector<>(syms.size()+1);
+            m_seq = sdsl::int_vector<>(syms.size()+1);
             m_seq[0]=0;
-            uint64_t pos_seq = 1, pos_ptr = 0;
-            while (!q.empty()) {
-                node = q.front(); q.pop();
-                auto children = node->get_children();
+            uint64_t pos_ptr = 0, pos_seq = 1;
+            for(const auto &sym : syms) {
+                m_seq[pos_seq] = sym;
+                ++pos_seq;
+            }
+            pos_seq = 1;
+            for(const auto &len : lengths) {
                 m_ptr[pos_ptr] = pos_seq;
                 ++pos_ptr;
-                for (const auto &c: children) {
-                    m_seq[pos_seq] = c;
-                    ++pos_seq;
-                    const TrieV2 *child = node->to_child(c);
-                    if (!child->children.empty()) { //Check if it is a leaf
-                        q.push(child);
-                    }
-                }
+                pos_seq += len;
             }
             m_ptr[pos_ptr] = pos_seq;
             m_ptr.resize(pos_ptr+1);
 
             sdsl::util::bit_compress(m_seq);
             sdsl::util::bit_compress(m_ptr);
-
-            /*for(size_type i = 0; i < m_seq.size(); ++i){
-                std::cout << m_seq[i] << ", ";
-            }
-            std::cout << std::endl;
-
-            for(size_type i = 0; i < m_ptr.size(); ++i){
-                std::cout << m_ptr[i] << ", ";
-            }
-            std::cout << std::endl;*/
-
         }
 
         //! Copy constructor
-        uncompact_trie_v2(const uncompact_trie_v2 &o) {
+        uncompact_trie(const uncompact_trie &o) {
             copy(o);
         }
 
         //! Move constructor
-        uncompact_trie_v2(uncompact_trie_v2 &&o) {
+        uncompact_trie(uncompact_trie &&o) {
             *this = std::move(o);
         }
 
         //! Copy Operator=
-        uncompact_trie_v2 &operator=(const uncompact_trie_v2 &o) {
+        uncompact_trie &operator=(const uncompact_trie &o) {
             if (this != &o) {
                 copy(o);
             }
@@ -99,7 +76,7 @@ namespace cltj {
         }
 
         //! Move Operator=
-        uncompact_trie_v2 &operator=(uncompact_trie_v2 &&o) {
+        uncompact_trie &operator=(uncompact_trie &&o) {
             if (this != &o) {
                 m_ptr = std::move(o.m_ptr);
                 m_seq = std::move(o.m_seq);
@@ -107,7 +84,7 @@ namespace cltj {
             return *this;
         }
 
-        void swap(uncompact_trie_v2 &o) {
+        void swap(uncompact_trie &o) {
             // m_bp.swap(bp_support.m_bp); use set_vector to set the supported bit_vector
             std::swap(m_ptr, o.m_ptr);
             std::swap(m_seq, o.m_seq);
@@ -126,9 +103,10 @@ namespace cltj {
             Receives index of current node and the child that is required
             Returns index of the nth child of current node
         */
-        inline size_type child(uint32_t it, uint32_t n) const {
-            return m_ptr[it] + n -1;
+        inline size_type child(uint32_t it, uint32_t n, uint32_t gap=1) const {
+            return m_ptr[it-1+gap] + n -1;
         }
+
 
         /*
             Receives index of node whos children we want to count
@@ -149,8 +127,8 @@ namespace cltj {
         }
 
 
-        pair<uint32_t, uint32_t> binary_search_seek(uint32_t val, uint32_t i, uint32_t f) const {
-            if (m_seq[f] < val) return make_pair(0, f + 1);
+        std::pair<uint32_t, uint64_t> binary_search_seek(uint32_t val, uint32_t i, uint32_t f) const {
+            if (m_seq[f] < val) return std::make_pair(0, f + 1);
             uint32_t mid;
             while (i < f) {
                 mid = (i + f) / 2;
@@ -160,7 +138,7 @@ namespace cltj {
                     f = mid;
                 }
             }
-            return make_pair(m_seq[i], i);
+            return std::make_pair(m_seq[i], i);
         }
 
 

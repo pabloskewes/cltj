@@ -28,14 +28,13 @@
 #include <unordered_set>
 #include <list>
 #include <configuration.hpp>
-#include <cltj_index_spo.hpp>
 
 namespace ltj {
 
     namespace veo {
 
 
-        template<class ltj_iterator_t = ltj_iterator_v2 <cltj::compact_ltj, uint8_t, uint64_t>,
+        template<class ltj_iterator_t = ltj_iterator_lite<cltj::compact_ltj, uint8_t, uint64_t>,
                 class veo_trait_t = util::trait_size>
         class veo_adaptive {
 

@@ -7,8 +7,8 @@
 
 
 #include <cltj_compact_trie_dyn.hpp>
-//#include <cltj_uncompact_trie_v2.hpp>
-#include <cltj_config.hpp>
+//#include <cltj_uncompact_trie.hpp>
+#include <cltj_helper.hpp>
 #include <sdsl/wt_helper.hpp>
 
 namespace cltj {
@@ -26,57 +26,7 @@ namespace cltj {
         std::array<size_type, 3> m_gaps;
         size_type m_n_triples = 0;
 
-        bool equal(const spo_triple &a, const spo_triple &b, const spo_order_type &order, const size_type l){
-            for(size_type i = 0; i <= l; ++i){
-                if(a[order[i]] != b[order[i]]) return false;
-            }
-            return true;
-        }
 
-        bool same_parent(const spo_triple &a, const spo_triple &b, const spo_order_type &order, const size_type l) {
-            for(size_type i = 0; i < l; ++i){
-                if(a[order[i]] != b[order[i]]) return false;
-            }
-            return true;
-        }
-
-        void sym_level(const vector<spo_triple> &D, const spo_order_type &order, size_type level,
-                      std::vector<uint32_t> &syms, std::vector<size_type> &lengths){
-
-            if(D.empty()) return;
-            if(D.size() == 1) {
-                for(uint32_t l = level; l < 3; ++l) {
-                    lengths.push_back(1);
-                    syms.push_back(D[0][order[l]]);
-                }
-                return;
-            }
-            spo_triple prev, curr;
-            size_type children;
-            std::vector<size_type> res;
-            for(uint32_t l = level; l < 3; ++l){
-                children = 1;
-                for(size_type i = 1; i < D.size(); ++i){
-                    prev = D[i-1]; curr = D[i];
-                    if(!equal(prev, curr, order, l)){
-                        syms.emplace_back(prev[order[l]]);
-                        if(!same_parent(prev, curr, order, l)) {// false when parent is the root
-                            lengths.emplace_back(children);
-                            children = 1;
-                        }else {
-                            ++children;
-                        }
-                    }
-                }
-                syms.emplace_back(curr[order[l]]);
-                lengths.emplace_back(children);
-            }
-
-            /*for(auto s : syms) {
-                std::cout << s << ", ";
-            }
-            std::cout << std::endl;*/
-        }
 
         void copy(const cltj_index_spo_dyn &o){
             m_tries = o.m_tries;
@@ -97,7 +47,7 @@ namespace cltj {
                 std::sort(D.begin(), D.end(), comparator_order(i));
                 std::vector<uint32_t> syms;
                 std::vector<size_type> lengths;
-                sym_level(D,  spo_orders[i], i % 2, syms, lengths);
+                helper::sym_level(D,  spo_orders[i], i % 2, syms, lengths);
                 if(i % 2 == 0){
                     m_gaps[i/2] = lengths[0];
                 }

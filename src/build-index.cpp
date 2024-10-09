@@ -1,5 +1,5 @@
 #include <iostream>
-#include <cltj_index_spo_v2.hpp>
+#include <cltj_index_spo_lite.hpp>
 
 using namespace std;
 
@@ -33,7 +33,7 @@ int main(int argc, char **argv){
         //sdsl::memory_monitor::start();
 
         auto start = timer::now();
-        cltj::cltj_index_spo_v2<cltj::compact_trie_v3> index(D);
+        cltj::compact_ltj index(D);
         auto stop = timer::now();
 
         //sdsl::memory_monitor::stop();

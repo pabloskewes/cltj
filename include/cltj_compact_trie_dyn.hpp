@@ -39,7 +39,6 @@ namespace cltj {
 
         const dyn_cds::dyn_array &seq = m_seq;
 
-
         compact_trie_dyn(const uint width = default_width) {
             m_seq = dyn_cds::dyn_array(width);
         }
@@ -134,7 +133,7 @@ namespace cltj {
             Receives index of current node and the child that is required
             Returns index of the nth child of current node
         */
-        inline size_type child(uint32_t it, uint32_t gap, uint32_t n) const {
+        inline size_type child(uint32_t it, uint32_t n, uint32_t gap=1) const {
             return m_dyn_bv.select(it + gap + n);
         }
 
@@ -143,7 +142,7 @@ namespace cltj {
             Returns how many children said node has
         */
         size_type children(size_type i) const {
-            return m_dyn_bv.select(m_dyn_bv.rank(i+1)+1) - i;
+            return m_dyn_bv.select(m_dyn_bv.rank(i+1)+1) - i; //TODO: implementar successors
             //return m_succ(i + 1) - i;
         }
 

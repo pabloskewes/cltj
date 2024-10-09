@@ -17,22 +17,23 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LTJ_ITERATOR_V3_HPP
-#define LTJ_ITERATOR_V3_HPP
+#ifndef LTJ_ITERATOR_V2_HPP
+#define LTJ_ITERATOR_V2_HPP
 
 #include <triple_pattern.hpp>
 #include <cltj_config.hpp>
 #include <vector>
 #include <utils.hpp>
 #include <string>
-#include <cltj_compact_trie_v3.hpp>
+#include <cltj_index_spo_basic.hpp>
+#include <cltj_index_spo_lite.hpp>
 
 #define VERBOSE 0
 
 namespace ltj {
 
     template<class index_scheme_t, class var_t, class cons_t>
-    class ltj_iterator_v3 {
+    class ltj_iterator_basic {
 
     public:
         typedef cons_t value_type;
@@ -78,7 +79,7 @@ namespace ltj {
         //std::array<size_type, 2> m_parent_it_v = {0, 0}; // NEW DIEGO
         //std::array<size_type, 2> m_pos_in_parent_v = {1,1}; // NEW DIEGO
 
-        void copy(const ltj_iterator_v3 &o) {
+        void copy(const ltj_iterator_basic &o) {
             m_ptr_triple_pattern = o.m_ptr_triple_pattern;
             m_ptr_index = o.m_ptr_index;
             m_nfixed = o.m_nfixed;
@@ -186,8 +187,8 @@ namespace ltj {
         inline size_type parent() const;
 
 
-        ltj_iterator_v3() = default;
-        ltj_iterator_v3(const triple_pattern *triple, index_scheme_type *index) {
+        ltj_iterator_basic() = default;
+        ltj_iterator_basic(const triple_pattern *triple, index_scheme_type *index) {
             m_ptr_triple_pattern = triple;
             m_ptr_index = index;
 
@@ -218,17 +219,17 @@ namespace ltj {
             return m_ptr_triple_pattern;
         }
         //! Copy constructor
-        ltj_iterator_v3(const ltj_iterator_v3 &o) {
+        ltj_iterator_basic(const ltj_iterator_basic &o) {
             copy(o);
         }
 
         //! Move constructor
-        ltj_iterator_v3(ltj_iterator_v3 &&o) {
+        ltj_iterator_basic(ltj_iterator_basic &&o) {
             *this = std::move(o);
         }
 
         //! Copy Operator=
-        ltj_iterator_v3 &operator=(const ltj_iterator_v3 &o) {
+        ltj_iterator_basic &operator=(const ltj_iterator_basic &o) {
             if (this != &o) {
                 copy(o);
             }
@@ -236,7 +237,7 @@ namespace ltj {
         }
 
         //! Move Operator=
-        ltj_iterator_v3 &operator=(ltj_iterator_v3 &&o) {
+        ltj_iterator_basic &operator=(ltj_iterator_basic &&o) {
             if (this != &o) {
                 m_ptr_triple_pattern = std::move(o.m_ptr_triple_pattern);
                 m_ptr_index = std::move(o.m_ptr_index);
@@ -251,7 +252,7 @@ namespace ltj {
             return *this;
         }
 
-        void swap(ltj_iterator_v3 &o) {
+        void swap(ltj_iterator_basic &o) {
             // m_bp.swap(bp_support.m_bp); use set_vector to set the supported bit_vector
             std::swap(m_ptr_triple_pattern, o.m_ptr_triple_pattern);
             std::swap(m_ptr_index, o.m_ptr_index);
@@ -272,14 +273,13 @@ namespace ltj {
             if(m_nfixed == 1){
                 const auto* trie = m_ptr_index->get_trie(m_trie_i);
                 auto pos = m_status[m_nfixed].beg;
-                m_status[m_nfixed].it[0] =  trie->child(pos, 1, 1); //root -> gap = 1
+                m_status[m_nfixed].it[0] = trie->nodeselect(pos);
                 trie = m_ptr_index->get_trie(m_trie_i+1);
-                m_status[m_nfixed].it[1] = trie->child(pos, 0, 1); //no root -> gap = 0
+                m_status[m_nfixed].it[1] = trie->nodeselect(pos);
             }else if (m_nfixed == 2){
                 const auto* trie = m_ptr_index->get_trie(m_trie_i);
                 auto pos = m_status[m_nfixed].beg;
-                //root -> gap = 1; level -> gap = nodes in first level
-                m_status[m_nfixed].it[m_status_i] = trie->child(pos, m_status_i ? m_ptr_index->gaps[m_trie_i/2] : 1 , 1);
+                m_status[m_nfixed].it[m_status_i] = trie->nodeselect(pos);
             }
             //print_status();
             //m_redo[m_nfixed] = true;
@@ -423,10 +423,10 @@ namespace ltj {
             //Count children
             auto cnt = trie->children(it);
             //Leftmost
-            auto first = trie->child(it, !s_i, 1); //root -> gap = 1; no root -> gap = 0
+            auto first = trie->child(it, 1);
             leftmost_leaf = trie->first_child(first);
             //Rightmost
-            it = trie->child(it, s_i ? m_ptr_index->gaps[t_i/2] : 1, cnt); //jump the root or the whole first level
+            it = trie->child(it, cnt);
             cnt = trie->children(it);
             rightmost_leaf = trie->first_child(it) + cnt - 1;
             return rightmost_leaf - leftmost_leaf + 1;
@@ -453,7 +453,7 @@ namespace ltj {
     };
 
     template<class index_scheme_t, class var_t, class cons_t>
-    uint64_t ltj_iterator_v3<index_scheme_t, var_t, cons_t>::parent() const {
+    uint64_t ltj_iterator_basic<index_scheme_t, var_t, cons_t>::parent() const {
         return m_status[m_nfixed].it[m_status_i];
     }
 
