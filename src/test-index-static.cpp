@@ -36,6 +36,7 @@ int main(int argc, char **argv) {
 
 
     auto new_size = D.size() / 100 * 20;
+    std::cout << "New size= " << new_size << std::endl;
     D.resize(new_size);
     cltj::compact_ltj index(D);
     std::cout << "Index: " << sdsl::size_in_bytes(index) << " bytes." << std::endl;
