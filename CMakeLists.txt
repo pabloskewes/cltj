@@ -47,7 +47,7 @@ include_directories(~/include
                     ${CMAKE_HOME_DIRECTORY}/lib/hybridBV/include
                     ${CMAKE_HOME_DIRECTORY}/include)
 
-#link_directories(~/lib)
+link_directories(~/lib)
 add_subdirectory(lib/hybridBV)
 
 add_executable(build-index src/build-index.cpp
@@ -59,6 +59,9 @@ target_link_libraries(build-index-dyn sdsl divsufsort divsufsort64 hybridbv_gn)
 
 add_executable(test-index-dyn src/test-index-dyn.cpp)
 target_link_libraries(test-index-dyn sdsl divsufsort divsufsort64 hybridbv_gn)
+
+add_executable(test-index-static src/test-index-static.cpp)
+target_link_libraries(test-index-static sdsl divsufsort divsufsort64)
 
 add_executable(main src/main.cpp)
 target_link_libraries(main sdsl divsufsort divsufsort64 hybridbv_gn)
