@@ -67,7 +67,7 @@ namespace cltj {
             std::cout << "n_nodes=" << syms.size() << " pos_seq=" << pos_seq << " pos_bv=" << pos_bv << std::endl;
 
             sdsl::util::bit_compress(m_seq);
-            std::cout << "width of trie seq = " << m_seq.width() << std::endl;
+            std::cout << "width of trie seq = " << (uint64_t) m_seq.width() << std::endl;
             sdsl::util::init_support(m_succ0, &m_bv);
             sdsl::util::init_support(m_select0, &m_bv);
 
