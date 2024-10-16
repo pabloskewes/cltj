@@ -2,6 +2,8 @@
 
 #include "hybridBV/hybridBV.h"
 
+#include "hybridBV/hybridBVId.h"
+
 extern float FactorBV = 1.0; // Factor * length reads => rebuild as static
 
 static inline mustFlatten(hybridBV B) {
@@ -431,6 +433,7 @@ extern inline uint64_t hybridOnes(hybridBV B) {
     return B->bv.dyn->ones;
 }
 
+
 // sets value for B[i]= (v != 0), assumes i is right
 // returns the difference in 1s
 
@@ -769,3 +772,5 @@ uint64_t hybridSelect(hybridBV B, uint64_t j) {
     if (delta) recompute(B, answ, delta);
     return answ;
 }
+
+

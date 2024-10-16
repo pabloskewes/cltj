@@ -102,7 +102,7 @@ namespace dyn_cds {
 
         size_type serialize(std::ostream &out, sdsl::structure_tree_node *v = nullptr, std::string name = "") const {
             sdsl::structure_tree_node *child = sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
-            size_type written_bytes = hybridIdSpace(m_B);
+            size_type written_bytes = hybridIdSpace(m_B) * 8;
             FILE* f = util::file::create_c_file();
             hybridIdSave(m_B, f);
             util::file::begin_c_file(f);

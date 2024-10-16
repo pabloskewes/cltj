@@ -3,8 +3,8 @@
 
 #include "hybridBV/leafBV.h"
 
-const int MaxBlockWords = 32;
-const float NewFraction = 0.75; // new blocks try to be this fraction full
+#define MaxBlockWords 32 // measured in uint64_t's
+#define NewFraction 0.75 // new blocks try to be this fraction full
 
        // size that a newly created leaf should have
 

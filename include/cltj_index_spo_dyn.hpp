@@ -7,6 +7,7 @@
 
 
 #include <cltj_compact_trie_dyn.hpp>
+#include <cltj_compact_trie_dyn_v2.hpp>
 //#include <cltj_uncompact_trie.hpp>
 #include <cltj_helper.hpp>
 #include <sdsl/wt_helper.hpp>
@@ -139,7 +140,9 @@ namespace cltj {
                     //When the triple is not found in the previous level, it means that we are in the first child (1-bit) of the current level.
                     //Otherwise, we have to add a new child to the current level, thus we add a 0-bit.
                     if(states[j].ins) {
+                        //std::cout << "insert at: " << states[j].pos << "[" << states[j-1].ins << ", " << states[j].first_child << "]" << std::endl;
                         m_tries[i].insert(states[j].pos, triple[spo_orders[i][j-1]], states[j-1].ins, states[j].first_child);
+                        //m_tries[i].print();
                         if(j == 1) inc_gaps[i/2] = true;
                     }
                 }
@@ -148,6 +151,7 @@ namespace cltj {
                 m_gaps[i] += inc_gaps[i]; //updating gaps because of insertions in the first level
             }
             ++m_n_triples;
+            //m_tries[4].print();
             /*for(uint64_t i = 0; i < 6; ++i) {
                 m_tries[i].print();
             }*/
@@ -172,15 +176,19 @@ namespace cltj {
                     b = (l==0) ? 0 : m_tries[i].child(states[l].pos, 1, gap);
                     e = b+m_tries[i].children(b)-1;
                     auto bs = m_tries[i].binary_search(triple[spo_orders[i][l]], b, e);
-                    if(!bs.second) return false;
+                    if(!bs.second) {
+                        //m_tries[i].print();
+                        return false;
+                    }
                     states[l+1].pos = bs.first;
-                    states[l+1].first_child = (b==bs.first);
+                    //states[l+1].first_child = (b==bs.first);
                     states[l+1].rem = (b==e);
                 }
                 bool rem = true;
                 for(int64_t j = 3; j >= 1+skip_level; --j) {
                     if(rem) {
-                        m_tries[i].remove(states[j].pos, states[j].first_child);
+                        //m_tries[i].remove(states[j].pos, states[j].first_child);
+                        m_tries[i].remove(states[j].pos, !states[j].rem);
                         if(j == 1) dec_gaps[i/2] = true;
                     }
                     rem &= states[j].rem;
@@ -211,7 +219,7 @@ namespace cltj {
                     if(skip_level) gap = (l==1) ? 0 : m_gaps[i/2];
                     b = (l==0) ? 0 : m_tries[i].child(states[l], 1, gap);
                     e = b+m_tries[i].children(b)-1;
-                    auto bs = m_tries[i].binary_search(triple[spo_orders[i][l]], b, e);
+                    auto bs = m_tries[i].binary_search(triple[spo_orders[i][l]], b, e); //aqui
                     if(!bs.second) {
                         if(l == 0) exists_l0 = false;
                         break;
@@ -238,9 +246,11 @@ namespace cltj {
                 for(l = skip_level; l < 3; ++l) {
                     gap = 1;
                     if(skip_level) gap = (l==1) ? 0 : m_gaps[i/2];
+                    //std::cout << "compute child with" << states[l] << ", " << gap << std::endl;
                     b = (l==0) ? 0 : m_tries[i].child(states[l], 1, gap);
                     e = b+m_tries[i].children(b)-1;
                     auto bs = m_tries[i].binary_search(triple[spo_orders[i][l]], b, e);
+                    //std::cout << "search in [" << b << ", " << e << "] find=" << (uint) bs.second << " pos=" << bs.first << std::endl;
                     if(!bs.second) {
                         if(l == 0) exists_l0 = false;
                         break;
@@ -248,7 +258,7 @@ namespace cltj {
                     states[l+1] = bs.first;
                     if(l == 0) exists_l0 = true;
                 }
-                std::cout << "trie=" << i << " l=" << l << std::endl;
+                //std::cout << "trie=" << i << " l=" << l << std::endl;
                 r += (l == 3);
             }
             return r;
@@ -282,6 +292,23 @@ namespace cltj {
         void print() {
             for(uint64_t i = 0; i < 6; ++i) {
                 m_tries[i].print();
+            }
+        }
+
+        bool check() {
+            bool ok = true;
+            for(uint64_t i = 0; i < 6; ++i) {
+                ok &= m_tries[i].check();
+            }
+            return ok;
+        }
+
+        void check_print() {
+            bool ok = true;
+            for(uint64_t i = 0; i < 6; ++i) {
+                std::cout << "------ TRIE=" << i << " ------"<< std::endl;
+                m_tries[i].check_print();
+                std::cout << std::endl;
             }
         }
 

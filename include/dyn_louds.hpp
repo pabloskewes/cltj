@@ -2,17 +2,20 @@
 // Created by adrian on 28/9/24.
 //
 
-#ifndef DYN_BIT_VECTOR_HPP
-#define DYN_BIT_VECTOR_HPP
+#ifndef DYN_LOUDS_HPP
+#define DYN_LOUDS_HPP
+
 #include <file.hpp>
+#include <sdsl/structure_tree.hpp>
+#include <sdsl/util.hpp>
 
 namespace dyn_cds {
 
     extern "C" {
-        #include "hybridBV/hybridBV.h"
+        #include "hybridBV/hybridBVId.h"
     }
 
-    class dyn_bit_vector {
+    class dyn_louds {
 
     public:
 
@@ -20,74 +23,78 @@ namespace dyn_cds {
         typedef uint64_t value_type;
 
     private:
-        hybridBV m_B = nullptr;
+        hybridBVId m_B = nullptr;
 
-        void copy(const dyn_bit_vector &o) {
-            m_B = hybridClone(o.m_B);
+        void copy(const dyn_louds &o) {
+            m_B = hybridBVIdClone(o.m_B);
         }
 
     public:
 
-        dyn_bit_vector() {
-            m_B = hybridCreate();
+        dyn_louds() = default;
+
+        dyn_louds(uint width) {
+            m_B = hybridBVIdCreate(width);
         }
 
-        dyn_bit_vector(uint64_t* data, size_type n) {
-            m_B = hybridCreateFromNoFree(data, n);
+        dyn_louds(uint64_t* data, uint64_t* id_data, size_type n, uint width) {
+            m_B = hybridBVIdCreateFrom64(data, id_data, n, width);
         }
 
-        ~dyn_bit_vector() {
+        ~dyn_louds() {
             if(m_B != nullptr) {
-                hybridDestroy(m_B);
+                hybridBVIdDestroy(m_B);
                 m_B = nullptr;
             }
         }
 
         size_type size() const {
-            return hybridLength(m_B);
+            return hybridBVIdLength(m_B);
         }
 
-        value_type access(size_type i) const {
-            return hybridAccess(m_B, i);
+        std::pair<bool, value_type> access(size_type i) const {
+            value_type id;
+            auto bit = hybridBVIdAccess(m_B, i, &id);
+            return {bit, id};
         }
 
         value_type operator[](size_type i) const {
-            return access(i);
+            return hybridBVIdAccessId(m_B, i);
         }
 
-        void insert(size_type i, value_type v) {
-            hybridInsert(m_B, i, v);
+        void insert(size_type i, value_type bit, value_type v, bool first) {
+            hybridBVIdInsert(m_B, i, bit , v, first);
         }
 
-        value_type remove(size_type i) {
-            return hybridDelete(m_B, i);
+        void remove(size_type i, bool more) {
+            hybridBVIdDelete(m_B, i, more);
         }
 
         void set(size_type i, value_type v) {
-            hybridWrite(m_B, i, v);
+            hybridBVIdWriteBV(m_B, i, v); //TODO: penso que non se vai usar
         }
 
         size_type rank(size_type i) const {
-            return hybridRank(m_B, i-1);
+            return hybridBVIdRank(m_B, i-1);
         }
 
         size_type select(size_type i) const { //TODO: mellor que tivera succ en lugar de select [falar con Gonzalo]
-            return hybridSelect(m_B, i);
+            return hybridBVIdSelect(m_B, i);
         }
 
 
         //! Copy constructor
-        dyn_bit_vector(const dyn_bit_vector &o) {
+        dyn_louds(const dyn_louds &o) {
             copy(o);
         }
 
         //! Move constructor
-        dyn_bit_vector(dyn_bit_vector &&o) {
+        dyn_louds(dyn_louds &&o) {
             *this = std::move(o);
         }
 
         //! Copy Operator=
-        dyn_bit_vector &operator=(const dyn_bit_vector &o) {
+        dyn_louds &operator=(const dyn_louds &o) {
             if (this != &o) {
                 copy(o);
             }
@@ -95,7 +102,7 @@ namespace dyn_cds {
         }
 
         //! Move Operator=
-        dyn_bit_vector &operator=(dyn_bit_vector &&o) {
+        dyn_louds &operator=(dyn_louds &&o) {
             if (this != &o) {
                m_B = o.m_B;
                o.m_B = nullptr; //prevents deleting the data
@@ -103,14 +110,14 @@ namespace dyn_cds {
             return *this;
         }
 
-        void swap(dyn_bit_vector &o) {
+        void swap(dyn_louds &o) {
             std::swap(m_B, o.m_B);
         }
         size_type serialize(std::ostream &out, sdsl::structure_tree_node *v = nullptr, std::string name = "") const {
             sdsl::structure_tree_node *child = sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
-            size_type written_bytes = hybridSpace(m_B) * 8;
+            size_type written_bytes = hybridBVIdSpace(m_B) * 8;
             FILE* f = util::file::create_c_file();
-            hybridSave(m_B, f);
+            hybridBVIdSave(m_B, f);
             util::file::begin_c_file(f);
             util::file::c_file_to_ostream(f, out);
             util::file::close_c_file(f);
@@ -123,15 +130,22 @@ namespace dyn_cds {
             int64_t pos = in.tellg();
             util::file::istream_to_c_file(f, in);
             util::file::begin_c_file(f);
-            m_B = hybridLoad(f);
+            m_B = hybridBVIdLoad(f);
             int64_t offset = ftell(f);
             in.seekg(pos + offset, std::istream::beg);
             util::file::close_c_file(f);
         }
 
+        bool check() {
+            return checkOnes(m_B);
+        }
+
+        void check_print() {
+            checkOnesPrint(m_B);
+        }
 
 
     };
 }
 
-#endif //DYN_BIT_VECTOR_HPP
+#endif //dyn_louds_HPP

@@ -37,7 +37,7 @@ hybridId hybridIdCreateFrom64NoFree (uint64_t *data, uint64_t n, uint width)
     }
     else
     { B->type = tLeaf;
-        B->bv.stat = leafIdCreateFrom64NoFree(data,n,width,0);
+        B->bv.leaf = leafIdCreateFrom64NoFree(data,n,width,0);
     }
     return B;
 }
@@ -53,7 +53,7 @@ hybridId hybridIdCreateFrom64 (uint64_t *data, uint64_t n, uint width)
         }
      else 
         { B->type = tLeaf;
-          B->bv.stat = leafIdCreateFrom64(data,n,width,0);
+          B->bv.leaf = leafIdCreateFrom64(data,n,width,0);
         } 
      return B;
    }
@@ -70,7 +70,7 @@ hybridId hybridIdCreateFrom32 (uint32_t *data, uint64_t n, uint width)
         }
      else 
         { B->type = tLeaf;
-          B->bv.stat = leafIdCreateFrom32(data,n,width,0);
+          B->bv.leaf = leafIdCreateFrom32(data,n,width,0);
         } 
      return B;
    }
@@ -81,7 +81,7 @@ hybridId hybridIdClone (hybridId B)
 { hybridId BC = myalloc(sizeof(struct s_hybridId));
     BC->type = B->type;
     if (B->type == tLeaf) BC->bv.leaf = leafIdClone(B->bv.leaf);
-    else if (B->type == tStatic) BC->bv.leaf = leafIdClone(B->bv.stat);
+    else if (B->type == tStatic) BC->bv.stat = leafIdClone(B->bv.stat);
     else {
         BC->bv.dyn->accesses = B->bv.dyn->accesses;
         BC->bv.dyn->leaves = B->bv.dyn->leaves;

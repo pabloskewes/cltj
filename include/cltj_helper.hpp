@@ -46,7 +46,7 @@ namespace cltj {
                         }
                     }
                 }
-                syms.emplace_back(prev[order[l]]);
+                syms.emplace_back(curr[order[l]]);
                 lengths.emplace_back(children);
             }
         }

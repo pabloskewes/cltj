@@ -1,6 +1,8 @@
 #include <iostream>
 #include <cltj_index_spo_dyn.hpp>
 
+#include "hybridBV/hybridBVId.h"
+
 using namespace std;
 
 using namespace std::chrono;
@@ -38,10 +40,11 @@ int main(int argc, char **argv) {
     std::mt19937 g(rd());
     //std::shuffle(D.begin(), D.end(), g);
 
-    cltj::cltj_index_spo_dyn<cltj::compact_trie_dyn<>> index;
+    cltj::cltj_index_spo_dyn<cltj::compact_trie_dyn_v2<>> index;
+
 
     uint64_t block_size = D.size() / 100;
-    //uint64_t block_size = 100;
+    //uint64_t block_size = 20;
     //sdsl::memory_monitor::stop();
     uint64_t beg = 0;
     for (uint64_t k = 0; k < steps; ++k ) {
@@ -52,6 +55,18 @@ int main(int argc, char **argv) {
         auto start = timer::now();
         for (uint64_t i = beg; i < last; ++i) {
             index.insert(D[i]);
+           // index.print();
+            /*for(uint64_t ii = 0; ii <= i; ++ii) {
+                auto r = index.test_exists(D[ii]);
+                if (r < 6) {
+                    std::cout << "====================" << std::endl;
+                    index.print();
+                    std::cout << "Error looking for D[" << ii << "]=(" << D[ii][0] << ", " << D[ii][1] << ", " << D[ii][2] << ") appears in "
+                            << r << " tries." << std::endl;
+                    index.test_exists_error(D[ii]);
+                    exit(0);
+                }
+            }*/
             if((i-beg) % ((last-beg)/1000) == 0) {
                 float per = ((i-beg) / (float) (last-beg+1)) * 100;
                 std::cout << "\r insertions: " << per <<  "% (" << (i-beg) << "/" << last-beg << ")" << std::flush;
@@ -87,6 +102,7 @@ int main(int argc, char **argv) {
             if (r < 6) {
                 std::cout << "Error looking for D[" << i << "]=(" << D[i][0] << ", " << D[i][1] << ", " << D[i][2] << ") appears in "
                         << r << " tries." << std::endl;
+                index.test_exists_error(D[i]);
                 exit(0);
             }
             if(i % 1000 == 0) {
@@ -101,16 +117,59 @@ int main(int argc, char **argv) {
         std::cout << "\r remove: 0% (0/" << last-beg << ")" << std::flush;
         start = timer::now();
         for (uint64_t i = beg; i < last; ++i) {
+            /*std::cout << "i=" << i << std::endl;
+            if(i == 112) {
+                std::cout << "aa " << std::endl;
+            }*/
+           /*auto a = index.test_exists(D[i]);
+           if (a < 6) {
+               std::cout << "====================" << std::endl;
+               index.print();
+               std::cout << "Error looking for D[" << i << "]=(" << D[i][0] << ", " << D[i][1] << ", " << D[i][2] << ") appears in "
+                       << a << " tries." << std::endl;
+               index.test_exists_error(D[i]);
+               exit(0);
+           }*/
+            //std::cout <<"i=" << i << std::endl;
             index.remove(D[i]);
+
+           // std::cout << "check: " << ok << std::endl;
+
+            //if(i ==2) index.print();
+            /*for(uint64_t ii = 0; ii <= i; ++ii) {
+                if(ii == 112) {
+                    std::cout << "bb" << std::endl;
+                }
+               auto r = index.test_exists(D[ii]);
+                ok = index.check();
+                std::cout << "check after test: " << ok << std::endl;
+                if(!ok) {
+                    index.check_print();
+                    exit(0);
+                }
+               if (r > 0) {
+                   std::cout << "====================" << std::endl;
+                   index.print();
+                   std::cout << "Error looking for D[" << ii << "]=(" << D[ii][0] << ", " << D[ii][1] << ", " << D[ii][2] << ") appears in "
+                           << r << " tries." << std::endl;
+                   index.test_exists_error(D[ii]);
+                   exit(0);
+               }
+           }*/
+
             if((i-beg) % 1000 == 0) {
                 float per = ((i-beg) / (float) (last-beg)) * 100;
-                std::cout << "\r remove: " << per <<  "% (" << (i-beg) << "/" << last-beg << ")\r" << std::flush;
+                std::cout << "\r remove: " << per <<  "% (" << (i-beg) << "/" << last-beg << ")" << std::flush;
             }
         }
         stop = timer::now();
         ms_time = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
         std::cout << "\r remove: 100% (" << last-beg << "/" << last-beg << ") takes " << ms_time << " ms [" << index.n_triples << "]" << std::endl;
-
+        auto ok = index.check();
+        if(!ok) {
+            index.check_print();
+            exit(0);
+        }
         /*std::cout << "\r check_remove: 0% (0/" << queries << ")" << std::flush;
         start = timer::now();
         for (uint64_t i = 0; i < queries; ++i) {

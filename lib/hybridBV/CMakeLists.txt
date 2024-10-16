@@ -19,6 +19,13 @@ set(SOURCES
         include/hybridBV/leafId.h
         src/hybridBV/staticBV.c
         include/hybridBV/staticBV.h
+        include/hybridBV/hybridBVId.h
+        include/hybridBV/leafBVId.h
+        include/hybridBV/staticBVId.h
+        src/hybridBV/hybridBVId.c
+        src/hybridBV/leafBVId.c
+        src/hybridBV/staticBVId.c
+
 )
 
 # Flags

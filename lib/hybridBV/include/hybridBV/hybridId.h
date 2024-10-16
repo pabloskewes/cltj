@@ -28,7 +28,7 @@ typedef struct s_hybridId
       
 extern float FactorId; // reconstruction factor
 
-	// creates an empty hybridId, of width width
+// creates an empty hybridId, of width width
 hybridId hybridIdCreate (uint width);
 
 
@@ -42,7 +42,7 @@ hybridId hybridIdCreateFrom64 (uint64_t *data, uint64_t n, uint width);
 	// of width width. data is pointed to and will be freed 
 hybridId hybridIdCreateFrom32 (uint32_t *data, uint64_t n, uint width);
 
-	// destroys B, frees data 
+// destroys B, frees data
 void hybridIdDestroy (hybridId B);
 
 // clones B

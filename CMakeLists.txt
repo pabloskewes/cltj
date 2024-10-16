@@ -7,7 +7,7 @@ project(CLTJ)
 set(CMAKE_PROJECT_NAME "CLTJ")
 
 #Change to "Debug" when you need it
-set(CMAKE_BUILD_TYPE "Debug")
+set(CMAKE_BUILD_TYPE "Release")
 
 # C++11 compiler Check
 if(NOT CMAKE_CXX_COMPILER_VERSION) # work around for cmake versions smaller than 2.8.10
@@ -65,6 +65,9 @@ target_link_libraries(test-index-static sdsl divsufsort divsufsort64)
 
 add_executable(main src/main.cpp)
 target_link_libraries(main sdsl divsufsort divsufsort64 hybridbv_gn)
+
+add_executable(test-louds src/test-louds.cpp)
+target_link_libraries(test-louds sdsl divsufsort divsufsort64 hybridbv_gn)
 
 add_executable(build-uncltj-index src/build-uncltj-index.cpp)
 target_link_libraries(build-uncltj-index sdsl divsufsort divsufsort64)
