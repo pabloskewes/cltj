@@ -44,7 +44,7 @@ int main(int argc, char **argv) {
 
 
     uint64_t block_size = D.size() / 100;
-    //uint64_t block_size = 20;
+    //uint64_t block_size = 1000;
     //sdsl::memory_monitor::stop();
     uint64_t beg = 0;
     for (uint64_t k = 0; k < steps; ++k ) {
@@ -61,6 +61,7 @@ int main(int argc, char **argv) {
                 if (r < 6) {
                     std::cout << "====================" << std::endl;
                     index.print();
+                    std::cout << "i=" << i << std::endl;
                     std::cout << "Error looking for D[" << ii << "]=(" << D[ii][0] << ", " << D[ii][1] << ", " << D[ii][2] << ") appears in "
                             << r << " tries." << std::endl;
                     index.test_exists_error(D[ii]);

@@ -868,6 +868,40 @@ uint64_t hybridBVIdSelect(hybridBVId B, uint64_t j) {
     return answ;
 }
 
+static int64_t next1 (hybridBVId B, uint64_t i, int64_t *delta)
+
+{ uint64_t lsize;
+    int64_t next;
+    if (hybridBVIdOnes(B) == 0) return -1;
+    if (B->type == tDynamic)
+    {
+        B->bv.dyn->accesses++; // not considered an access!
+        if (mustFlatten(B))
+            flatten(B,delta);
+        else {
+            lsize = hybridBVIdLength(B->bv.dyn->left);
+            if (i < lsize)
+            {   next = next1(B->bv.dyn->left,i,delta);
+                if (next != -1) return next;
+                i = lsize;
+            }
+            //return lsize + next1(B->bv.dyn->right,i-lsize,delta);
+            next = next1(B->bv.dyn->right,i-lsize,delta);
+            if(next != -1) return lsize + next;
+            return -1;
+        }
+    }
+    if (B->type == tLeaf) return leafBVIdNext(B->bv.leaf,i);
+    return staticBVIdNext(B->bv.stat,i);
+}
+
+int64_t hybridBVIdNext (hybridBVId B, uint64_t i)
+
+{ int64_t delta = 0;
+    int64_t answ = next1(B,i,&delta);
+    if (delta) recompute(B,i,delta);
+    return answ;
+}
 
 uint checkOnes(hybridBVId B) {
     if(B->type == tDynamic) {

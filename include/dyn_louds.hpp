@@ -82,6 +82,10 @@ namespace dyn_cds {
             return hybridBVIdSelect(m_B, i);
         }
 
+        size_type next(size_type i) const {
+            return hybridBVIdNext(m_B, i);
+        }
+
 
         //! Copy constructor
         dyn_louds(const dyn_louds &o) {

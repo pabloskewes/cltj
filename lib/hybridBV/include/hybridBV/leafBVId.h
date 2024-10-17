@@ -81,4 +81,5 @@ uint leafBVIdRank (leafBVId B, uint i);
 	// computes select_1(B,j), zero-based, assumes j is right
 uint leafBVIdSelect (leafBVId B, uint j);
 
+int leafBVIdNext (leafBVId B, uint i);
 #endif

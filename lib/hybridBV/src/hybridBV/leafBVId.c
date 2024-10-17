@@ -481,3 +481,24 @@ uint leafBVIdSelect(leafBVId B, uint j) {
         i++;
     }
 }
+
+// trick for lowest 1 in a 64-bit word
+static int decode[64] = {
+    0, 1,56, 2,57,49,28, 3,61,58,42,50,38,29,17, 4,
+   62,47,59,36,45,43,51,22,53,39,33,30,24,18,12, 5,
+   63,55,48,27,60,41,37,16,46,35,44,21,52,32,23,11,
+   54,26,40,15,34,20,31,10,25,14,19, 9,13, 8, 7, 6 };
+
+int leafBVIdNext (leafBVId B, uint i)
+
+{ uint p;
+    uint64_t word;
+    p = i/w64;
+    word = B->data[p] & ((~(uint64_t)0)<<(i%w64));
+    while ((++p*w64 <= B->size) && !word)
+        word = B->data[p];
+    if (p*w64 > B->size)
+        word &= (((uint64_t)1) << (B->size % w64)) - 1;
+    if (!word) return -1;
+    return (p-1)*w64 + decode[(0x03f79d71b4ca8b09 * (word & -word))>>58];
+}

@@ -137,7 +137,8 @@ namespace cltj {
             Returns how many children said node has
         */
         size_type children(size_type i) const {
-            return m_louds.select(m_louds.rank(i+1)+1) - i; //TODO: implementar successors
+            //return m_louds.select(m_louds.rank(i+1)+1) - i;
+            return m_louds.next(i+1) - i;
             //return m_succ(i + 1) - i;
         }
 

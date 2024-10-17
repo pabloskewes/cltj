@@ -258,7 +258,7 @@ namespace cltj {
                     states[l+1] = bs.first;
                     if(l == 0) exists_l0 = true;
                 }
-                //std::cout << "trie=" << i << " l=" << l << std::endl;
+                std::cout << "trie=" << i << " l=" << l << std::endl;
                 r += (l == 3);
             }
             return r;

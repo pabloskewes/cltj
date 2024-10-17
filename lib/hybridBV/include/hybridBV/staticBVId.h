@@ -62,4 +62,6 @@ extern inline uint64_t staticBVIdRank (staticBVId B, uint64_t i);
 	// computes select_1(B,j), zero-based, assumes j is right
 extern uint64_t staticBVIdSelect (staticBVId B, uint64_t j);
 
+int64_t staticBVIdNext(staticBVId B, uint64_t i);
+
 #endif

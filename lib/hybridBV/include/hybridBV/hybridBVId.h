@@ -90,6 +90,6 @@ uint checkOnes(hybridBVId B);
 
 uint checkOnesPrint(hybridBVId B);
 
-
+int64_t hybridBVIdNext (hybridBVId B, uint64_t i);
 
 #endif //HYBRIDLOUDS_H
