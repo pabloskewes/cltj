@@ -581,14 +581,6 @@ void insert(hybridBVId B, uint64_t i, uint bv_v, uint64_t id_v, uint first, uint
             B->bv.dyn = splitLeaf(B->bv.leaf);
             *recalc = 1; // leaf added
         } else {
-            /*if (prevent) {
-                leafBVIdWriteBV(B->bv.leaf, i, 0);
-                leafBVIdInsertBV(B->bv.leaf, i, 1);
-            }else {
-                leafBVIdInsertBV(B->bv.leaf, i, bv_v);
-            }
-            leafBVIdInsertId(B->bv.leaf, i, id_v);*/
-
             leafBVIdInsert(B->bv.leaf, i, bv_v, id_v, first);
             return;
         }
