@@ -120,7 +120,6 @@ void staticBVIdDestroy(staticBVId B) {
 void staticBVIdSave(staticBVId B, FILE *file) {
     myfwrite(&B->size, sizeof(uint64_t), 1, file);
     myfwrite(&B->width, sizeof(byte), 1, file);
-    myfwrite(&B->ones, sizeof(uint64_t), 1, file);
     if (B->size != 0) {
         myfwrite(B->data, sizeof(uint64_t), (B->size + w64 - 1) / w64, file); //bitvector
         myfwrite(B->id_data, sizeof(uint64_t), (B->size * B->width + w64 - 1) / w64, file); //sequence
@@ -137,11 +136,9 @@ staticBVId staticBVIdLoad(FILE *file) {
     byte width;
     myfread(&size, sizeof(uint64_t), 1, file);
     myfread(&width, sizeof(byte), 1, file);
-    myfread(&ones, sizeof(uint64_t), 1, file);
     B = (staticBVId) myalloc(sizeof(struct s_staticBVId));
     B->size = size;
     B->width = width;
-    B->ones = ones;
     if (size == 0) {
         B->data = NULL;
         B->id_data = NULL;

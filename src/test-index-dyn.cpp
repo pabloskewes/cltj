@@ -38,7 +38,7 @@ int main(int argc, char **argv) {
 
     std::random_device rd;
     std::mt19937 g(rd());
-    //std::shuffle(D.begin(), D.end(), g);
+    std::shuffle(D.begin(), D.end(), g);
 
     cltj::cltj_index_spo_dyn<cltj::compact_trie_dyn_v2<>> index;
 
