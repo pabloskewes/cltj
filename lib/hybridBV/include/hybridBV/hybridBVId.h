@@ -90,6 +90,11 @@ uint checkOnes(hybridBVId B);
 
 uint checkOnesPrint(hybridBVId B);
 
-int64_t hybridBVIdNext (hybridBVId B, uint64_t i);
+int64_t hybridBVIdNext1 (hybridBVId B, uint64_t i);
+
+// finds first value >= c in [i..j], which must be increasing
+// returns j+1 if not found
+
+uint64_t hybridBVIdNext (hybridBVId B, uint64_t i, uint64_t j, uint64_t c, uint* found);
 
 #endif //HYBRIDLOUDS_H

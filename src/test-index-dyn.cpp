@@ -56,7 +56,7 @@ int main(int argc, char **argv) {
         for (uint64_t i = beg; i < last; ++i) {
             index.insert(D[i]);
            // index.print();
-            /*for(uint64_t ii = 0; ii <= i; ++ii) {
+           /* for(uint64_t ii = 0; ii <= i; ++ii) {
                 auto r = index.test_exists(D[ii]);
                 if (r < 6) {
                     std::cout << "====================" << std::endl;

@@ -154,6 +154,10 @@ namespace cltj {
             m_louds.check_print();
         }
 
+        std::pair<size_type, bool> next(size_type i, size_type j, value_type val) {
+            return m_louds.next(i, j, val);
+        }
+
         std::pair<uint32_t, uint64_t> binary_search_seek(uint32_t val, uint32_t i, uint32_t f) const {
             if (m_louds[f] < val) return std::make_pair(0, f + 1);
             uint64_t mid;

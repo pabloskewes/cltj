@@ -340,7 +340,7 @@ static int decode[64] = {
     54, 26, 40, 15, 34, 20, 31, 10, 25, 14, 19, 9, 13, 8, 7, 6
 };
 
-int64_t staticBVIdNext(staticBVId B, uint64_t i) {
+int64_t staticBVIdNext1(staticBVId B, uint64_t i) {
 
     uint64_t p, b, sb;
     uint64_t word, rank;
@@ -370,4 +370,65 @@ int64_t staticBVIdNext(staticBVId B, uint64_t i) {
     rank = B->S[(sb * K * w64) >> w16] + B->B[sb];
     if (rank == B->ones) return -1;
     return staticBVIdSelect(B, rank + 1);
+}
+
+
+uint staticBVIdNext (staticBVId B, uint i, uint j, uint64_t c, uint *found)
+
+{ uint width,iq,ir,d,m;
+    uint64_t v;
+    width = B->width;
+    // answer is i
+    iq = i*B->width/w64;
+    ir = (i*B->width)%w64;
+    v = B->id_data[iq] >> ir;
+    if (ir+width >= w64)
+        v |= B->id_data[iq+1] << (w64-ir);
+    v &= ((((uint64_t)1) << width) - 1);
+    if (v >= c) {
+        *found = (v == c);
+        return i;
+    }
+    // answer is j+1
+    iq = j*B->width/w64;
+    ir = (j*B->width)%w64;
+    v = B->id_data[iq] >> ir;
+    if (ir+width >= w64)
+        v |= B->id_data[iq+1] << (w64-ir);
+    v &= ((((uint64_t)1) << width) - 1);
+    if (v < c) {
+        *found = 0;
+        return j+1;
+    }
+    // invariant data[i] < c and data[j] >= c
+    d = 1;
+    while (i+d <= j)
+    { iq = (i+d)*B->width/w64;
+        ir = ((i+d)*B->width)%w64;
+        v = B->id_data[iq] >> ir;
+        if (ir+width >= w64)
+            v |= B->id_data[iq+1] << (w64-ir);
+        v &= ((((uint64_t)1) << width) - 1);
+        if (v >= c) break;
+        i += d; d <<= 1;
+    }
+    d = mymin(j,i+d); // data[d] >= j
+    while (i<d)
+    { m = (i+d)>>1;
+        iq = m*B->width/w64;
+        ir = (m*B->width)%w64;
+        v = B->id_data[iq] >> ir;
+        if (ir+width >= w64)
+            v |= B->id_data[iq+1] << (w64-ir);
+        v &= ((((uint64_t)1) << width) - 1);
+        if (v < c) i = m+1; else d = m;
+    }
+    iq = d*B->width/w64;
+    ir = (d*B->width)%w64;
+    v = B->id_data[iq] >> ir;
+    if (ir+width >= w64)
+        v |= B->id_data[iq+1] << (w64-ir);
+    v &= ((((uint64_t)1) << width) - 1);
+    *found = (v == c);
+    return d;
 }

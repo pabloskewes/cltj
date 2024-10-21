@@ -81,5 +81,9 @@ uint leafBVIdRank (leafBVId B, uint i);
 	// computes select_1(B,j), zero-based, assumes j is right
 uint leafBVIdSelect (leafBVId B, uint j);
 
-int leafBVIdNext (leafBVId B, uint i);
+int leafBVIdNext1 (leafBVId B, uint i);
+
+// finds first value >= c in [i..j], which must be increasing
+// returns j+1 if not found
+uint leafBVIdNext (leafBVId B, uint i, uint j, uint64_t c, uint* found);
 #endif

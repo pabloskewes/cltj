@@ -489,7 +489,7 @@ static int decode[64] = {
    63,55,48,27,60,41,37,16,46,35,44,21,52,32,23,11,
    54,26,40,15,34,20,31,10,25,14,19, 9,13, 8, 7, 6 };
 
-int leafBVIdNext (leafBVId B, uint i)
+int leafBVIdNext1 (leafBVId B, uint i)
 
 { uint p;
     uint64_t word;
@@ -501,4 +501,66 @@ int leafBVIdNext (leafBVId B, uint i)
         word &= (((uint64_t)1) << (B->size % w64)) - 1;
     if (!word) return -1;
     return (p-1)*w64 + decode[(0x03f79d71b4ca8b09 * (word & -word))>>58];
+}
+
+// finds first value >= c in [i..j], which must be increasing
+// returns j+1 if not found
+
+uint leafBVIdNext (leafBVId B, uint i, uint j, uint64_t c, uint *found)
+
+{ uint width,iq,ir,d,m;
+    uint64_t v;
+    width = B->width;
+    // answer is i
+    iq = i*B->width/w64;
+    ir = (i*B->width)%w64;
+    v = B->id_data[iq] >> ir;
+    if (ir+width >= w64)
+        v |= B->id_data[iq+1] << (w64-ir);
+    v &= ((((uint64_t)1) << width) - 1);
+    if (v >= c) {
+        *found = (v == c);
+        return i;
+    }// answer is j+1
+    iq = j*B->width/w64;
+    ir = (j*B->width)%w64;
+    v = B->id_data[iq] >> ir;
+    if (ir+width >= w64)
+        v |= B->id_data[iq+1] << (w64-ir);
+    v &= ((((uint64_t)1) << width) - 1);
+    if (v < c) {
+        *found = 0;
+        return j+1;
+    }
+    // invariant data[i] < c and data[j] >= c
+    d = 1;
+    while (i+d <= j)
+    { iq = (i+d)*B->width/w64;
+        ir = ((i+d)*B->width)%w64;
+        v = B->id_data[iq] >> ir;
+        if (ir+width >= w64)
+            v |= B->id_data[iq+1] << (w64-ir);
+        v &= ((((uint64_t)1) << width) - 1);
+        if (v >= c) break;
+        i += d; d <<= 1;
+    }
+    d = mymin(j,i+d); // data[d] >= j
+    while (i<d)
+    { m = (i+d)>>1;
+        iq = m*B->width/w64;
+        ir = (m*B->width)%w64;
+        v = B->id_data[iq] >> ir;
+        if (ir+width >= w64)
+            v |= B->id_data[iq+1] << (w64-ir);
+        v &= ((((uint64_t)1) << width) - 1);
+        if (v < c) i = m+1; else d = m;
+    }
+    iq = d*B->width/w64;
+    ir = (d*B->width)%w64;
+    v = B->id_data[iq] >> ir;
+    if (ir+width >= w64)
+        v |= B->id_data[iq+1] << (w64-ir);
+    v &= ((((uint64_t)1) << width) - 1);
+    *found = (v == c);
+    return d;
 }

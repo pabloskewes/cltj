@@ -883,16 +883,56 @@ static int64_t next1 (hybridBVId B, uint64_t i, int64_t *delta)
             return -1;
         }
     }
-    if (B->type == tLeaf) return leafBVIdNext(B->bv.leaf,i);
-    return staticBVIdNext(B->bv.stat,i);
+    if (B->type == tLeaf) return leafBVIdNext1(B->bv.leaf,i);
+    return staticBVIdNext1(B->bv.stat,i);
 }
 
-int64_t hybridBVIdNext (hybridBVId B, uint64_t i)
+int64_t hybridBVIdNext1 (hybridBVId B, uint64_t i)
 
 { int64_t delta = 0;
     int64_t answ = next1(B,i,&delta);
     if (delta) recompute(B,i,delta);
     return answ;
+}
+
+// finds first value >= c in [i..j], which must be increasing
+// returns j+1 if not found
+
+static uint64_t next (hybridBVId B, uint64_t i, uint64_t j, uint64_t c,
+             uint *recomp, uint *found)
+
+{ uint64_t lsize;
+    int64_t delta;
+    int64_t n;
+    // too hard to maintain upon deletions if (B->max < c) return j+1;
+    if (B->type == tDynamic)
+    { B->bv.dyn->accesses++;
+        if (mustFlatten(B)) {
+            delta = 0;
+            flatten(B,&delta);
+            if (delta) *recomp = 1;
+        }
+        else {
+            lsize = hybridBVIdLength(B->bv.dyn->left);
+            if (j < lsize)
+                return next(B->bv.dyn->left,i,j,c,recomp,found);
+            if (i >= lsize)
+                return lsize + next(B->bv.dyn->right,i-lsize,j-lsize,c,recomp,found);
+            n = next(B->bv.dyn->left,i,lsize-1,c,recomp,found);
+            if (n < lsize) return n;
+            return lsize + next(B->bv.dyn->right,0,j-lsize,c,recomp,found);
+        }
+    }
+    if (B->type == tLeaf) return leafBVIdNext(B->bv.leaf,i,j,c,found);
+    else return staticBVIdNext(B->bv.stat,i,j,c,found);
+}
+
+uint64_t hybridBVIdNext (hybridBVId B, uint64_t i, uint64_t j, uint64_t c, uint *found)
+
+{ uint recomp = 0;
+    uint64_t n = next(B,i,j,c,&recomp,found);
+    if (recomp) rrecompute(B,i,j-i+1);
+    return n;
 }
 
 uint checkOnes(hybridBVId B) {
