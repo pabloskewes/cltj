@@ -197,7 +197,7 @@ static void flatten(hybridBVId B, int64_t *delta) {
 // returns a dynamicId and destroys B
 
 static dynamicBVId splitFrom(uint64_t *data, uint64_t *id_data, uint64_t n, uint64_t ones, uint width, uint64_t i) {
-    //printf("splitFrom\n");
+    //printf("splitFrom i=%lu\n", i);
     hybridBVId HB;
     dynamicBVId DB, finalDB;
     uint bnum; // size in elements of blocks to create
@@ -665,6 +665,7 @@ typedef struct{
 // deletes B[i], assumes i is right
 // last from deleted, -1 if has not changed
 static res_delete delete(hybridBVId B, uint64_t i, uint more, uint *recalc, uint *nl) {
+
     uint64_t lsize, rsize;
     hybridBVId B2;
     int64_t delta;
@@ -680,8 +681,6 @@ static res_delete delete(hybridBVId B, uint64_t i, uint more, uint *recalc, uint
         if(leafBVIdLength(B->bv.leaf) > 0) {
             r.last = leafBVIdAccessId(B->bv.leaf, leafBVIdLength(B->bv.leaf) - 1);
             //printf("last: %lu\n", r.last);
-        }else {
-            r.last = 0;
         }
         return r;
     }
@@ -737,12 +736,22 @@ static res_delete delete(hybridBVId B, uint64_t i, uint more, uint *recalc, uint
             *B = *B2;
             *recalc = 1;
             //printf("rsize=1 last=%lu\n", B->bv.dyn->last);
-            r.last = B->bv.dyn->last;
+            r.last = hybridBVIdLast(B);
             return r;
         }
     }
     B->bv.dyn->size--;
     B->bv.dyn->ones += r.diff;
+    if (r.last != -1) {
+        B->bv.dyn->last = r.last;
+        // printf("end last=%lu\n", r.last);
+    }
+    uint ok = checkLast(B);
+    if(!ok) {
+        printf("error deleting i=%lu\n", i);
+        checkLastPrint(B);
+        exit(0);
+    }
     if (B->bv.dyn->size <= leafBVIdNewSize(B->bv.dyn->width)) {
         // merge leaves
         //printf("merge leaves\n");
@@ -758,10 +767,6 @@ static res_delete delete(hybridBVId B, uint64_t i, uint more, uint *recalc, uint
         flatten(B, &delta);
         if (delta) *recalc = 1;
         return r;
-    }
-    if (r.last != -1) {
-        B->bv.dyn->last = r.last;
-       // printf("end last=%lu\n", r.last);
     }
    // printf("return last=%lu\n", r.last);
     return r;

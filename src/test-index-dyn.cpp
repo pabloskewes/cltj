@@ -119,30 +119,13 @@ int main(int argc, char **argv) {
         std::cout << "\r remove: 0% (0/" << last-beg << ")" << std::flush;
         start = timer::now();
         for (uint64_t i = beg; i < last; ++i) {
-            /*std::cout << "i=" << i << std::endl;
-            if(i == 112) {
-                std::cout << "aa " << std::endl;
-            }*/
-            if(i == 173076) {
-                std::cout << "aaa" << std::endl;
-            }
-           /*auto a = index.test_exists(D[i]);
-           if (a < 6) {
-               std::cout << "====================" << std::endl;
-               index.print();
-               std::cout << "Error looking for D[" << i << "]=(" << D[i][0] << ", " << D[i][1] << ", " << D[i][2] << ") appears in "
-                       << a << " tries." << std::endl;
-               index.test_exists_error(D[i]);
-               exit(0);
-           }*/
-            //std::cout <<"i=" << i << std::endl;
             index.remove(D[i]);
-            bool ok = index.check_last();
+            /*bool ok = index.check_last();
             std::cout << "check : " << ok << " at i=" << i << std::endl;
             if(!ok) {
                 index.check_last_print();
                 exit(0);
-            }
+            }*/
            // std::cout << "check: " << ok << std::endl;
 
             //if(i ==2) index.print();
@@ -172,9 +155,9 @@ int main(int argc, char **argv) {
         stop = timer::now();
         ms_time = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
         std::cout << "\r remove: 100% (" << last-beg << "/" << last-beg << ") takes " << ms_time << " ms [" << index.n_triples << "]" << std::endl;
-        auto ok = index.check();
+        auto ok = index.check_last();
         if(!ok) {
-            index.check_print();
+            index.check_last_print();
             exit(0);
         }
         /*std::cout << "\r check_remove: 0% (0/" << queries << ")" << std::flush;
