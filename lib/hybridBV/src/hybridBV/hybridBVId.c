@@ -746,12 +746,6 @@ static res_delete delete(hybridBVId B, uint64_t i, uint more, uint *recalc, uint
         B->bv.dyn->last = r.last;
         // printf("end last=%lu\n", r.last);
     }
-    uint ok = checkLast(B);
-    if(!ok) {
-        printf("error deleting i=%lu\n", i);
-        checkLastPrint(B);
-        exit(0);
-    }
     if (B->bv.dyn->size <= leafBVIdNewSize(B->bv.dyn->width)) {
         // merge leaves
         //printf("merge leaves\n");
