@@ -150,8 +150,16 @@ namespace dyn_cds {
             return checkOnes(m_B);
         }
 
+        bool check_last() {
+            return checkLast(m_B);
+        }
+
         void check_print() {
             checkOnesPrint(m_B);
+        }
+
+        void check_last_print() {
+            checkLastPrint(m_B);
         }
 
 

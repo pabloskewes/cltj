@@ -7,7 +7,7 @@
 
 int main() {
 
-    if(1) {
+    if(0) {
             std::vector<cltj::spo_triple> D;
             cltj::spo_triple t1{5, 8, 2};
             cltj::spo_triple t2{5, 8, 3};
@@ -19,7 +19,7 @@ int main() {
             index.print();
     }
 
-    if(0) {
+    if(1) {
         std::vector<cltj::spo_triple> D;
         cltj::spo_triple t1{5, 8, 2};
         cltj::spo_triple t2{5, 8, 3};

@@ -413,7 +413,7 @@ uint staticBVIdNext (staticBVId B, uint i, uint j, uint64_t c, uint *found)
         i += d; d <<= 1;
     }
     d = mymin(j,i+d); // data[d] >= j
-    while (i<d)
+    while (i+1<d)
     { m = (i+d)>>1;
         iq = m*B->width/w64;
         ir = (m*B->width)%w64;
@@ -421,7 +421,7 @@ uint staticBVIdNext (staticBVId B, uint i, uint j, uint64_t c, uint *found)
         if (ir+width >= w64)
             v |= B->id_data[iq+1] << (w64-ir);
         v &= ((((uint64_t)1) << width) - 1);
-        if (v < c) i = m+1; else d = m;
+        if (v < c) i = m; else d = m;
     }
     iq = d*B->width/w64;
     ir = (d*B->width)%w64;

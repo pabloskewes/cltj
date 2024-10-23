@@ -277,6 +277,7 @@ namespace cltj {
             states[0].pos = 0; states[0].first_child = true; states[0].rem = false;
             size_type b, e, gap;
             for(size_type i = 0; i < m_tries.size(); ++i) {
+            //for(size_type i = 2; i < 3; ++i) {
                 bool skip_level = i & 0x1;
                 for(size_type l = skip_level; l < 3; ++l) {
                     gap = 1;
@@ -411,11 +412,28 @@ namespace cltj {
             return ok;
         }
 
+        bool check_last() {
+            bool ok = true;
+            for(uint64_t i = 0; i < 6; ++i) {
+                ok &= m_tries[i].check_last();
+            }
+            return ok;
+        }
+
         void check_print() {
             bool ok = true;
             for(uint64_t i = 0; i < 6; ++i) {
                 std::cout << "------ TRIE=" << i << " ------"<< std::endl;
                 m_tries[i].check_print();
+                std::cout << std::endl;
+            }
+        }
+
+        void check_last_print() {
+            bool ok = true;
+            for(uint64_t i = 0; i < 6; ++i) {
+                std::cout << "------ TRIE=" << i << " ------"<< std::endl;
+                m_tries[i].check_last_print();
                 std::cout << std::endl;
             }
         }

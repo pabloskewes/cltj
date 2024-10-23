@@ -15,6 +15,7 @@ typedef struct s_dynamicBVId
 {   uint64_t size;
     uint64_t ones;
     byte width; // up to w
+    uint64_t last; // last value in subtree
     uint64_t leaves; // leaves below node
     uint64_t accesses; // since last update
     hybridBVId left,right; // hybridIds
@@ -88,7 +89,11 @@ uint64_t hybridBVIdSelect (hybridBVId B, uint64_t j);
 
 uint checkOnes(hybridBVId B);
 
+uint checkLast(hybridBVId B);
+
 uint checkOnesPrint(hybridBVId B);
+
+uint checkLastPrint(hybridBVId B);
 
 int64_t hybridBVIdNext1 (hybridBVId B, uint64_t i);
 

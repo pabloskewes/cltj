@@ -38,13 +38,13 @@ int main(int argc, char **argv) {
 
     std::random_device rd;
     std::mt19937 g(rd());
-    std::shuffle(D.begin(), D.end(), g);
+    //std::shuffle(D.begin(), D.end(), g);
 
     cltj::cltj_index_spo_dyn<cltj::compact_trie_dyn_v2<>> index;
 
 
     uint64_t block_size = D.size() / 100;
-    //uint64_t block_size = 1000;
+    //uint64_t block_size = 20;
     //sdsl::memory_monitor::stop();
     uint64_t beg = 0;
     for (uint64_t k = 0; k < steps; ++k ) {
@@ -101,6 +101,7 @@ int main(int argc, char **argv) {
         for (uint64_t i = beg; i < last; ++i) {
             auto r = index.test_exists(D[i]);
             if (r < 6) {
+                index.print();
                 std::cout << "Error looking for D[" << i << "]=(" << D[i][0] << ", " << D[i][1] << ", " << D[i][2] << ") appears in "
                         << r << " tries." << std::endl;
                 index.test_exists_error(D[i]);
@@ -122,6 +123,9 @@ int main(int argc, char **argv) {
             if(i == 112) {
                 std::cout << "aa " << std::endl;
             }*/
+            if(i == 173076) {
+                std::cout << "aaa" << std::endl;
+            }
            /*auto a = index.test_exists(D[i]);
            if (a < 6) {
                std::cout << "====================" << std::endl;
@@ -133,14 +137,16 @@ int main(int argc, char **argv) {
            }*/
             //std::cout <<"i=" << i << std::endl;
             index.remove(D[i]);
-
+            bool ok = index.check_last();
+            std::cout << "check : " << ok << " at i=" << i << std::endl;
+            if(!ok) {
+                index.check_last_print();
+                exit(0);
+            }
            // std::cout << "check: " << ok << std::endl;
 
             //if(i ==2) index.print();
             /*for(uint64_t ii = 0; ii <= i; ++ii) {
-                if(ii == 112) {
-                    std::cout << "bb" << std::endl;
-                }
                auto r = index.test_exists(D[ii]);
                 ok = index.check();
                 std::cout << "check after test: " << ok << std::endl;

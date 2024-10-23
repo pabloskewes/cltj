@@ -150,8 +150,16 @@ namespace cltj {
             return m_louds.check();
         }
 
+        bool check_last() {
+            return m_louds.check_last();
+        }
+
         void check_print() {
             m_louds.check_print();
+        }
+
+        void check_last_print() {
+            m_louds.check_last_print();
         }
 
         std::pair<size_type, bool> next(size_type i, size_type j, value_type val) {

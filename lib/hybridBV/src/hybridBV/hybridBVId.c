@@ -42,7 +42,6 @@ hybridBVId hybridBVIdCreateFrom64(uint64_t *bv_data, uint64_t *id_data, uint64_t
 }
 
 
-
 hybridBVId hybridBVIdCreateFromPacked(uint64_t *bv_data, uint64_t *id_data, uint64_t n, uint width) {
     hybridBVId B = myalloc(sizeof(struct s_hybridBVId));
     if (n > leafBVIdNewSize(width)) {
@@ -119,7 +118,7 @@ static void packedRead(hybridBVId B, uint64_t *D, uint64_t j) {
         packedRead(B->bv.dyn->right, D, j + lsize);
         return;
     }
-    width =hybridBVIdWidth(B);
+    width = hybridBVIdWidth(B);
     if (B->type == tStatic)
         copyBits(D, j * width, B->bv.stat->id_data, 0, hybridBVIdLength(B) * width);
     else copyBits(D, j * width, B->bv.leaf->id_data, 0, hybridBVIdLength(B) * width);
@@ -128,7 +127,7 @@ static void packedRead(hybridBVId B, uint64_t *D, uint64_t j) {
 static void myread(hybridBVId B, uint64_t i, uint64_t l, uint64_t *D, uint64_t j) {
     uint64_t lsize;
     if (B->type == tLeaf) {
-        copyBits(D,j,B->bv.leaf->data,i,l);
+        copyBits(D, j, B->bv.leaf->data, i, l);
         return;
     }
     if (B->type == tDynamic) {
@@ -141,7 +140,7 @@ static void myread(hybridBVId B, uint64_t i, uint64_t l, uint64_t *D, uint64_t j
         }
         return;
     }
-    copyBits(D,j,B->bv.stat->data,i,l);
+    copyBits(D, j, B->bv.stat->data, i, l);
 }
 
 
@@ -172,7 +171,7 @@ static inline uint64_t hybridBVIdLeaves(hybridBVId B) {
 // delta gives the difference in leaves (new - old)
 
 static void flatten(hybridBVId B, int64_t *delta) {
-    //printf("flatten\n");
+   // printf("flatten\n");
     uint64_t len;
     uint64_t *bv_D, *id_D;
     uint width;
@@ -228,6 +227,15 @@ static dynamicBVId splitFrom(uint64_t *data, uint64_t *id_data, uint64_t n, uint
         DB->ones = ones;
         DB->leaves = nblock;
         DB->accesses = 0;
+        if (width == w64) DB->last = id_data[end - 1];
+        else {
+            uint iq = ((end - 1) * width) / w64;
+            uint ir = ((end - 1) * width) % w64;
+            uint64_t word = (id_data[iq] >> ir);
+            if (ir + width > w64) word |= id_data[iq + 1] << (w64 - ir);
+            DB->last = word & ((((uint64_t) 1) << width) - 1);
+            //printf("DB->last= %lu\n", DB->last);
+        }
         mid = start + (nblock / 2) * bnum;
         mid_ptr = start_ptr + (nblock / 2) * bsize;
         if (i / bnum < nblock / 2) {
@@ -236,8 +244,8 @@ static dynamicBVId splitFrom(uint64_t *data, uint64_t *id_data, uint64_t n, uint
             DB->right = HB = (hybridBVId) myalloc(sizeof(struct s_hybridBVId));
             if (n - (nblock / 2) * bnum > leafBVIdNewSize(width)) {
                 // create a static
-                segment = (uint64_t *) myalloc((end - mid + w64 -1) / w64 * sizeof(uint64_t));
-                memcpy(segment, mid_ptr, (end - mid + w64 -1) / w64 * sizeof(uint64_t));
+                segment = (uint64_t *) myalloc((end - mid + w64 - 1) / w64 * sizeof(uint64_t));
+                memcpy(segment, mid_ptr, (end - mid + w64 - 1) / w64 * sizeof(uint64_t));
 
                 id_segment = (uint64_t *) myalloc((((end - mid) * width + w64 - 1) / w64) * sizeof(uint64_t));
                 copyBits(id_segment, 0, id_data, mid * width, (end - mid) * width);
@@ -246,7 +254,8 @@ static dynamicBVId splitFrom(uint64_t *data, uint64_t *id_data, uint64_t n, uint
             } else {
                 // create a leaf
                 HB->type = tLeaf;
-                HB->bv.leaf = leafBVIdCreateFromPacked((uint64_t*) mid_ptr, id_data, mid, n - (nblock/2) * bnum, width, 0);
+                HB->bv.leaf = leafBVIdCreateFromPacked((uint64_t *) mid_ptr, id_data, mid, n - (nblock / 2) * bnum,
+                                                       width, 0);
             }
             // continue for left half
             end = mid;
@@ -260,17 +269,18 @@ static dynamicBVId splitFrom(uint64_t *data, uint64_t *id_data, uint64_t n, uint
             DB->left = HB = (hybridBVId) myalloc(sizeof(struct s_hybridBVId));
             if ((nblock / 2) * bnum > leafBVIdNewSize(width)) {
                 // create a static
-                segment = (uint64_t *) myalloc((mid - start + w64 -1) / w64 * sizeof(uint64_t));
-                memcpy(segment, start_ptr, (mid - start + w64 -1) / w64 * sizeof(uint64_t));
+                segment = (uint64_t *) myalloc((mid - start + w64 - 1) / w64 * sizeof(uint64_t));
+                memcpy(segment, start_ptr, (mid - start + w64 - 1) / w64 * sizeof(uint64_t));
                 id_segment = (uint64_t *) myalloc((((mid - start) * width + w64 - 1) / w64)
-                                               * sizeof(uint64_t));
+                                                  * sizeof(uint64_t));
                 copyBits(id_segment, 0, id_data, start * width, (mid - start) * width);
                 HB->type = tStatic;
                 HB->bv.stat = staticBVIdCreateFromPacked(segment, id_segment, (nblock / 2) * bnum, width);
             } else {
                 // create a leaf
                 HB->type = tLeaf;
-                HB->bv.leaf = leafBVIdCreateFromPacked((uint64_t*) start_ptr, id_data, start, (nblock/2) * bnum, width, 0);
+                HB->bv.leaf = leafBVIdCreateFromPacked((uint64_t *) start_ptr, id_data, start, (nblock / 2) * bnum,
+                                                       width, 0);
             }
             // continue for right half
             start = mid;
@@ -284,7 +294,7 @@ static dynamicBVId splitFrom(uint64_t *data, uint64_t *id_data, uint64_t n, uint
     }
     // finally, the leaf where i lies
     HB->type = tLeaf;
-    HB->bv.leaf = leafBVIdCreateFromPacked((uint64_t*) start_ptr, id_data, start, n, width, 0);
+    HB->bv.leaf = leafBVIdCreateFromPacked((uint64_t *) start_ptr, id_data, start, n, width, 0);
     return finalDB;
 }
 
@@ -338,7 +348,7 @@ static dynamicBVId splitLeaf(leafBVId B) {
     HB1->type = tLeaf;
     HB1->bv.leaf = LB;
     LB = leafBVIdCreateFromPacked((uint64_t *) (((byte *) B->data) + bsize),
-                            B->id_data, bnum, B->size - bnum, B->width, 0);
+                                  B->id_data, bnum, B->size - bnum, B->width, 0);
     HB2 = (hybridBVId) myalloc(sizeof(struct s_hybridBVId));
     HB2->type = tLeaf;
     HB2->bv.leaf = LB;
@@ -350,6 +360,7 @@ static dynamicBVId splitLeaf(leafBVId B) {
     DB->leaves = 2;
     DB->left = HB1;
     DB->right = HB2;
+    DB->last = hybridBVIdAccessId(HB2, bnum - 1);
     leafBVIdDestroy(B);
     return DB;
 }
@@ -498,6 +509,12 @@ extern inline uint64_t hybridBVIdLength(hybridBVId B) {
     return B->bv.dyn->size;
 }
 
+extern inline uint64_t hybridBVIdLast(hybridBVId B) {
+    if (B->type == tLeaf) return leafBVIdAccessId(B->bv.leaf, leafBVIdLength(B->bv.leaf)-1);
+    if (B->type == tStatic) return staticBVIdAccessId(B->bv.stat, staticBVIdLength(B->bv.stat)-1);
+    return B->bv.dyn->last;
+}
+
 // gives width of elements
 
 extern inline uint hybridBVIdWidth(hybridBVId B) {
@@ -565,10 +582,10 @@ static void rrecompute(hybridBVId B, uint64_t i, uint64_t l) {
 }
 
 // inserts v at B[i], assumes i is right and v fits in width
-
-void insert(hybridBVId B, uint64_t i, uint bv_v, uint64_t id_v, uint first, uint *recalc) {
+// returns last value in subtree, -1 if it did not change
+static int64_t insert(hybridBVId B, uint64_t i, uint bv_v, uint64_t id_v, uint first, uint *recalc) {
     uint64_t lsize, rsize;
-    int64_t delta;
+    int64_t delta, last;
     uint width;
     if (B->type == tStatic) {
         B->type = tDynamic;
@@ -582,7 +599,7 @@ void insert(hybridBVId B, uint64_t i, uint bv_v, uint64_t id_v, uint first, uint
             *recalc = 1; // leaf added
         } else {
             leafBVIdInsert(B->bv.leaf, i, bv_v, id_v, first);
-            return;
+            return leafBVIdAccessId(B->bv.leaf, leafBVIdLength(B->bv.leaf) - 1);
         }
     }
     B->bv.dyn->accesses = 0; // reset
@@ -596,8 +613,7 @@ void insert(hybridBVId B, uint64_t i, uint bv_v, uint64_t id_v, uint first, uint
             && (B->bv.dyn->right->type == tLeaf)
             && transferRight(B->bv.dyn)) {
             // avoided, transferred to the right
-            insert(B, i, bv_v, id_v, first, recalc);
-            return;
+            return insert(B, i, bv_v, id_v, first, recalc);
         }
         if ((lsize + 1 > AlphaFactor * (lsize + rsize + 1))
             && (lsize + rsize >= MinLeavesToBalance * leafBVIdMaxSize(width))
@@ -606,10 +622,10 @@ void insert(hybridBVId B, uint64_t i, uint bv_v, uint64_t id_v, uint first, uint
             delta = 0;
             balance(B, i, &delta);
             if (delta) *recalc = 1;
-            insert(B, i, bv_v, id_v, first, recalc);
-            return;
+            return insert(B, i, bv_v, id_v, first, recalc);
         }
         insert(B->bv.dyn->left, i, bv_v, id_v, first, recalc);
+        last = -1; // cannot alter previous last value
     } else {
         if ((rsize == leafBVIdMaxSize(width)) // will overflow if leaf
             && (lsize < leafBVIdMaxSize(width)) // can avoid if leaf
@@ -617,8 +633,7 @@ void insert(hybridBVId B, uint64_t i, uint bv_v, uint64_t id_v, uint first, uint
             && (B->bv.dyn->left->type == tLeaf)
             && transferLeft(B->bv.dyn)) {
             // avoided, transferred to the left
-            insert(B, i, bv_v, id_v, first, recalc);
-            return;
+            return insert(B, i, bv_v, id_v, first, recalc);
         }
         if ((rsize + 1 > AlphaFactor * (lsize + rsize + 1))
             && (lsize + rsize >= MinLeavesToBalance * leafBVIdMaxSize(width))
@@ -627,13 +642,14 @@ void insert(hybridBVId B, uint64_t i, uint bv_v, uint64_t id_v, uint first, uint
             delta = 0;
             balance(B, i, &delta);
             if (delta) *recalc = 1;
-            insert(B, i, bv_v, id_v, first, recalc);
-            return;
+            return insert(B, i, bv_v, id_v, first, recalc);
         }
-        insert(B->bv.dyn->right, i - lsize, bv_v, id_v, first, recalc);
+        last = insert(B->bv.dyn->right, i - lsize, bv_v, id_v, first, recalc);
     }
     B->bv.dyn->size++;
     B->bv.dyn->ones += bv_v;
+    if (last != -1) B->bv.dyn->last = last;
+    return last;
 }
 
 void hybridBVIdInsert(hybridBVId B, uint64_t i, uint bv_v, uint64_t id_v, uint first) {
@@ -642,21 +658,32 @@ void hybridBVIdInsert(hybridBVId B, uint64_t i, uint bv_v, uint64_t id_v, uint f
     if (recalc) irecompute(B, i); // we went to the leaf now holding i
 }
 
+typedef struct{
+    int diff;
+    int64_t last;
+} res_delete;
 // deletes B[i], assumes i is right
-
-static int delete(hybridBVId B, uint64_t i, uint more, uint *recalc, uint* nl) {
+// last from deleted, -1 if has not changed
+static res_delete delete(hybridBVId B, uint64_t i, uint more, uint *recalc, uint *nl) {
     uint64_t lsize, rsize;
     hybridBVId B2;
     int64_t delta;
-    int diff;
+    res_delete r;
     uint width;
     if (B->type == tStatic) {
         B->type = tDynamic;
-        //printf("split on delete"); fflush(stdout);
+        //printf("split on delete\n"); fflush(stdout);
         B->bv.dyn = split(B->bv.stat, i);
     }
     if (B->type == tLeaf) {
-        return leafBVIdDelete(B->bv.leaf, i, more, nl);
+        r.diff = leafBVIdDelete(B->bv.leaf, i, more, nl);
+        if(leafBVIdLength(B->bv.leaf) > 0) {
+            r.last = leafBVIdAccessId(B->bv.leaf, leafBVIdLength(B->bv.leaf) - 1);
+            //printf("last: %lu\n", r.last);
+        }else {
+            r.last = 0;
+        }
+        return r;
     }
     B->bv.dyn->accesses = 0; // reset
     width = B->bv.dyn->width;
@@ -670,10 +697,14 @@ static int delete(hybridBVId B, uint64_t i, uint more, uint *recalc, uint* nl) {
             // too biased
             delta = 0;
             balance(B, i, &delta);
+            //printf("balance 1\n");
             if (delta) *recalc = 1;
             return delete(B, i, more, recalc, nl);
         }
-        diff = delete(B->bv.dyn->left, i, more, recalc, nl);
+        //printf("delete 1\n");
+        r = delete(B->bv.dyn->left, i, more, recalc, nl);
+        r.last = -1;
+        //printf("delete 1 last=%lu\n", r.last);
         if (lsize == 1) {
             // left child is now of size zero, remove
             hybridBVIdDestroy(B->bv.dyn->left);
@@ -681,7 +712,8 @@ static int delete(hybridBVId B, uint64_t i, uint more, uint *recalc, uint* nl) {
             myfree(B->bv.dyn);
             *B = *B2;
             *recalc = 1;
-            return diff;
+            //printf("lsize=1 last=%lu\n", r.last);
+            return r;
         }
     } else {
         if ((lsize > AlphaFactor * (lsize + rsize - 1))
@@ -690,10 +722,13 @@ static int delete(hybridBVId B, uint64_t i, uint more, uint *recalc, uint* nl) {
             // too biased
             delta = 0;
             balance(B, i, &delta);
+            //printf("balance 2\n");
             if (delta) *recalc = 1;
             return delete(B, i, more, recalc, nl);
         }
-        diff = delete(B->bv.dyn->right, i - lsize, more, recalc, nl);
+        //printf("delete 2\n");
+        r = delete(B->bv.dyn->right, i - lsize, more, recalc, nl);
+        //printf("delete 2 last=%lu\n", r.last);
         if (rsize == 1) {
             // right child is now of size zero, remove
             hybridBVIdDestroy(B->bv.dyn->right);
@@ -701,35 +736,48 @@ static int delete(hybridBVId B, uint64_t i, uint more, uint *recalc, uint* nl) {
             myfree(B->bv.dyn);
             *B = *B2;
             *recalc = 1;
-            return diff;
+            //printf("rsize=1 last=%lu\n", B->bv.dyn->last);
+            r.last = B->bv.dyn->last;
+            return r;
         }
     }
     B->bv.dyn->size--;
-    B->bv.dyn->ones += diff;
+    B->bv.dyn->ones += r.diff;
     if (B->bv.dyn->size <= leafBVIdNewSize(B->bv.dyn->width)) {
         // merge leaves
+        //printf("merge leaves\n");
         B->bv.leaf = mergeLeaves(B->bv.dyn);
         B->type = tLeaf;
         *recalc = 1;
-    } else if (B->bv.dyn->size <
-               B->bv.dyn->leaves * leafBVIdNewSize(B->bv.dyn->width) * MinFillFactor) {
+        return r;
+    }
+    if (B->bv.dyn->size <
+        B->bv.dyn->leaves * leafBVIdNewSize(B->bv.dyn->width) * MinFillFactor) {
+        //printf("flatten\n");
         delta = 0;
         flatten(B, &delta);
         if (delta) *recalc = 1;
+        return r;
     }
-    return diff;
+    if (r.last != -1) {
+        B->bv.dyn->last = r.last;
+       // printf("end last=%lu\n", r.last);
+    }
+   // printf("return last=%lu\n", r.last);
+    return r;
 }
 
 int hybridBVIdDelete(hybridBVId B, uint64_t i, uint more) {
     uint recalc = 0, nl = 0;
-    int dif = delete(B, i, more, &recalc, &nl);
+    res_delete r = delete(B, i, more, &recalc, &nl);
     if (recalc) {
+        //printf("recalc\n");
         // the node is now at i-1 or at i, hard to know
         irecompute(B, i - 1);
         irecompute(B, i);
     }
-    if(nl) hybridBVIdWriteBV(B, i, 1); //restoring a 1-bit
-    return dif;
+    if (nl) hybridBVIdWriteBV(B, i, 1); //restoring a 1-bit
+    return r.diff;
 }
 
 // flattening is uncommon and only then we need to recompute
@@ -747,7 +795,7 @@ static void recompute(hybridBVId B, uint64_t i, int64_t delta) {
 
 // access B[i], assumes i is right
 
-uint access(hybridBVId B, uint64_t i, int64_t *delta, uint64_t* id) {
+uint access(hybridBVId B, uint64_t i, int64_t *delta, uint64_t *id) {
     uint64_t lsize;
     if (B->type == tDynamic) {
         B->bv.dyn->accesses++;
@@ -757,7 +805,7 @@ uint access(hybridBVId B, uint64_t i, int64_t *delta, uint64_t* id) {
             lsize = hybridBVIdLength(B->bv.dyn->left);
             if (i < lsize) {
                 return access(B->bv.dyn->left, i, delta, id);
-            }else {
+            } else {
                 return access(B->bv.dyn->right, i - lsize, delta, id);
             }
         }
@@ -765,7 +813,7 @@ uint access(hybridBVId B, uint64_t i, int64_t *delta, uint64_t* id) {
     if (B->type == tLeaf) {
         *id = leafBVIdAccessId(B->bv.leaf, i);
         return leafBVIdAccessBV(B->bv.leaf, i);
-    }else {
+    } else {
         *id = staticBVIdAccessId(B->bv.stat, i);
         return staticBVIdAccessBV(B->bv.stat, i);
     }
@@ -781,14 +829,14 @@ uint64_t accessId(hybridBVId B, uint64_t i, int64_t *delta) {
             lsize = hybridBVIdLength(B->bv.dyn->left);
             if (i < lsize) {
                 return accessId(B->bv.dyn->left, i, delta);
-            }else {
+            } else {
                 return accessId(B->bv.dyn->right, i - lsize, delta);
             }
         }
     }
     if (B->type == tLeaf) {
         return leafBVIdAccessId(B->bv.leaf, i);
-    }else {
+    } else {
         return staticBVIdAccessId(B->bv.stat, i);
     }
 }
@@ -860,109 +908,140 @@ uint64_t hybridBVIdSelect(hybridBVId B, uint64_t j) {
     return answ;
 }
 
-static int64_t next1 (hybridBVId B, uint64_t i, int64_t *delta)
-
-{ uint64_t lsize;
+static int64_t next1(hybridBVId B, uint64_t i, int64_t *delta) {
+    uint64_t lsize;
     int64_t next;
     if (hybridBVIdOnes(B) == 0) return -1;
-    if (B->type == tDynamic)
-    {
+    if (B->type == tDynamic) {
         B->bv.dyn->accesses++; // not considered an access!
         if (mustFlatten(B))
-            flatten(B,delta);
+            flatten(B, delta);
         else {
             lsize = hybridBVIdLength(B->bv.dyn->left);
-            if (i < lsize)
-            {   next = next1(B->bv.dyn->left,i,delta);
+            if (i < lsize) {
+                next = next1(B->bv.dyn->left, i, delta);
                 if (next != -1) return next;
                 i = lsize;
             }
             //return lsize + next1(B->bv.dyn->right,i-lsize,delta);
-            next = next1(B->bv.dyn->right,i-lsize,delta);
-            if(next != -1) return lsize + next;
+            next = next1(B->bv.dyn->right, i - lsize, delta);
+            if (next != -1) return lsize + next;
             return -1;
         }
     }
-    if (B->type == tLeaf) return leafBVIdNext1(B->bv.leaf,i);
-    return staticBVIdNext1(B->bv.stat,i);
+    if (B->type == tLeaf) return leafBVIdNext1(B->bv.leaf, i);
+    return staticBVIdNext1(B->bv.stat, i);
 }
 
-int64_t hybridBVIdNext1 (hybridBVId B, uint64_t i)
-
-{ int64_t delta = 0;
-    int64_t answ = next1(B,i,&delta);
-    if (delta) recompute(B,i,delta);
+int64_t hybridBVIdNext1(hybridBVId B, uint64_t i) {
+    int64_t delta = 0;
+    int64_t answ = next1(B, i, &delta);
+    if (delta) recompute(B, i, delta);
     return answ;
 }
 
 // finds first value >= c in [i..j], which must be increasing
 // returns j+1 if not found
 
-static uint64_t next (hybridBVId B, uint64_t i, uint64_t j, uint64_t c,
-             uint *recomp, uint *found)
-
-{ uint64_t lsize;
+static uint64_t next(hybridBVId B, uint64_t i, uint64_t j, uint64_t c,
+                     uint *recomp, uint *found, uint all) {
+    uint64_t lsize;
     int64_t delta;
     int64_t n;
-    // too hard to maintain upon deletions if (B->max < c) return j+1;
-    if (B->type == tDynamic)
-    { B->bv.dyn->accesses++;
+    if (B->type == tDynamic) {
+        if (all && B->bv.dyn->last < c) return j + 1;
+        B->bv.dyn->accesses++;
         if (mustFlatten(B)) {
             delta = 0;
-            flatten(B,&delta);
+            flatten(B, &delta);
             if (delta) *recomp = 1;
-        }
-        else {
+        } else {
             lsize = hybridBVIdLength(B->bv.dyn->left);
             if (j < lsize)
-                return next(B->bv.dyn->left,i,j,c,recomp,found);
+                return next(B->bv.dyn->left, i, j, c, recomp, found, j == lsize - 1);
             if (i >= lsize)
-                return lsize + next(B->bv.dyn->right,i-lsize,j-lsize,c,recomp,found);
-            n = next(B->bv.dyn->left,i,lsize-1,c,recomp,found);
+                return lsize + next(B->bv.dyn->right, i - lsize, j - lsize, c, recomp, found, all);
+            n = next(B->bv.dyn->left, i, lsize - 1, c, recomp, found, 1);
             if (n < lsize) return n;
-            return lsize + next(B->bv.dyn->right,0,j-lsize,c,recomp,found);
+            return lsize + next(B->bv.dyn->right, 0, j - lsize, c, recomp, found, all);
         }
     }
-    if (B->type == tLeaf) return leafBVIdNext(B->bv.leaf,i,j,c,found);
-    else return staticBVIdNext(B->bv.stat,i,j,c,found);
+    if (B->type == tLeaf) return leafBVIdNext(B->bv.leaf, i, j, c, found);
+    else return staticBVIdNext(B->bv.stat, i, j, c, found);
 }
 
-uint64_t hybridBVIdNext (hybridBVId B, uint64_t i, uint64_t j, uint64_t c, uint *found)
 
-{ uint recomp = 0;
-    uint64_t n = next(B,i,j,c,&recomp,found);
-    if (recomp) rrecompute(B,i,j-i+1);
+uint64_t hybridBVIdNext(hybridBVId B, uint64_t i, uint64_t j, uint64_t c, uint *found) {
+    uint recomp = 0;
+    uint64_t n = next(B, i, j, c, &recomp, found, 0);
+    if (recomp) rrecompute(B, i, j - i + 1);
     return n;
 }
 
 uint checkOnes(hybridBVId B) {
-    if(B->type == tDynamic) {
+    if (B->type == tDynamic) {
         uint64_t ones = hybridBVIdOnes(B->bv.dyn->left) + hybridBVIdOnes(B->bv.dyn->right);
         return ones == hybridBVIdOnes(B) && checkOnes(B->bv.dyn->left) && checkOnes(B->bv.dyn->right);
     }
     return 1;
 }
 
+
+uint checkLast(hybridBVId B) {
+    if (B->type == tDynamic) {
+        return checkLast(B->bv.dyn->left) && (hybridBVIdLast(B->bv.dyn->right) == hybridBVIdLast(B));
+    }
+    return 1;
+}
+
+uint checkLastPrint(hybridBVId B) {
+    if (B->type == tDynamic) {
+        checkLastPrint(B->bv.dyn->left);
+        if(hybridBVIdLast(B->bv.dyn->right) != hybridBVIdLast(B)){
+            printf("falla en dynamic con: %lu, %lu\n", hybridBVIdLast(B), hybridBVIdLength(B));
+            if (B->bv.dyn->left->type == tStatic) {
+                printf("-left: static %lu, %lu \n", hybridBVIdLast(B->bv.dyn->left), hybridBVIdLength(B->bv.dyn->left));
+            } else if (B->bv.dyn->left->type == tLeaf) {
+                printf("-left: leaf %lu, %lu \n", hybridBVIdLast(B->bv.dyn->left), hybridBVIdLength(B->bv.dyn->left));
+            } else {
+                printf("-left: dynamic %lu, %lu \n", hybridBVIdLast(B->bv.dyn->left), hybridBVIdLength(B->bv.dyn->left));
+            }
+            if (B->bv.dyn->right->type == tStatic) {
+                printf("-right: static %lu, %lu \n", hybridBVIdLast(B->bv.dyn->right), hybridBVIdLength(B->bv.dyn->right));
+            } else if (B->bv.dyn->right->type == tLeaf) {
+                printf("-right: leaf %lu, %lu \n", hybridBVIdLast(B->bv.dyn->right), hybridBVIdLength(B->bv.dyn->right));
+            } else {
+                printf("-right: dynamic %lu, %lu \n", hybridBVIdLast(B->bv.dyn->right), hybridBVIdLength(B->bv.dyn->right));
+            }
+            printf("\n");
+            fflush(stdout);
+            return 0;
+        }
+    }
+    return 1;
+}
+
+
 uint checkOnesPrint(hybridBVId B) {
-    if(B->type == tDynamic) {
+    if (B->type == tDynamic) {
         uint64_t ones = hybridBVIdOnes(B->bv.dyn->left) + hybridBVIdOnes(B->bv.dyn->right);
-        if(ones == hybridBVIdOnes(B)) {
+        if (ones == hybridBVIdOnes(B)) {
             return checkOnesPrint(B->bv.dyn->left) && checkOnesPrint(B->bv.dyn->right);
         }
         printf("falla en dynamic con: %lu\n", hybridBVIdOnes(B));
-        if(B->bv.dyn->left->type == tStatic) {
+        if (B->bv.dyn->left->type == tStatic) {
             printf("-left: static %lu \n", hybridBVIdOnes(B->bv.dyn->left));
-        }else if (B->bv.dyn->left->type == tLeaf) {
+        } else if (B->bv.dyn->left->type == tLeaf) {
             printf("-left: leaf %lu \n", hybridBVIdOnes(B->bv.dyn->left));
-        }else {
+        } else {
             printf("-left: dynamic %lu \n", hybridBVIdOnes(B->bv.dyn->left));
         }
 
-        if(B->bv.dyn->right->type == tStatic) {
+        if (B->bv.dyn->right->type == tStatic) {
             printf("-right: static %lu \n", hybridBVIdOnes(B->bv.dyn->right));
-        }else if (B->bv.dyn->right->type == tLeaf) {
+        } else if (B->bv.dyn->right->type == tLeaf) {
             printf("-right: leaf %lu \n", hybridBVIdOnes(B->bv.dyn->right));
-        }else {
+        } else {
             printf("-right: dynamic %lu \n", hybridBVIdOnes(B->bv.dyn->right));
         }
         printf("\n");
