@@ -260,13 +260,13 @@ int main(int argc, char **argv){
     std::cout << "\r check insert: 100% (" << D.size()-num_build << "/" << D.size()-num_build << ")" << std::endl;
 #endif
 
-    /*if (type == "normal") {
+    if (type == "normal") {
         query<cltj::compact_dyn_ltj, ltj::util::trait_distinct>(index, queries, limit);
     } else if (type == "star") {
         query<cltj::compact_dyn_ltj, ltj::util::trait_size>(index, queries, limit);
     } else {
         std::cout << "Type of index: " << type << " is not supported." << std::endl;
-    }*/
+    }
 
 
 }
