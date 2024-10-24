@@ -24,8 +24,6 @@
 #include <iostream>
 #include <set>
 #include <configuration.hpp>
-//#include <ltj_iterator.hpp>
-#include <ltj_iterator_v2.hpp>
 
 namespace ltj {
 
