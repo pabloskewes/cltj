@@ -57,6 +57,21 @@ namespace cltj {
             m_n_triples = D.size();
         }
 
+        cltj_index_spo_dyn(vector<spo_triple>::iterator beg, vector<spo_triple>::iterator end){
+            if(std::distance(beg, end) == 0) return;
+            for(size_type i = 0; i < 6; ++i){
+                std::sort(beg, end, comparator_order(i));
+                std::vector<uint32_t> syms;
+                std::vector<size_type> lengths;
+                helper::sym_level(beg, end, spo_orders[i], i % 2, syms, lengths);
+                if(i % 2 == 0){
+                    m_gaps[i/2] = lengths[0];
+                }
+                m_tries[i] = trie_type(syms, lengths);
+            }
+            m_n_triples = std::distance(beg, end);
+        }
+
         //! Copy constructor
         cltj_index_spo_dyn(const cltj_index_spo_dyn &o) {
             copy(o);
@@ -440,7 +455,7 @@ namespace cltj {
 
     };
 
-    typedef cltj::cltj_index_spo_dyn<cltj::compact_trie_dyn<>> compact_dyn_ltj;
+    typedef cltj::cltj_index_spo_dyn<cltj::compact_trie_dyn_v2<>> compact_dyn_ltj;
    // typedef cltj::cltj_index_spo_dyn<cltj::uncompact_trie_v2> uncompact_dyn_ltj;
 
 }

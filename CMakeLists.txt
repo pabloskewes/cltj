@@ -7,7 +7,7 @@ project(CLTJ)
 set(CMAKE_PROJECT_NAME "CLTJ")
 
 #Change to "Debug" when you need it
-set(CMAKE_BUILD_TYPE "Debug")
+set(CMAKE_BUILD_TYPE "Release")
 
 # C++11 compiler Check
 if(NOT CMAKE_CXX_COMPILER_VERSION) # work around for cmake versions smaller than 2.8.10
@@ -88,3 +88,11 @@ target_link_libraries(query-uncltj-index sdsl divsufsort divsufsort64)
 add_executable(query-uncltj-index-fixed src/query-uncltj-index.cpp)
 target_compile_definitions(query-uncltj-index-fixed PUBLIC ADAPTIVE=0)
 target_link_libraries(query-uncltj-index-fixed sdsl divsufsort divsufsort64)
+
+add_executable(dyn-exp1 src/dyn-exp1.cpp)
+target_compile_definitions(dyn-exp1 PUBLIC ADAPTIVE=1)
+target_link_libraries(dyn-exp1 sdsl divsufsort divsufsort64 hybridbv_gn)
+
+add_executable(dyn-exp1-fixed src/dyn-exp1.cpp)
+target_compile_definitions(dyn-exp1-fixed PUBLIC ADAPTIVE=0)
+target_link_libraries(dyn-exp1-fixed sdsl divsufsort divsufsort64 hybridbv_gn)

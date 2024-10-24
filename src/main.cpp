@@ -23,9 +23,9 @@ int main() {
         std::vector<cltj::spo_triple> D;
         cltj::spo_triple t1{5, 8, 2};
         cltj::spo_triple t2{5, 8, 3};
-        //D.push_back(t1);
-        //D.push_back(t2);
-        cltj::cltj_index_spo_dyn<cltj::compact_trie_dyn_v2<>> index(D);
+        D.push_back(t1);
+        D.push_back(t2);
+        cltj::cltj_index_spo_dyn<cltj::compact_trie_dyn_v2<>> index(D.begin(), D.end());
         index.print();
         std::cout << "============" << std::endl;
         index.insert(t2);

@@ -30,7 +30,6 @@ static void staticPreprocess(staticBVId B) {
 }
 
 // converts a bit array into a bitvector of n bits
-// data is pointed to and will be freed 
 
 staticBVId staticBVIdCreateFrom64(uint64_t *bv_data, uint64_t *id_data, uint64_t n, uint width) {
     staticBVId B;
@@ -43,7 +42,8 @@ staticBVId staticBVIdCreateFrom64(uint64_t *bv_data, uint64_t *id_data, uint64_t
         B->data = NULL;
         B->id_data = NULL;
     } else {
-        B->data = bv_data;
+        B->data = (uint64_t*)myalloc( ((B->size+w64-1)/w64)* sizeof(uint64_t));
+        memcpy(B->data,bv_data, ((B->size+w64-1)/w64)* sizeof(uint64_t));
         B->id_data = (uint64_t *) mycalloc((n * width + w64 - 1) / w64, sizeof(uint64_t));
         p = 0;
         for (i = 0; i < n; i++) {
