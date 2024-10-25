@@ -50,8 +50,7 @@ include_directories(~/include
 link_directories(~/lib)
 add_subdirectory(lib/hybridBV)
 
-add_executable(build-index src/build-index.cpp
-        src/main.cpp)
+add_executable(build-index src/build-index.cpp)
 target_link_libraries(build-index sdsl divsufsort divsufsort64)
 
 add_executable(build-index-dyn src/build-index-dyn.cpp)

@@ -206,12 +206,12 @@ int main(int argc, char **argv){
     std::mt19937 g(rd());
     //std::shuffle(D.begin(), D.end(), g);
 
-    uint64_t num_build = D.size() * 0.8; //num triples in the build phase
-    //uint64_t num_build = D.size();
+    //uint64_t num_build = D.size() * 0.8; //num triples in the build phase
+    uint64_t num_build = D.size();
 
     //Build pahse
     auto start = timer::now();
-    cltj::compact_dyn_ltj index(D.begin(), D.begin()+num_build);
+    cltj::compact_dyn_ltj index(D);
     auto end = timer::now();
     auto sec_build = std::chrono::duration_cast<std::chrono::seconds>(end-start).count();
     std::cout << "Build phase in " << sec_build << " secs." << std::endl;
@@ -224,7 +224,10 @@ int main(int argc, char **argv){
             float per = (i / (float) (num_build)) * 100;
             std::cout << "\r check build: " << per <<  "% (" << i << "/" << num_build << ")" << std::flush;
         }
-        if(!index.test_exists(D[i])) {
+        auto ap = index.test_exists(D[i]);
+        if(6 > ap) {
+            std::cout << std::endl;
+            std::cout << "Appears in " << ap << " tries." << std::endl;
             std::cout << "Error in construction at i=" << i << "." << std::endl;
             std::cout << "(" << D[i][0] << ", " << D[i][1] << ", " << D[i][2] << ")"  << std::endl;
             exit(0);
@@ -251,7 +254,7 @@ int main(int argc, char **argv){
             float per = ((i - num_build)/ (float) (D.size()-num_build)) * 100;
             std::cout << "\r check insert: " << per <<  "% (" << i-num_build << "/" << D.size()-num_build << ")" << std::flush;
         }
-        if(!index.test_exists(D[i])) {
+        if(6 > index.test_exists(D[i])) {
             std::cout << "Error in construction at i=" << i << "." << std::endl;
             std::cout << "(" << D[i][0] << ", " << D[i][1] << ", " << D[i][2] << ")"  << std::endl;
             exit(0);

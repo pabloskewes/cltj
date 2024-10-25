@@ -167,6 +167,9 @@ namespace cltj {
         }
 
         std::pair<uint32_t, uint64_t> binary_search_seek(uint32_t val, uint32_t i, uint32_t f) const {
+            /*for(uint j = i; j <= f; ++j) {
+                std::cout << m_seq[j] << std::endl;
+            }*/
             if (m_seq[f] < val) return std::make_pair(0, f + 1);
             uint64_t mid;
             while (i < f) {

@@ -64,6 +64,7 @@ hybridBVId hybridBVIdClone(hybridBVId B) {
         BC->bv.dyn->ones = B->bv.dyn->ones;
         BC->bv.dyn->accesses = B->bv.dyn->accesses;
         BC->bv.dyn->leaves = B->bv.dyn->leaves;
+        BC->bv.dyn->last = B->bv.dyn->last;
         BC->bv.dyn->size = B->bv.dyn->size;
         BC->bv.dyn->width = B->bv.dyn->width;
         BC->bv.dyn->left = hybridBVIdClone(B->bv.dyn->left);
@@ -822,9 +823,9 @@ uint64_t accessId(hybridBVId B, uint64_t i, int64_t *delta) {
     uint64_t lsize;
     if (B->type == tDynamic) {
         B->bv.dyn->accesses++;
-        if (mustFlatten(B))
+        if (mustFlatten(B)){
             flatten(B, delta);
-        else {
+        }else {
             lsize = hybridBVIdLength(B->bv.dyn->left);
             if (i < lsize) {
                 return accessId(B->bv.dyn->left, i, delta);
