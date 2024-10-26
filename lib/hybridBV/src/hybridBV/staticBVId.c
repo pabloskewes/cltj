@@ -33,7 +33,7 @@ static void staticPreprocess(staticBVId B) {
 
 staticBVId staticBVIdCreateFrom64(uint64_t *bv_data, uint64_t *id_data, uint64_t n, uint width) {
     staticBVId B;
-    uint p, i;
+    uint64_t p, i;
     uint64_t word;
     B = (staticBVId) myalloc(sizeof(struct s_staticBVId));
     B->size = n;
@@ -61,8 +61,6 @@ staticBVId staticBVIdCreateFrom64(uint64_t *bv_data, uint64_t *id_data, uint64_t
 
 staticBVId staticBVIdCreateFromPacked(uint64_t *bv_data, uint64_t *id_data, uint64_t n, uint width) {
     staticBVId B;
-    uint p, i;
-    uint64_t word;
     B = (staticBVId) myalloc(sizeof(struct s_staticBVId));
     B->size = n;
     B->width = width;
@@ -194,11 +192,11 @@ extern inline uint staticBVIdAccessBV(staticBVId B, uint64_t i) {
     return (B->data[i / w64] >> (i % w64)) & 1;
 }
 
-extern inline uint64_t staticBVIdAccessId(staticBVId B, uint i) {
+extern inline uint64_t staticBVIdAccessId(staticBVId B, uint64_t i) {
     uint64_t word;
     if (B->width == w64) return B->id_data[i];
-    uint iq = i * B->width / w64;
-    uint ir = (i * B->width) % w64;
+    uint64_t iq = i * B->width / w64;
+    uint64_t ir = (i * B->width) % w64;
     word = (B->id_data[iq] >> ir);
     if (ir + B->width > w64) word |= B->id_data[iq + 1] << (w64 - ir);
     return word & ((((uint64_t) 1) << B->width) - 1);
@@ -247,7 +245,7 @@ extern inline uint64_t staticBVIdRank(staticBVId B, uint64_t i) {
 
 extern uint64_t staticBVIdSelect(staticBVId B, uint64_t j) {
     int64_t i, d, b;
-    uint p;
+    uint64_t p;
     uint64_t word, s, m, n;
     n = B->size;
     s = (n + (1 << w16) - 1) / (1 << w16);
@@ -373,9 +371,9 @@ int64_t staticBVIdNext1(staticBVId B, uint64_t i) {
 }
 
 
-uint staticBVIdNext (staticBVId B, uint i, uint j, uint64_t c, uint *found)
+uint64_t staticBVIdNext (staticBVId B, uint64_t i, uint64_t j, uint64_t c, uint64_t *value)
 
-{ uint width,iq,ir,d,m;
+{ uint64_t width,iq,ir,d,m;
     uint64_t v;
     width = B->width;
     // answer is i
@@ -386,7 +384,7 @@ uint staticBVIdNext (staticBVId B, uint i, uint j, uint64_t c, uint *found)
         v |= B->id_data[iq+1] << (w64-ir);
     v &= ((((uint64_t)1) << width) - 1);
     if (v >= c) {
-        *found = (v == c);
+        *value = v;
         return i;
     }
     // answer is j+1
@@ -397,7 +395,6 @@ uint staticBVIdNext (staticBVId B, uint i, uint j, uint64_t c, uint *found)
         v |= B->id_data[iq+1] << (w64-ir);
     v &= ((((uint64_t)1) << width) - 1);
     if (v < c) {
-        *found = 0;
         return j+1;
     }
     // invariant data[i] < c and data[j] >= c
@@ -429,6 +426,6 @@ uint staticBVIdNext (staticBVId B, uint i, uint j, uint64_t c, uint *found)
     if (ir+width >= w64)
         v |= B->id_data[iq+1] << (w64-ir);
     v &= ((((uint64_t)1) << width) - 1);
-    *found = (v == c);
+    *value = v;
     return d;
 }

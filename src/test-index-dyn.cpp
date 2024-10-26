@@ -104,7 +104,7 @@ int main(int argc, char **argv) {
                 index.print();
                 std::cout << "Error looking for D[" << i << "]=(" << D[i][0] << ", " << D[i][1] << ", " << D[i][2] << ") appears in "
                         << r << " tries." << std::endl;
-                index.test_exists_error(D[i]);
+                index.test_exists(D[i]);
                 exit(0);
             }
             if(i % 1000 == 0) {
@@ -186,7 +186,7 @@ int main(int argc, char **argv) {
             if (r > 0) {
                 std::cout << "Error looking for D[" << i << "]=(" << D[i][0] << ", " << D[i][1] << ", " << D[i][2] << ") appears in "
                         << r << " tries." << std::endl;
-                index.test_exists_error(D[i]);
+                index.test_exists(D[i]);
                 exit(0);
             }
             if((i-beg) % 1000 == 0) {

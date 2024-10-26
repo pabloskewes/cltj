@@ -86,10 +86,10 @@ namespace dyn_cds {
             return hybridBVIdNext1(m_B, i);
         }
 
-        std::pair<size_type, bool> next(size_type i, size_type j, value_type c) const {
-            uint found = 0;
-            size_type p = hybridBVIdNext(m_B, i, j, c, &found);
-            return {p, found};
+        std::pair<value_type, size_type> next(size_type i, size_type j, value_type c) const {
+            uint64_t value = 0;
+            size_type p = hybridBVIdNext(m_B, i, j, c, &value);
+            return {value, p};
         }
 
 

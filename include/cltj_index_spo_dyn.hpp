@@ -142,10 +142,10 @@ namespace cltj {
                         b = (l==0) ? 0 : m_tries[i].child(states[l].pos, 1, gap);
                         e = b+m_tries[i].children(b)-1;
                         auto p = m_tries[i].next(b, e, triple[spo_orders[i][l]]);
-                        states[l+1].pos = p.first;
-                        states[l+1].first_child = (b==p.first); //first position
-                        states[l+1].ins = !p.second; //insert
-                        insert = !p.second;
+                        states[l+1].pos = p.second;
+                        states[l+1].first_child = (b==p.second); //first position
+                        states[l+1].ins =  p.first != triple[spo_orders[i][l]]; //insert
+                        insert = p.first != triple[spo_orders[i][l]];
                     } else {
                         states[l+1].pos = m_tries[i].child(states[l].pos, 1, gap);
                         states[l+1].first_child = false; //it is not the first child of the current range
@@ -175,111 +175,6 @@ namespace cltj {
         }
 
 
-        void insert_old(spo_triple &triple) {
-            if(!m_n_triples) {
-                for(size_type i = 0; i < m_tries.size(); ++i) {
-                    m_tries[i] = trie_type(triple, spo_orders[i], i & 0x1);
-                }
-                m_gaps = {1,1,1};
-                ++m_n_triples;
-                return;
-            }
-            typedef struct {
-                size_type pos;
-                bool first_child; //pos contains the first_child of the current level
-                bool ins;
-            } state_type ;
-            std::array<state_type, 4> states;
-            std::array<bool, 3> inc_gaps = {false, false, false};
-            states[0].pos = 0; states[0].first_child = false; states[0].ins = false;
-            size_type b, e, gap;
-            for(size_type i = 0; i < m_tries.size(); ++i) {
-                //std::cout << "Dealing with: " << i << std::endl;
-                //m_tries[i].print();
-                bool skip_level = i & 0x1;
-                for(size_type l = skip_level; l < 3; ++l) {
-                    gap = 1;
-                    if(skip_level) gap = (l==1) ? 0 : m_gaps[i/2];
-                    if(!states[l].ins) {
-                        b = (l==0) ? 0 : m_tries[i].child(states[l].pos, 1, gap);
-                        e = b+m_tries[i].children(b)-1;
-                        auto bs = m_tries[i].binary_search(triple[spo_orders[i][l]], b, e);
-                        states[l+1].pos = bs.first;
-                        states[l+1].first_child = (b==bs.first);
-                        states[l+1].ins = !bs.second;
-                    } else {
-                        states[l+1].pos = m_tries[i].child(states[l].pos, 1, gap);
-                        states[l+1].first_child = false; //it is not the first child of the current range
-                        states[l+1].ins = true;
-                    }
-                }
-                for(int64_t j = 3; j >= 1+skip_level; --j) {
-                    //When the triple is not found in the previous level, it means that we are in the first child (1-bit) of the current level.
-                    //Otherwise, we have to add a new child to the current level, thus we add a 0-bit.
-                    if(states[j].ins) {
-                        //std::cout << "insert at: " << states[j].pos << "[" << states[j-1].ins << ", " << states[j].first_child << "]" << std::endl;
-                        m_tries[i].insert(states[j].pos, triple[spo_orders[i][j-1]], states[j-1].ins, states[j].first_child);
-                        //m_tries[i].print();
-                        if(j == 1) inc_gaps[i/2] = true;
-                    }
-                }
-            }
-            for(auto i = 0; i < 3; ++i) {
-                m_gaps[i] += inc_gaps[i]; //updating gaps because of insertions in the first level
-            }
-            ++m_n_triples;
-            //m_tries[4].print();
-            /*for(uint64_t i = 0; i < 6; ++i) {
-                m_tries[i].print();
-            }*/
-        }
-
-        bool remove_old(spo_triple &triple) {
-            if(!m_n_triples) return false;
-            typedef struct {
-                size_type pos;
-                bool first_child;
-                bool rem;
-            } state_type ;
-            std::array<bool, 3> dec_gaps = {false, false, false};
-            std::array<state_type, 4> states;
-            states[0].pos = 0; states[0].first_child = true; states[0].rem = false;
-            size_type b, e, gap;
-            for(size_type i = 0; i < m_tries.size(); ++i) {
-                bool skip_level = i & 0x1;
-                for(size_type l = skip_level; l < 3; ++l) {
-                    gap = 1;
-                    if(skip_level) gap = (l==1) ? 0 : m_gaps[i/2];
-                    b = (l==0) ? 0 : m_tries[i].child(states[l].pos, 1, gap);
-                    e = b+m_tries[i].children(b)-1;
-                    auto bs = m_tries[i].binary_search(triple[spo_orders[i][l]], b, e);
-                    if(!bs.second) {
-                        //m_tries[i].print();
-                        return false;
-                    }
-                    states[l+1].pos = bs.first;
-                    //states[l+1].first_child = (b==bs.first);
-                    states[l+1].rem = (b==e);
-                }
-                bool rem = true;
-                for(int64_t j = 3; j >= 1+skip_level; --j) {
-                    if(rem) {
-                        //m_tries[i].remove(states[j].pos, states[j].first_child);
-                        m_tries[i].remove(states[j].pos, !states[j].rem);
-                        if(j == 1) dec_gaps[i/2] = true;
-                    }
-                    rem &= states[j].rem;
-                }
-                //std::cout << "Fin: " << i << std::endl;
-            }
-            for(auto i = 0; i < 3; ++i) {
-                m_gaps[i] -= dec_gaps[i]; //updating gaps because of deletions in the first level
-            }
-            --m_n_triples;
-            return true;
-        }
-
-
         bool remove(spo_triple &triple) {
             if(!m_n_triples) return false;
             typedef struct {
@@ -300,11 +195,11 @@ namespace cltj {
                     b = (l==0) ? 0 : m_tries[i].child(states[l].pos, 1, gap);
                     e = b+m_tries[i].children(b)-1;
                     auto p = m_tries[i].next(b, e, triple[spo_orders[i][l]]);
-                    if(!p.second) {
+                    if(p.first != triple[spo_orders[i][l]]) {
                         //m_tries[i].print();
                         return false;
                     }
-                    states[l+1].pos = p.first;
+                    states[l+1].pos = p.second;
                     //states[l+1].first_child = (b==bs.first);
                     states[l+1].rem = (b==e);
                 }
@@ -344,50 +239,17 @@ namespace cltj {
                     b = (l==0) ? 0 : m_tries[i].child(states[l], 1, gap);
                     e = b+m_tries[i].children(b)-1;
                     auto bs = m_tries[i].next(b, e, triple[spo_orders[i][l]]); //aqui
-                    if(!bs.second) {
+                    if(bs.first != triple[spo_orders[i][l]]) {
                         if(l == 0) exists_l0 = false;
                         break;
                     }
-                    states[l+1] = bs.first;
+                    states[l+1] = bs.second;
                     if(l == 0) exists_l0 = true;
                 }
                 r += (l == 3);
             }
             return r;
         }
-        //Checks if the triple exists, it returns the number of tries where it appears
-        //The only possible outputs should be 6 or 0.
-        uint64_t test_exists_error(spo_triple &triple) {
-            if(m_n_triples == 0) return 0;
-            size_type r = 0;
-            std::array<size_type, 4> states;
-            states[0] = 0;
-            size_type b, e, gap, l;
-            bool exists_l0 = true;
-            for(size_type i = 0; i < m_tries.size(); ++i) {
-                bool skip_level = i & 0x1;
-                if(skip_level && !exists_l0) continue;
-                for(l = skip_level; l < 3; ++l) {
-                    gap = 1;
-                    if(skip_level) gap = (l==1) ? 0 : m_gaps[i/2];
-                    //std::cout << "compute child with" << states[l] << ", " << gap << std::endl;
-                    b = (l==0) ? 0 : m_tries[i].child(states[l], 1, gap);
-                    e = b+m_tries[i].children(b)-1;
-                    auto bs = m_tries[i].binary_search(triple[spo_orders[i][l]], b, e);
-                    //std::cout << "search in [" << b << ", " << e << "] find=" << (uint) bs.second << " pos=" << bs.first << std::endl;
-                    if(!bs.second) {
-                        if(l == 0) exists_l0 = false;
-                        break;
-                    }
-                    states[l+1] = bs.first;
-                    if(l == 0) exists_l0 = true;
-                }
-                std::cout << "trie=" << i << " l=" << l << std::endl;
-                r += (l == 3);
-            }
-            return r;
-        }
-
 
         size_type serialize(std::ostream &out, sdsl::structure_tree_node *v = nullptr, std::string name = "") const {
             sdsl::structure_tree_node *child = sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));

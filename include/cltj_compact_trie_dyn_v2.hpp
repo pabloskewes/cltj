@@ -56,7 +56,7 @@ namespace cltj {
         compact_trie_dyn_v2(const std::vector<uint32_t> &syms, const std::vector<size_type> &lengths,
                          const uint width = default_width) {
             auto bv = sdsl::bit_vector(syms.size()+1, 0);
-            std::vector<uint64_t> s(syms.size()+1);
+            sdsl::int_vector<> s(syms.size()+1);
             bv[0] = 1;
             uint64_t pos_bv = 0, pos_seq = 0;
             for(const auto &sym : syms) {
@@ -72,6 +72,14 @@ namespace cltj {
             std::cout << "n_nodes=" << syms.size() << " pos_seq=" << pos_seq << " pos_bv=" << pos_bv << std::endl;
             m_seq = dyn_cds::dyn_louds(bv.data(), s.data(), bv.size(), width);
             //sdsl::util::bit_compress(m_seq);
+            /*for(uint64_t i = 0; i < s.size(); ++i) {
+                if(m_seq[i] != s[i]) {
+                    std::cout << "Error en " << i << std::endl;
+                    std::cout << "seq[i]=" << m_seq[i] << std::endl;
+                    std::cout << "syms[i]=" << s[i] << std::endl;
+                    exit(0);
+                }
+            }*/
 
         }
 
@@ -162,25 +170,12 @@ namespace cltj {
             m_seq.check_last_print();
         }
 
-        std::pair<size_type, bool> next(size_type i, size_type j, value_type val) {
+        std::pair<value_type, size_type> next(size_type i, size_type j, value_type val) {
             return m_seq.next(i, j, val);
         }
 
         std::pair<uint32_t, uint64_t> binary_search_seek(uint32_t val, uint32_t i, uint32_t f) const {
-            /*for(uint j = i; j <= f; ++j) {
-                std::cout << m_seq[j] << std::endl;
-            }*/
-            if (m_seq[f] < val) return std::make_pair(0, f + 1);
-            uint64_t mid;
-            while (i < f) {
-                mid = (i + f) / 2;
-                if (m_seq[mid] < val) {
-                    i = mid + 1;
-                } else {
-                    f = mid;
-                }
-            }
-            return std::make_pair(m_seq[i], i);
+           return m_seq.next(i, f, val);
         }
 
         //return position, equal; where equal means that position contains val

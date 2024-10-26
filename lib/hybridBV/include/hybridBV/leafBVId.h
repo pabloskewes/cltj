@@ -85,5 +85,5 @@ int leafBVIdNext1 (leafBVId B, uint i);
 
 // finds first value >= c in [i..j], which must be increasing
 // returns j+1 if not found
-uint leafBVIdNext (leafBVId B, uint i, uint j, uint64_t c, uint* found);
+uint leafBVIdNext (leafBVId B, uint i, uint j, uint64_t c, uint64_t* value);
 #endif

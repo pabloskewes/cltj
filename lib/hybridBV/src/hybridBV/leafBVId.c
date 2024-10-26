@@ -85,7 +85,7 @@ leafBVId leafBVIdCreateFromPacked(uint64_t *bv_data, uint64_t *id_data, uint64_t
 
     //bitvector
     B->data = (uint64_t *) myalloc(bitmapSize(width));
-    uint nb = (n + 7) / 8;
+    uint64_t nb = (n + 7) / 8;
     memcpy(B->data, bv_data, nb);
     nb = (n + w64 - 1) / w64;
     if (freeit) free(bv_data);
@@ -413,10 +413,6 @@ extern inline uint leafBVIdAccessBV(leafBVId B, uint i) {
 }
 
 extern inline uint64_t leafBVIdAccessId(leafBVId B, uint i) {
-    if(i >= B->size) {
-        printf("Bad access\n");
-        exit(0);
-    }
     uint64_t word;
     if (B->width == w64) return B->id_data[i];
     uint iq = i * B->width / w64;
@@ -510,7 +506,7 @@ int leafBVIdNext1 (leafBVId B, uint i)
 // finds first value >= c in [i..j], which must be increasing
 // returns j+1 if not found
 
-uint leafBVIdNext (leafBVId B, uint i, uint j, uint64_t c, uint *found)
+uint leafBVIdNext (leafBVId B, uint i, uint j, uint64_t c, uint64_t *value)
 
 { uint width,iq,ir,d,m;
     uint64_t v;
@@ -523,7 +519,7 @@ uint leafBVIdNext (leafBVId B, uint i, uint j, uint64_t c, uint *found)
         v |= B->id_data[iq+1] << (w64-ir);
     v &= ((((uint64_t)1) << width) - 1);
     if (v >= c) {
-        *found = (v == c);
+        *value = v;
         return i;
     }// answer is j+1
     iq = j*B->width/w64;
@@ -533,7 +529,6 @@ uint leafBVIdNext (leafBVId B, uint i, uint j, uint64_t c, uint *found)
         v |= B->id_data[iq+1] << (w64-ir);
     v &= ((((uint64_t)1) << width) - 1);
     if (v < c) {
-        *found = 0;
         return j+1;
     }
     // invariant data[i] < c and data[j] >= c
@@ -565,6 +560,6 @@ uint leafBVIdNext (leafBVId B, uint i, uint j, uint64_t c, uint *found)
     if (ir+width >= w64)
         v |= B->id_data[iq+1] << (w64-ir);
     v &= ((((uint64_t)1) << width) - 1);
-    *found = (v == c);
+    *value = v;
     return d;
 }

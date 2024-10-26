@@ -4,7 +4,7 @@
 * is added with insertions. Then, we measure the times of solving each query.
 */
 
-#define CHECK 1
+#define CHECK 0
 
 #include <iostream>
 #include <cltj_index_spo_dyn.hpp>
@@ -206,12 +206,12 @@ int main(int argc, char **argv){
     std::mt19937 g(rd());
     //std::shuffle(D.begin(), D.end(), g);
 
-    //uint64_t num_build = D.size() * 0.8; //num triples in the build phase
-    uint64_t num_build = D.size();
+    uint64_t num_build = D.size() * 0.8; //num triples in the build phase
+    //uint64_t num_build = D.size();
 
     //Build pahse
     auto start = timer::now();
-    cltj::compact_dyn_ltj index(D);
+    cltj::compact_dyn_ltj index(D.begin(), D.begin()+num_build);
     auto end = timer::now();
     auto sec_build = std::chrono::duration_cast<std::chrono::seconds>(end-start).count();
     std::cout << "Build phase in " << sec_build << " secs." << std::endl;
@@ -244,7 +244,7 @@ int main(int argc, char **argv){
     auto sec_insert = std::chrono::duration_cast<std::chrono::seconds>(end-start).count();
     std::cout << "Insertion phase in " << sec_insert << " secs. [" << D.size()-num_build << "]" << std::endl;
     std::cout << "Each insert takes " << std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count() / (D.size()-num_build) << " nanosecs." << std::endl;
-    std::cout << "Index uses " << sdsl::size_in_bytes(index) << " bytes." << std::endl;
+    //std::cout << "Index uses " << sdsl::size_in_bytes(index) << " bytes." << std::endl;
     std::cout << std::endl;
 
 #if  CHECK

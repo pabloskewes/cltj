@@ -49,7 +49,7 @@ extern inline uint64_t staticBVIdOnes (staticBVId B);
 
 	// access B[i], assumes i is right
 extern inline uint staticBVIdAccessBV (staticBVId B, uint64_t i);
-extern inline uint64_t staticBVIdAccessId (staticBVId B, uint i);
+extern inline uint64_t staticBVIdAccessId (staticBVId B, uint64_t i);
 
         // read bits [i..i+l-1], writes onto D[j..]
 extern inline void staticBVIdReadBV (staticBVId B, uint64_t i, uint64_t l,
@@ -64,6 +64,6 @@ extern uint64_t staticBVIdSelect (staticBVId B, uint64_t j);
 
 int64_t staticBVIdNext1(staticBVId B, uint64_t i);
 
-uint staticBVIdNext (staticBVId B, uint i, uint j, uint64_t c, uint *found);
+uint64_t staticBVIdNext (staticBVId B, uint64_t i, uint64_t j, uint64_t c, uint64_t *value);
 
 #endif

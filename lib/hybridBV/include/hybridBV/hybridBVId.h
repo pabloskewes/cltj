@@ -100,6 +100,6 @@ int64_t hybridBVIdNext1 (hybridBVId B, uint64_t i);
 // finds first value >= c in [i..j], which must be increasing
 // returns j+1 if not found
 
-uint64_t hybridBVIdNext (hybridBVId B, uint64_t i, uint64_t j, uint64_t c, uint* found);
+uint64_t hybridBVIdNext (hybridBVId B, uint64_t i, uint64_t j, uint64_t c, uint64_t* value);
 
 #endif //HYBRIDLOUDS_H

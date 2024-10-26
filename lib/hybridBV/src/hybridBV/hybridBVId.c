@@ -944,7 +944,7 @@ int64_t hybridBVIdNext1(hybridBVId B, uint64_t i) {
 // returns j+1 if not found
 
 static uint64_t next(hybridBVId B, uint64_t i, uint64_t j, uint64_t c,
-                     uint *recomp, uint *found, uint all) {
+                     uint *recomp, uint64_t *value, uint all) {
     uint64_t lsize;
     int64_t delta;
     int64_t n;
@@ -958,22 +958,22 @@ static uint64_t next(hybridBVId B, uint64_t i, uint64_t j, uint64_t c,
         } else {
             lsize = hybridBVIdLength(B->bv.dyn->left);
             if (j < lsize)
-                return next(B->bv.dyn->left, i, j, c, recomp, found, j == lsize - 1);
+                return next(B->bv.dyn->left, i, j, c, recomp, value, j == lsize - 1);
             if (i >= lsize)
-                return lsize + next(B->bv.dyn->right, i - lsize, j - lsize, c, recomp, found, all);
-            n = next(B->bv.dyn->left, i, lsize - 1, c, recomp, found, 1);
+                return lsize + next(B->bv.dyn->right, i - lsize, j - lsize, c, recomp, value, all);
+            n = next(B->bv.dyn->left, i, lsize - 1, c, recomp, value, 1);
             if (n < lsize) return n;
-            return lsize + next(B->bv.dyn->right, 0, j - lsize, c, recomp, found, all);
+            return lsize + next(B->bv.dyn->right, 0, j - lsize, c, recomp, value, all);
         }
     }
-    if (B->type == tLeaf) return leafBVIdNext(B->bv.leaf, i, j, c, found);
-    else return staticBVIdNext(B->bv.stat, i, j, c, found);
+    if (B->type == tLeaf) return leafBVIdNext(B->bv.leaf, i, j, c, value);
+    else return staticBVIdNext(B->bv.stat, i, j, c, value);
 }
 
 
-uint64_t hybridBVIdNext(hybridBVId B, uint64_t i, uint64_t j, uint64_t c, uint *found) {
+uint64_t hybridBVIdNext(hybridBVId B, uint64_t i, uint64_t j, uint64_t c, uint64_t *value) {
     uint recomp = 0;
-    uint64_t n = next(B, i, j, c, &recomp, found, 0);
+    uint64_t n = next(B, i, j, c, &recomp, value, 0);
     if (recomp) rrecompute(B, i, j - i + 1);
     return n;
 }
