@@ -95,3 +95,11 @@ target_link_libraries(dyn-exp1 sdsl divsufsort divsufsort64 hybridbv_gn)
 add_executable(dyn-exp1-fixed src/dyn-exp1.cpp)
 target_compile_definitions(dyn-exp1-fixed PUBLIC ADAPTIVE=0)
 target_link_libraries(dyn-exp1-fixed sdsl divsufsort divsufsort64 hybridbv_gn)
+
+add_executable(dyn-exp2 src/dyn-exp2.cpp)
+target_compile_definitions(dyn-exp2 PUBLIC ADAPTIVE=1)
+target_link_libraries(dyn-exp2 sdsl divsufsort divsufsort64 hybridbv_gn)
+
+add_executable(dyn-exp2-fixed src/dyn-exp2.cpp)
+target_compile_definitions(dyn-exp2-fixed PUBLIC ADAPTIVE=0)
+target_link_libraries(dyn-exp2-fixed sdsl divsufsort divsufsort64 hybridbv_gn)

@@ -2,7 +2,7 @@
 
 #include "hybridBV/hybridBVId.h"
 
-extern float FactorId = 1.0; // Factor * length reads => rebuild as static
+extern float FactorId = 0.01; // Factor * length reads => rebuild as static
 
 static inline int mustFlatten(hybridBVId B) {
     return (B->bv.dyn->accesses >= FactorId * B->bv.dyn->size);
