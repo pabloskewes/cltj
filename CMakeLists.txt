@@ -53,6 +53,9 @@ add_subdirectory(lib/hybridBV)
 add_executable(build-index src/build-index.cpp)
 target_link_libraries(build-index sdsl divsufsort divsufsort64)
 
+add_executable(build-index-rand src/build-index-random.cpp)
+target_link_libraries(build-index-rand sdsl divsufsort divsufsort64)
+
 add_executable(build-index-dyn src/build-index-dyn.cpp)
 target_link_libraries(build-index-dyn sdsl divsufsort divsufsort64 hybridbv_gn)
 
