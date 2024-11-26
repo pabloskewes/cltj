@@ -50,7 +50,7 @@ int main(int argc, char **argv){
         //sdsl::memory_monitor::start();
 
         auto start = timer::now();
-        cltj::cltj_index_spo_dyn<cltj::compact_trie_dyn<>> index(D);
+        cltj::compact_dyn_ltj index(D);
         auto stop = timer::now();
 
         //sdsl::memory_monitor::stop();
