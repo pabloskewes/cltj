@@ -114,3 +114,9 @@ target_link_libraries(dyn-exp3 sdsl divsufsort divsufsort64 hybridbv_gn)
 add_executable(dyn-exp3-fixed src/dyn-exp3.cpp)
 target_compile_definitions(dyn-exp3-fixed PUBLIC ADAPTIVE=0)
 target_link_libraries(dyn-exp3-fixed sdsl divsufsort divsufsort64 hybridbv_gn)
+
+add_executable(test-dict src/test-dict.cpp)
+target_link_libraries(test-dict sdsl divsufsort divsufsort64)
+
+add_executable(build-index-triples src/build-index-triples.cpp)
+target_link_libraries(build-index-triples sdsl divsufsort divsufsort64 hybridbv_gn)
