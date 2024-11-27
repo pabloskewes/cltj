@@ -118,5 +118,11 @@ target_link_libraries(dyn-exp3-fixed sdsl divsufsort divsufsort64 hybridbv_gn)
 add_executable(test-dict src/test-dict.cpp)
 target_link_libraries(test-dict sdsl divsufsort divsufsort64)
 
+add_executable(test-regex src/test-regex.cpp)
+target_link_libraries(test-regex sdsl divsufsort divsufsort64)
+
 add_executable(build-index-triples src/build-index-triples.cpp)
 target_link_libraries(build-index-triples sdsl divsufsort divsufsort64 hybridbv_gn)
+
+add_executable(query-index-triples src/query-index-triples.cpp)
+target_link_libraries(query-index-triples sdsl divsufsort divsufsort64 hybridbv_gn)

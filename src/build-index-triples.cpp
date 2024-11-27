@@ -1,5 +1,6 @@
 #include <iostream>
 #include <cltj_index_spo_dyn.hpp>
+#include <cltj_parser.hpp>
 #include <dict_map.hpp>
 #include <regex>
 
@@ -24,10 +25,6 @@ int main(int argc, char **argv){
         std::ifstream ifs(dataset);
         cltj::spo_triple spo;
         std::string line;
-        std::vector<std::string> spo_str(3);
-        std::regex token_regex("(?:\".*\"|[^[:space:]])+");
-        std::sregex_iterator reg_it;
-        uint64_t i = 0;
 
         dict::basic_map dict_so;
         dict::basic_map dict_p;
@@ -35,10 +32,7 @@ int main(int argc, char **argv){
         do {
             std::getline(ifs, line);
             if(line.empty()) break;
-            for (reg_it = sregex_iterator(line.begin(), line.end(), token_regex), i = 0; i < 3; i++, reg_it++)
-            {
-                spo_str[i] = (*reg_it).str();
-            }
+            auto spo_str = cltj::parser::get_triple(line);
             spo[0] = dict_so.get_or_insert(spo_str[0]);
             spo[1] = dict_p.get_or_insert(spo_str[1]);
             spo[2] = dict_so.get_or_insert(spo_str[2]);
