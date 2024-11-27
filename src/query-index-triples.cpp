@@ -193,11 +193,12 @@ void query(const std::string &file, const std::string &queries, const uint64_t l
             res_str.reserve(res.size());
             for(uint64_t i = 0; i < res.size(); ++i) {
                 const auto &tuple = res[i];
-                for(uint8_t id = 0; id < tuple.size(); ++id) {
+                for(uint8_t j = 0; j < tuple.size(); ++j) {
+                    auto id = tuple[j].first;
                     if(vars_in_p.find(id) != vars_in_p.end()) {
-                        tmp_str[id] = dict_p.extract(tuple[id]);
+                        tmp_str[id] = dict_p.extract(tuple[j].second);
                     }else {
-                        tmp_str[id] = dict_so.extract(tuple[id]);
+                        tmp_str[id] = dict_so.extract(tuple[j].second);
                     }
                 }
                 res_str.push_back(tmp_str);

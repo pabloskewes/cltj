@@ -46,7 +46,7 @@ namespace util {
             ++m_cnt;
         }
 
-        inline results_collector &operator[](const size_type i) {
+        inline value_type operator[](const size_type i) {
             return m_results[i];
         }
 
