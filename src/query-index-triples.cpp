@@ -177,7 +177,6 @@ void query(const std::string &file, const std::string &queries, const uint64_t l
             std::unordered_map<std::string, uint8_t> hash_table_vars;
             std::unordered_set<uint8_t> vars_in_p;
             std::vector<ltj::triple_pattern> query;
-            std::vector<string> tmp_str(hash_table_vars.size());
 
             auto t0 = std::chrono::high_resolution_clock::now();
             std::vector<cltj::parser::user_triple_type> tokens = cltj::parser::get_query(query_string);
@@ -190,10 +189,11 @@ void query(const std::string &file, const std::string &queries, const uint64_t l
             algorithm_type ltj(&query, &graph);
             ltj.join(res, limit, 600);
             auto t2 = std::chrono::high_resolution_clock::now();
+            std::vector<string> tmp_str(hash_table_vars.size());
             res_str.reserve(res.size());
             for(uint64_t i = 0; i < res.size(); ++i) {
                 const auto &tuple = res[i];
-                for(uint8_t j = 0; j < tuple.size(); ++j) {
+                for(uint64_t j = 0; j < tuple.size(); ++j) {
                     auto id = tuple[j].first;
                     if(vars_in_p.find(id) != vars_in_p.end()) {
                         tmp_str[id] = dict_p.extract(tuple[j].second);
