@@ -29,6 +29,7 @@ int main(int argc, char **argv){
         dict::basic_map dict_so;
         dict::basic_map dict_p;
         vector<cltj::spo_triple> D;
+        auto start = timer::now();
         do {
             std::getline(ifs, line);
             if(line.empty()) break;
@@ -39,13 +40,15 @@ int main(int argc, char **argv){
             D.emplace_back(spo);
 
         } while (!ifs.eof());
+        auto stop = timer::now();
+        cout << "Mapping: " << duration_cast<seconds>(stop-start).count() << " seconds." << endl;
         D.shrink_to_fit();
         std::cout << "Dataset: " << 3*D.size()*sizeof(::uint32_t) << " bytes." << std::endl;
         //sdsl::memory_monitor::start();
 
-        auto start = timer::now();
+        start = timer::now();
         cltj::compact_dyn_ltj index(D);
-        auto stop = timer::now();
+        stop = timer::now();
 
         //sdsl::memory_monitor::stop();
 

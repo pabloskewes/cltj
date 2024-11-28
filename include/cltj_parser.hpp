@@ -37,8 +37,10 @@ namespace cltj {
                 t[0] = (reg_it++)->str();
                 t[1] = (reg_it++)->str();
                 t[2] = (reg_it++)->str();
-                ++reg_it; //skipping the point
                 vec.push_back(t);
+                if(reg_it == reg_end) break;
+                ++reg_it; //skipping the point
+
             }
             return vec;
         }
