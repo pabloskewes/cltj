@@ -121,6 +121,9 @@ target_link_libraries(test-dict sdsl divsufsort divsufsort64)
 add_executable(test-regex src/test-regex.cpp)
 target_link_libraries(test-regex sdsl divsufsort divsufsort64)
 
+add_executable(test-bulk-load src/test-bulk-load.cpp)
+target_link_libraries(test-bulk-load sdsl divsufsort divsufsort64)
+
 add_executable(build-index-triples src/build-index-triples.cpp)
 target_link_libraries(build-index-triples sdsl divsufsort divsufsort64 hybridbv_gn)
 

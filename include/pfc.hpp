@@ -184,6 +184,29 @@ namespace dict
     }
 
     /**
+     * @brief Appends a new word with its corresponding ID
+     * PRE: Inserts in the correct position, preserving the order in the PFC
+     *
+     * @param s the string being inserted
+     * @param id the id corresponding to the string
+     *
+     */
+    void append(const std::string &s, uint64_t id, std::string &prev)
+    {
+      // Inserting on an empty PFC
+      if (text_string.empty())
+      {
+        text_string += encode_number(id) + s + '\0';
+        current_size++;
+        return;
+      }
+
+      uint64_t lcp = longest_common_prefix(s, prev, std::min(s.size(), prev.size()));
+      text_string += encode_number(id) + encode_number(lcp) + s.substr(lcp) + '\0';
+      current_size++;
+    }
+
+    /**
      * @brief Get the ID of the given string
      * If its not found then insert it with the given ID
      *

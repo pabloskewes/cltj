@@ -190,8 +190,9 @@ void query(const std::string &file, const std::string &queries, const uint64_t l
             ltj.join(res, limit, 600);
             auto t2 = std::chrono::high_resolution_clock::now();
             std::vector<string> tmp_str(hash_table_vars.size());
-            res_str.reserve(res.size());
-            for(uint64_t i = 0; i < res.size(); ++i) {
+            auto l = std::min(res.buckets, res.size());
+            res_str.reserve(res.buckets);
+            for(uint64_t i = 0; i < l; ++i) {
                 const auto &tuple = res[i];
                 for(uint64_t j = 0; j < tuple.size(); ++j) {
                     auto id = tuple[j].first;

@@ -20,8 +20,8 @@
 #ifndef DICT_MAP_HPP
 #define DICT_MAP_HPP
 
-#include "pfc.hpp"
-#include "cltj_config.hpp"
+#include <pfc.hpp>
+#include <cltj_config.hpp>
 
 namespace dict
 {
@@ -49,6 +49,50 @@ namespace dict
     {
       root = new node(val, 1);
       id_map.push_back({ .pfc = root->get_pfc()});
+    }
+
+
+    //Bulk load from a map
+    dict_map(std::map<std::string, uint64_t> &dict)
+    {
+      auto pfc_size = (MAXSIZE + MINSIZE) / 2;
+      auto size = (dict.size() + pfc_size - 1) / pfc_size;
+
+      //1. Building the leaves
+      std::vector<node*> nodes(size);
+      size_type pfc_i;
+      for(pfc_i = 0; pfc_i < size; ++pfc_i) {
+        nodes[pfc_i] = new node();
+      }
+
+      //2. Appending the strings in the leaves
+      pfc_i = 0;
+      size_type k = 0;
+      std::string prev = "\0";
+      id_map.resize(dict.size());
+      for(auto &p : dict) {
+        id_map[p.second-1].pfc = nodes[pfc_i]->get_pfc();
+        nodes[pfc_i]->get_pfc()->append(p.first, p.second, prev);
+        prev = p.first; ++k;
+        if(k % pfc_size == 0) {
+          ++pfc_i;
+          prev = "\0";
+        }
+      }
+      dict.clear(); //delete
+
+      //3. Building the tree
+      while(size > 1) {
+        for(pfc_i = 0; pfc_i < size - (size % 2); pfc_i += 2) {
+          node* n = new node(nodes[pfc_i], nodes[pfc_i+1]);
+          nodes[pfc_i / 2] = n;
+        }
+        if(size % 2 == 1) {
+          nodes[(size-1) / 2] = nodes[size-1];
+        }
+        size = (size+1) / 2;
+      }
+      root = nodes[0];
     }
 
     // Move constructor
@@ -360,6 +404,12 @@ namespace dict
     {
       _is_leaf = true;
       pfc = p;
+    }
+
+    node(node* l, node* r) {
+      _is_leaf = false;
+      left = l;
+      right = r;
     }
 
     void free_mem()
