@@ -30,10 +30,13 @@ namespace dict
   * Union type to represent a pointer to a PFC
   * or the next ID that its free in the array.
   */
-  union EmptyOrPFC
+  struct EmptyOrPFC
   {
-    PFC *pfc;
-    uint64_t next_empty;
+    union {
+      PFC *pfc;
+      uint64_t next_empty;
+    } info;
+    uint64_t ptr_str = 0; //0 => no cached string
   };
 
   /**
@@ -105,7 +108,7 @@ namespace dict
       // Get first word
       curr_id = decode_number(index);
       index = text_string.find_first_of('\0', index) + 1;
-      id_map[curr_id - 1].pfc = this;
+      id_map[curr_id - 1].info.pfc = this;
 
       // Go through the PFC loading the ID map
       while (index < text_string.size())
@@ -113,7 +116,7 @@ namespace dict
         curr_id = decode_number(index);
         decode_number(index);
         index = text_string.find_first_of('\0', index) + 1;
-        id_map[curr_id - 1].pfc = this;
+        id_map[curr_id - 1].info.pfc = this;
       }
     }
 

@@ -221,7 +221,9 @@ void query(const std::string &file, const std::string &queries, const uint64_t l
             auto total = std::chrono::duration_cast<std::chrono::nanoseconds>(t3 - t0).count();
             cout << nQ << ";" << res.size() << ";" << str_to_id << ";" << run << ";" << id_to_str << ";" << total << endl;
             nQ++;
-
+            //Reset caches in dictionary
+            dict_so.reset_cache();
+            dict_p.reset_cache();
             // cout << std::chrono::duration_cast<std::chrono::nanoseconds> (end - begin).count() << std::endl;
 
             //cout << "RESULTS QUERY " << count << ": " << number_of_results << endl;

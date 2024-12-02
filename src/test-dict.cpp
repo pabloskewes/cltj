@@ -16,8 +16,10 @@ int main() {
     auto id_fari = map_SO.get_or_insert("fari");
     std::cout << "id_adrian: " << id_adrian << std::endl;
     std::cout << "id_fari: " << id_fari << std::endl;
-
+    std::cout << map_SO.extract(1) << std::endl;
+    std::cout << map_SO.extract(1) << std::endl;
     map_SO.eliminate("adrian");
+
     auto id_diego = map_SO.insert("diego");
     std::cout << "id_diego: " << id_diego << std::endl;
 
