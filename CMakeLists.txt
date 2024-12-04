@@ -127,5 +127,8 @@ target_link_libraries(test-bulk-load sdsl divsufsort divsufsort64)
 add_executable(build-index-triples src/build-index-triples.cpp)
 target_link_libraries(build-index-triples sdsl divsufsort divsufsort64 hybridbv_gn)
 
+add_executable(build-index-bulk-triples src/build-index-bulk-triples.cpp)
+target_link_libraries(build-index-bulk-triples sdsl divsufsort divsufsort64 hybridbv_gn)
+
 add_executable(query-index-triples src/query-index-triples.cpp)
 target_link_libraries(query-index-triples sdsl divsufsort divsufsort64 hybridbv_gn)
