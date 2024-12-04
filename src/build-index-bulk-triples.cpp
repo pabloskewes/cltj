@@ -19,9 +19,9 @@ int main(int argc, char **argv){
 
         std::string dataset = argv[1];
         uint64_t n_triples = std::atoll(argv[2]);
-        std::string index_name = dataset + ".cltj";
-        std::string dict_so_name = dataset + ".so";
-        std::string dict_p_name = dataset + ".p";
+        std::string index_name = dataset + "." + std::to_string(n_triples) + ".cltj";
+        std::string dict_so_name = dataset + "." + std::to_string(n_triples) + ".so";
+        std::string dict_p_name = dataset + "." + std::to_string(n_triples) + ".p";
 
         std::ifstream ifs(dataset);
         cltj::spo_triple spo;
