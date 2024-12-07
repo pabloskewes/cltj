@@ -27,6 +27,7 @@
 #include <utils.hpp>
 #include <unordered_set>
 #include <queue>
+#include<index/cltj_index_spo_lite.hpp>
 
 namespace ltj {
 

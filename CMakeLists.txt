@@ -59,6 +59,9 @@ target_link_libraries(build-index-rand sdsl divsufsort divsufsort64)
 add_executable(build-index-dyn src/build-index-dyn.cpp)
 target_link_libraries(build-index-dyn sdsl divsufsort divsufsort64 hybridbv_gn)
 
+add_executable(build-metatrie-index src/build-metatrie-index.cpp)
+target_link_libraries(build-metatrie-index sdsl divsufsort divsufsort64 hybridbv_gn)
+
 add_executable(test-index-dyn src/test-index-dyn.cpp)
 target_link_libraries(test-index-dyn sdsl divsufsort divsufsort64 hybridbv_gn)
 
@@ -67,9 +70,6 @@ target_link_libraries(test-index-static sdsl divsufsort divsufsort64)
 
 add_executable(main src/main.cpp)
 target_link_libraries(main sdsl divsufsort divsufsort64 hybridbv_gn)
-
-add_executable(test-louds src/test-louds.cpp)
-target_link_libraries(test-louds sdsl divsufsort divsufsort64 hybridbv_gn)
 
 add_executable(build-uncltj-index src/build-uncltj-index.cpp)
 target_link_libraries(build-uncltj-index sdsl divsufsort divsufsort64)
@@ -90,6 +90,15 @@ target_link_libraries(query-uncltj-index sdsl divsufsort divsufsort64)
 add_executable(query-uncltj-index-fixed src/query-uncltj-index.cpp)
 target_compile_definitions(query-uncltj-index-fixed PUBLIC ADAPTIVE=0)
 target_link_libraries(query-uncltj-index-fixed sdsl divsufsort divsufsort64)
+
+
+add_executable(query-metatrie-index src/query-metatrie-index.cpp)
+target_compile_definitions(query-metatrie-index PUBLIC ADAPTIVE=1)
+target_link_libraries(query-metatrie-index sdsl divsufsort divsufsort64)
+
+add_executable(query-metatrie-index-fixed src/query-metatrie-index.cpp)
+target_compile_definitions(query-metatrie-index-fixed PUBLIC ADAPTIVE=0)
+target_link_libraries(query-metatrie-index-fixed sdsl divsufsort divsufsort64)
 
 add_executable(dyn-exp1 src/dyn-exp1.cpp)
 target_compile_definitions(dyn-exp1 PUBLIC ADAPTIVE=1)

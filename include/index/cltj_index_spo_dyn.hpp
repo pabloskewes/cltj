@@ -6,9 +6,7 @@
 #define CLTJ_INDEX_SPO_DYN_HPP
 
 
-#include <cltj_compact_trie_dyn.hpp>
-#include <cltj_compact_trie_dyn_v2.hpp>
-//#include <cltj_uncompact_trie.hpp>
+#include <trie/cltj_compact_trie_dyn.hpp>
 #include <cltj_helper.hpp>
 #include <sdsl/wt_helper.hpp>
 
@@ -317,7 +315,7 @@ namespace cltj {
 
     };
 
-    typedef cltj::cltj_index_spo_dyn<cltj::compact_trie_dyn_v2<>> compact_dyn_ltj;
+    typedef cltj::cltj_index_spo_dyn<cltj::compact_trie_dyn<>> compact_dyn_ltj;
    // typedef cltj::cltj_index_spo_dyn<cltj::uncompact_trie_v2> uncompact_dyn_ltj;
 
 }

@@ -24,6 +24,7 @@
 #include <ltj_algorithm.hpp>
 #include "utils.hpp"
 #include <time.hpp>
+#include <index/cltj_index_metatrie.hpp>
 #include <index/cltj_index_spo_lite.hpp>
 
 using namespace std;
@@ -156,7 +157,7 @@ void query(const std::string &file, const std::string &queries, const uint64_t l
             }
 
 
-            typedef ltj::ltj_iterator_lite<index_scheme_type, uint8_t, uint64_t> iterator_type;
+            typedef ltj::ltj_iterator_metatrie<index_scheme_type, uint8_t, uint64_t> iterator_type;
 #if ADAPTIVE
             typedef ltj::ltj_algorithm<iterator_type,
                 ltj::veo::veo_adaptive<iterator_type, trait_type> > algorithm_type;
@@ -165,8 +166,6 @@ void query(const std::string &file, const std::string &queries, const uint64_t l
             typedef ltj::ltj_algorithm<iterator_type,
                     ltj::veo::veo_simple<iterator_type, trait_type>> algorithm_type;
 #endif
-            //typedef std::vector<typename algorithm_type::tuple_type> results_type;
-            //typedef algorithm_type::results_type results_type;
             typedef ::util::results_collector<typename algorithm_type::tuple_type> results_type;
             results_type res;
 
@@ -211,9 +210,9 @@ int main(int argc, char *argv[]) {
     std::string type = argv[4];
 
     if (type == "normal") {
-        query<cltj::compact_ltj, ltj::util::trait_distinct>(index, queries, limit);
+        query<cltj::compact_ltj_metatrie, ltj::util::trait_distinct>(index, queries, limit);
     } else if (type == "star") {
-        query<cltj::compact_ltj, ltj::util::trait_size>(index, queries, limit);
+        query<cltj::compact_ltj_metatrie, ltj::util::trait_size>(index, queries, limit);
     } else {
         std::cout << "Type of index: " << type << " is not supported." << std::endl;
     }

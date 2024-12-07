@@ -1,5 +1,5 @@
 #include <iostream>
-#include <index/cltj_index_spo_lite.hpp>
+#include <index/cltj_index_metatrie.hpp>
 
 using namespace std;
 
@@ -15,7 +15,7 @@ int main(int argc, char **argv){
         }
 
         std::string dataset = argv[1];
-        std::string index_name = dataset + ".uncltj";
+        std::string index_name = dataset + ".cltj-metatrie";
         vector<cltj::spo_triple> D;
 
         std::ifstream ifs(dataset);
@@ -23,6 +23,7 @@ int main(int argc, char **argv){
         cltj::spo_triple spo;
         do {
             ifs >> s >> p >> o;
+            if(ifs.eof()) break;
             spo[0] = s; spo[1] = p; spo[2] = o;
             D.emplace_back(spo);
 
@@ -33,7 +34,7 @@ int main(int argc, char **argv){
         //sdsl::memory_monitor::start();
 
         auto start = timer::now();
-        cltj::uncompact_ltj index(D);
+        cltj::compact_ltj_metatrie index(D);
         auto stop = timer::now();
 
         //sdsl::memory_monitor::stop();

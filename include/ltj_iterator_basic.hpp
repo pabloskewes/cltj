@@ -17,16 +17,14 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LTJ_ITERATOR_V2_HPP
-#define LTJ_ITERATOR_V2_HPP
+#ifndef LTJ_ITERATOR_BASIC_HPP
+#define LTJ_ITERATOR_BASIC_HPP
 
 #include <triple_pattern.hpp>
 #include <cltj_config.hpp>
 #include <vector>
 #include <utils.hpp>
 #include <string>
-#include <cltj_index_spo_basic.hpp>
-#include <cltj_index_spo_lite.hpp>
 
 #define VERBOSE 0
 

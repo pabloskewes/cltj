@@ -17,8 +17,8 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LTJ_ITERATOR_V3_HPP
-#define LTJ_ITERATOR_V3_HPP
+#ifndef LTJ_ITERATOR_LITE_HPP
+#define LTJ_ITERATOR_LITE_HPP
 
 #include <triple_pattern.hpp>
 #include <cltj_config.hpp>

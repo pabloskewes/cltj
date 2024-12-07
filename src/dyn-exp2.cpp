@@ -7,7 +7,7 @@
 #define CHECK 0
 
 #include <iostream>
-#include <cltj_index_spo_dyn.hpp>
+#include <index/cltj_index_spo_dyn.hpp>
 #include <triple_pattern.hpp>
 #include <ltj_algorithm.hpp>
 #include "utils.hpp"

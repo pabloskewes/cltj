@@ -20,7 +20,7 @@
 #include <iostream>
 #include <utility>
 #include <chrono>
-#include <cltj_index_spo_dyn.hpp>
+#include <index/cltj_index_spo_dyn.hpp>
 #include <triple_pattern.hpp>
 #include <ltj_algorithm.hpp>
 #include <cltj_parser.hpp>

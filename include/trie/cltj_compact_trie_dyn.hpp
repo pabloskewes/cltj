@@ -1,5 +1,5 @@
-#ifndef CLTJ_COMPACT_TRIE_DYN_V2_HPP
-#define CLTJ_COMPACT_TRIE_DYN_V2_HPP
+#ifndef CLTJ_COMPACT_TRIE_DYN_HPP
+#define CLTJ_COMPACT_TRIE_DYN_HPP
 
 #include <vector>
 #include <iostream>
@@ -13,7 +13,7 @@
 namespace cltj {
 
     template<uint default_width = 32>
-    class compact_trie_dyn_v2 {
+    class compact_trie_dyn {
 
 
     public:
@@ -24,7 +24,7 @@ namespace cltj {
     private:
         dyn_cds::dyn_louds m_seq;
 
-        void copy(const compact_trie_dyn_v2 &o) {
+        void copy(const compact_trie_dyn &o) {
             m_seq = o.m_seq;
         }
 
@@ -36,11 +36,11 @@ namespace cltj {
 
         const dyn_cds::dyn_louds &seq = m_seq;
 
-        compact_trie_dyn_v2(const uint width = default_width) {
+        compact_trie_dyn(const uint width = default_width) {
             m_seq = dyn_cds::dyn_louds(width);
         }
 
-        compact_trie_dyn_v2(const spo_triple &triple, const spo_order_type &order,
+        compact_trie_dyn(const spo_triple &triple, const spo_order_type &order,
                          const bool skip_level, const uint width = default_width) {
             sdsl::int_vector<> s(3+!skip_level);
             uint64_t l = 0;
@@ -53,7 +53,7 @@ namespace cltj {
             m_seq = dyn_cds::dyn_louds(bv.data(), s.data(), bv.size(), width);
         }
 
-        compact_trie_dyn_v2(const std::vector<uint32_t> &syms, const std::vector<size_type> &lengths,
+        compact_trie_dyn(const std::vector<uint32_t> &syms, const std::vector<size_type> &lengths,
                          const uint width = default_width) {
             auto bv = sdsl::bit_vector(syms.size()+1, 0);
             sdsl::int_vector<> s(syms.size()+1);
@@ -71,30 +71,20 @@ namespace cltj {
 
             std::cout << "n_nodes=" << syms.size() << " pos_seq=" << pos_seq << " pos_bv=" << pos_bv << std::endl;
             m_seq = dyn_cds::dyn_louds(bv.data(), s.data(), bv.size(), width);
-            //sdsl::util::bit_compress(m_seq);
-            /*for(uint64_t i = 0; i < s.size(); ++i) {
-                if(m_seq[i] != s[i]) {
-                    std::cout << "Error en " << i << std::endl;
-                    std::cout << "seq[i]=" << m_seq[i] << std::endl;
-                    std::cout << "syms[i]=" << s[i] << std::endl;
-                    exit(0);
-                }
-            }*/
-
         }
 
         //! Copy constructor
-        compact_trie_dyn_v2(const compact_trie_dyn_v2 &o) {
+        compact_trie_dyn(const compact_trie_dyn &o) {
             copy(o);
         }
 
         //! Move constructor
-        compact_trie_dyn_v2(compact_trie_dyn_v2 &&o) {
+        compact_trie_dyn(compact_trie_dyn &&o) {
             *this = std::move(o);
         }
 
         //! Copy Operator=
-        compact_trie_dyn_v2 &operator=(const compact_trie_dyn_v2 &o) {
+        compact_trie_dyn &operator=(const compact_trie_dyn &o) {
             if (this != &o) {
                 copy(o);
             }
@@ -102,14 +92,14 @@ namespace cltj {
         }
 
         //! Move Operator=
-        compact_trie_dyn_v2 &operator=(compact_trie_dyn_v2 &&o) {
+        compact_trie_dyn &operator=(compact_trie_dyn &&o) {
             if (this != &o) {
                 m_seq = std::move(o.m_seq);
             }
             return *this;
         }
 
-        void swap(compact_trie_dyn_v2 &o) {
+        void swap(compact_trie_dyn &o) {
             // m_bp.swap(bp_support.m_bp); use set_vector to set the supported bit_vector
             std::swap(m_seq, o.m_seq);
         }

@@ -24,6 +24,7 @@
 #include <ltj_algorithm.hpp>
 #include "utils.hpp"
 #include <time.hpp>
+#include <index/cltj_index_spo_lite.hpp>
 
 using namespace std;
 

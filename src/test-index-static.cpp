@@ -1,5 +1,5 @@
 #include <iostream>
-#include <cltj_index_spo_lite.hpp>
+#include <index/cltj_index_spo_lite.hpp>
 
 using namespace std;
 

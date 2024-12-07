@@ -1,5 +1,5 @@
 #include <iostream>
-#include <cltj_index_spo_dyn.hpp>
+#include <index/cltj_index_spo_dyn.hpp>
 #include <cltj_parser.hpp>
 #include <dict_map.hpp>
 #include <regex>

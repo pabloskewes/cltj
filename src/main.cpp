@@ -2,8 +2,8 @@
 // Created by adrian on 2/10/24.
 //
 
-#include <cltj_compact_trie_dyn_v2.hpp>
-#include <cltj_index_spo_dyn.hpp>
+#include <trie/cltj_compact_trie_dyn.hpp>
+#include <index/cltj_index_spo_dyn.hpp>
 
 int main() {
 
@@ -13,7 +13,7 @@ int main() {
             cltj::spo_triple t2{5, 8, 3};
             //D.push_back(t1);
             //D.push_back(t2);
-            cltj::cltj_index_spo_dyn<cltj::compact_trie_dyn_v2<>> index(D);
+            cltj::cltj_index_spo_dyn<cltj::compact_trie_dyn<>> index(D);
             index.insert(t1);
             index.insert(t2);
             index.print();
@@ -25,7 +25,7 @@ int main() {
         cltj::spo_triple t2{5, 8, 3};
         D.push_back(t1);
         D.push_back(t2);
-        cltj::cltj_index_spo_dyn<cltj::compact_trie_dyn_v2<>> index(D.begin(), D.end());
+        cltj::cltj_index_spo_dyn<cltj::compact_trie_dyn<>> index(D.begin(), D.end());
         index.print();
         std::cout << "============" << std::endl;
         index.insert(t2);
@@ -59,7 +59,7 @@ int main() {
         cltj::spo_triple t4{4, 7, 1};
         D.push_back(t3);
         D.push_back(t2);
-        cltj::cltj_index_spo_dyn<cltj::compact_trie_dyn_v2<>> index(D);
+        cltj::cltj_index_spo_dyn<cltj::compact_trie_dyn<>> index(D);
         index.insert(t3);
         index.print();
         std::cout << "===============" << std::endl;
