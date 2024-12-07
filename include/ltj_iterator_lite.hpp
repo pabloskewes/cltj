@@ -445,7 +445,7 @@ namespace ltj {
             uint32_t cnt = trie->children(parent());
             size_type beg = trie->first_child(parent());
             for(auto i = beg; i < beg + cnt; ++i){
-                results.emplace_back(trie->seq[i]); //TODO: esto poderia facerse mellor
+                results.emplace_back(trie->seq[i]);
             }
             return results;
         }

@@ -2,7 +2,8 @@
 
 #include "hybridBV/leafBVId.h"
 
-const int MaxBlockWords = 32;
+//const int MaxBlockWords = 32;
+const int MaxBlockWords = 128;
 const float NewFraction = 0.75; // new blocks try to be this fraction full
 
 // size that a newly created leaf should have
