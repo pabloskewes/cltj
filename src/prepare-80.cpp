@@ -43,13 +43,15 @@ int main(int argc, char **argv){
     uint64_t num_build = D.size() * 0.8; //num triples in the build phase
     //uint64_t num_build = D.size();
 
-    std::ofstream of_dataset(dataset+ ".80");
+    std::string f_data = dataset + ".80";
+    std::ofstream of_dataset(f_data);
     for(uint64_t i = 0; i < num_build; ++i) {
         of_dataset << D[i][0] << " " << D[i][1] << " " << D[i][2] << std::endl;
     }
     of_dataset.close();
 
-    std::ofstream of_updates(dataset + ".updates");
+    std::string f_updates = dataset + ".updates";
+    std::ofstream of_updates(f_updates);
     uint64_t i_del = 0;
     uint64_t i_ins = num_build;
     std::uniform_int_distribution<uint> dist1(0,1);
@@ -68,6 +70,7 @@ int main(int argc, char **argv){
             if(i_del == D.size()) i_del = 0;
         }
     }
+    of_updates.close();
 
 
 
