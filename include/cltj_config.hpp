@@ -23,6 +23,12 @@ namespace cltj{
                                               {2, 0, 1}, //OSP
                                               {2, 1, 0}}; //OPS
 
+    //given an index i of a partial trie, we can compute the switching as ts_full_map[i/2]
+    const static std::array<uint8_t, 3> ts_full_map = {4, 0, 2};
+    //given an index i of a full trie, we can compute the switching as ts_part_map[i/2]
+    const static std::array<uint8_t, 3> ts_part_map = {3, 5, 1};
+
+
     struct comparator_order {
         uint64_t i;
         comparator_order(uint64_t pi) {

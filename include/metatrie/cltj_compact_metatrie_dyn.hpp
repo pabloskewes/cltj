@@ -38,7 +38,9 @@ namespace cltj {
 
         const dyn_cds::dyn_louds &seq = m_seq;
 
-        compact_metatrie_dyn() = default;
+        compact_metatrie_dyn(const uint width = default_width) {
+            m_seq = dyn_cds::dyn_louds(width);
+        }
  
         compact_metatrie_dyn(sdsl::int_vector<> &s, sdsl::bit_vector &bv,
                          const uint width = default_width) {
@@ -88,6 +90,14 @@ namespace cltj {
          size_type root_degree() {
              return m_root_degree;
          }
+
+         void inc_root_degree() {
+            ++m_root_degree;
+        }
+
+        void dec_root_degree() {
+            --m_root_degree;
+        }
 
         void insert(size_type node_pos, value_type v_seq, bool v_bv, bool first) {
             m_seq.insert(node_pos, v_bv, v_seq, first);

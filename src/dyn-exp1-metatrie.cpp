@@ -4,7 +4,7 @@
 * is added with insertions. Then, we measure the times of solving each query.
 */
 
-#define CHECK 0
+#define CHECK 1
 
 #include <iostream>
 #include <index/cltj_index_metatrie_dyn.hpp>
@@ -132,7 +132,7 @@ void query(index_scheme_type &graph, const std::string &queries, const uint64_t 
             }
 
 
-            typedef ltj::ltj_iterator_lite<index_scheme_type, uint8_t, uint64_t> iterator_type;
+            typedef ltj::ltj_iterator_metatrie<index_scheme_type, uint8_t, uint64_t> iterator_type;
 #if ADAPTIVE
             typedef ltj::ltj_algorithm<iterator_type,
                 ltj::veo::veo_adaptive<iterator_type, trait_type> > algorithm_type;
@@ -184,7 +184,7 @@ int main(int argc, char **argv){
     uint64_t limit = atoll(argv[3]);
     std::string type = argv[4];
 
-    std::vector<cltj::spo_triple> D;
+    std::vector<cltj::spo_triple> D, D_aux;
 
     std::ifstream ifs(dataset);
     uint32_t s, p , o;
@@ -209,16 +209,22 @@ int main(int argc, char **argv){
     uint64_t num_build = D.size() * 0.8; //num triples in the build phase
     //uint64_t num_build = D.size();
 
+    D_aux = std::vector<cltj::spo_triple>(D);
+    D_aux.resize(num_build);
+
+
     //Build pahse
     auto start = timer::now();
     //TODO ojo aqui
     //cltj::compact_ltj_metatrie_dyn index(D.begin(), D.begin()+num_build);
-    cltj::compact_ltj_metatrie_dyn index;
+    cltj::compact_ltj_metatrie_dyn index(D_aux);
     auto end = timer::now();
     auto sec_build = std::chrono::duration_cast<std::chrono::seconds>(end-start).count();
     std::cout << "Build phase in " << sec_build << " secs." << std::endl;
     std::cout << "Index uses " << sdsl::size_in_bytes(index) << " bytes." << std::endl;
     std::cout << std::endl;
+
+    D_aux.clear();
 #if  CHECK
     std::cout << "\r check build: 0% (0/" << num_build << ")" << std::flush;
     for(uint64_t i = 0; i < num_build; ++i) {
@@ -227,7 +233,7 @@ int main(int argc, char **argv){
             std::cout << "\r check build: " << per <<  "% (" << i << "/" << num_build << ")" << std::flush;
         }
         auto ap = index.test_exists(D[i]);
-        if(6 > ap) {
+        if(3 > ap) {
             std::cout << std::endl;
             std::cout << "Appears in " << ap << " tries." << std::endl;
             std::cout << "Error in construction at i=" << i << "." << std::endl;
@@ -256,7 +262,7 @@ int main(int argc, char **argv){
             float per = ((i - num_build)/ (float) (D.size()-num_build)) * 100;
             std::cout << "\r check insert: " << per <<  "% (" << i-num_build << "/" << D.size()-num_build << ")" << std::flush;
         }
-        if(6 > index.test_exists(D[i])) {
+        if(3 > index.test_exists(D[i])) {
             std::cout << "Error in construction at i=" << i << "." << std::endl;
             std::cout << "(" << D[i][0] << ", " << D[i][1] << ", " << D[i][2] << ")"  << std::endl;
             exit(0);
@@ -264,6 +270,63 @@ int main(int argc, char **argv){
     }
     std::cout << "\r check insert: 100% (" << D.size()-num_build << "/" << D.size()-num_build << ")" << std::endl;
 #endif
+
+    //Insertion phase
+    start = timer::now();
+    for(uint64_t i = num_build; i < D.size(); ++i){
+        index.remove(D[i]);
+    }
+    end = timer::now();
+    auto sec_remove = std::chrono::duration_cast<std::chrono::seconds>(end-start).count();
+    std::cout << "Remove phase in " << sec_remove << " secs. [" << num_build << "]" << std::endl;
+    std::cout << "Each remove takes " << std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count() / num_build << " nanosecs." << std::endl;
+    //std::cout << "Index uses " << sdsl::size_in_bytes(index) << " bytes." << std::endl;
+    std::cout << std::endl;
+
+#if CHECK
+    std::cout << "\r check prev remove: 0% (0/" << num_build << ")" << std::flush;
+    for(uint64_t i = num_build; i < D.size(); ++i) {
+        if((i-num_build) % ((D.size()-num_build)/1000) == 0) {
+            float per = ((i - num_build)/ (float) (D.size()-num_build)) * 100;
+            std::cout << "\r check remove: " << per <<  "% (" << i-num_build << "/" << D.size()-num_build << ")" << std::flush;
+        }
+        auto tries = index.test_exists(D[i]);
+        if(0 < tries) {
+            std::cout << "Error in construction at i=" << i << "." << std::endl;
+            std::cout << "(" << D[i][0] << ", " << D[i][1] << ", " << D[i][2] << ")"  << std::endl;
+            exit(0);
+        }
+    }
+    std::cout << "\r check prev remove: 100% (" << D.size()-num_build << "/" << D.size()-num_build << ")" << std::endl;
+#endif
+
+
+   /* //Insertion phase
+    start = timer::now();
+    for(uint64_t i = 0; i < num_build; ++i){
+        index.remove(D[i]);
+    }
+    end = timer::now();
+    auto sec_remove = std::chrono::duration_cast<std::chrono::seconds>(end-start).count();
+    std::cout << "Remove phase in " << sec_remove << " secs. [" << num_build << "]" << std::endl;
+    std::cout << "Each remove takes " << std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count() / num_build << " nanosecs." << std::endl;
+    //std::cout << "Index uses " << sdsl::size_in_bytes(index) << " bytes." << std::endl;
+    std::cout << std::endl;
+
+#if CHECK
+    for(uint64_t i = 0; i < num_build; ++i) {
+        if((i % num_build)/1000 == 0) {
+            float per = i / (float) (num_build) * 100;
+            std::cout << "\r check remove: " << per <<  "% (" << i << "/" << num_build << ")" << std::flush;
+        }
+        if(0 < index.test_exists(D[i])) {
+            std::cout << "Error in construction at i=" << i << "." << std::endl;
+            std::cout << "(" << D[i][0] << ", " << D[i][1] << ", " << D[i][2] << ")"  << std::endl;
+            exit(0);
+        }
+    }
+    std::cout << "\r check remove: 100% (" << num_build << "/" <<num_build << ")" << std::endl;
+#endif*/
 
     if (type == "normal") {
         query<cltj::compact_ltj_metatrie_dyn, ltj::util::trait_distinct>(index, queries, limit);
