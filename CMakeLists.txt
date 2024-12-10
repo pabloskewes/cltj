@@ -104,6 +104,10 @@ add_executable(dyn-exp1 src/dyn-exp1.cpp)
 target_compile_definitions(dyn-exp1 PUBLIC ADAPTIVE=1)
 target_link_libraries(dyn-exp1 sdsl divsufsort divsufsort64 hybridbv_gn)
 
+add_executable(dyn-exp1-metatrie src/dyn-exp1-metatrie.cpp)
+target_compile_definitions(dyn-exp1-metatrie PUBLIC ADAPTIVE=1)
+target_link_libraries(dyn-exp1-metatrie sdsl divsufsort divsufsort64 hybridbv_gn)
+
 add_executable(dyn-exp1-fixed src/dyn-exp1.cpp)
 target_compile_definitions(dyn-exp1-fixed PUBLIC ADAPTIVE=0)
 target_link_libraries(dyn-exp1-fixed sdsl divsufsort divsufsort64 hybridbv_gn)
@@ -141,3 +145,6 @@ target_link_libraries(build-index-bulk-triples sdsl divsufsort divsufsort64 hybr
 
 add_executable(query-index-triples src/query-index-triples.cpp)
 target_link_libraries(query-index-triples sdsl divsufsort divsufsort64 hybridbv_gn)
+
+add_executable(prepare-80 src/prepare-80.cpp)
+target_link_libraries(prepare-80 sdsl divsufsort divsufsort64)

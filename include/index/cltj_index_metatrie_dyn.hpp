@@ -218,6 +218,68 @@ namespace cltj {
             return &m_tries[i];
         }
 
+        void insert(spo_triple &triple) {
+            if(!m_n_triples) {
+                for(size_type i = 0; i < m_tries.size(); ++i) {
+                    m_tries[i] = trie_type(triple, spo_orders[i], i & 0x1);
+                }
+                m_gaps = {1,1,1};
+                ++m_n_triples;
+                return;
+            }
+            typedef struct {
+                size_type pos;
+                bool first_child; //pos contains the first_child of the current level
+                bool ins;
+            } state_type ;
+            std::array<state_type, 4> states;
+            std::array<bool, 3> inc_gaps = {false, false, false};
+            states[0].pos = 0; states[0].first_child = false; states[0].ins = false;
+            size_type b, e, gap;
+            for(size_type i = 0; i < m_tries.size(); i+=2) {
+                //std::cout << "Dealing with: " << i << std::endl;
+                //m_tries[i].print();
+                bool insert = false;
+                //global tries
+                for(size_type l = 0; l < 3; ++l) {
+                    gap = 1;
+                    if(skip_level) gap = (l==1) ? 0 : m_gaps[i/2];
+                    if(!states[l].ins) {
+                        b = (l==0) ? 0 : m_tries[i].child(states[l].pos, 1, gap);
+                        e = b+m_tries[i].children(b)-1;
+                        auto p = m_tries[i].next(b, e, triple[spo_orders[i][l]]);
+                        states[l+1].pos = p.second;
+                        states[l+1].first_child = (b==p.second); //first position
+                        states[l+1].ins =  p.first != triple[spo_orders[i][l]]; //insert
+                        insert = p.first != triple[spo_orders[i][l]];
+                    } else {
+                        states[l+1].pos = m_tries[i].child(states[l].pos, 1, gap);
+                        states[l+1].first_child = false; //it is not the first child of the current range
+                        states[l+1].ins = true;
+                    }
+                }
+                if(i == 0 && !insert) return;
+                for(int64_t j = 3; j >= 1+skip_level; --j) {
+                    //When the triple is not found in the previous level, it means that we are in the first child (1-bit) of the current level.
+                    //Otherwise, we have to add a new child to the current level, thus we add a 0-bit.
+                    if(states[j].ins) {
+                        //std::cout << "insert at: " << states[j].pos << "[" << states[j-1].ins << ", " << states[j].first_child << "]" << std::endl;
+                        m_tries[i].insert(states[j].pos, triple[spo_orders[i][j-1]], states[j-1].ins, states[j].first_child);
+                        //m_tries[i].print();
+                        if(j == 1) inc_gaps[i/2] = true;
+                    }
+                }
+            }
+            for(auto i = 0; i < 3; ++i) {
+                m_gaps[i] += inc_gaps[i]; //updating gaps because of insertions in the first level
+            }
+            ++m_n_triples;
+            //m_tries[4].print();
+            /*for(uint64_t i = 0; i < 6; ++i) {
+                m_tries[i].print();
+            }*/
+        }
+
         size_type serialize(std::ostream &out, sdsl::structure_tree_node *v = nullptr, std::string name = "") const {
             sdsl::structure_tree_node *child = sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
             size_type written_bytes = 0;
