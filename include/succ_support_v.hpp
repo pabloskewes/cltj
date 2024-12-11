@@ -35,7 +35,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define CDS_SUCC_SUPPORT_V_HPP
 
 #include <cstdint>
-#include <math_util.hpp>
+#include <util/math_util.hpp>
 #include <sdsl/vectors.hpp>
 
 #define W 64
