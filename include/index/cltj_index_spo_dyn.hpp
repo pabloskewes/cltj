@@ -110,7 +110,7 @@ namespace cltj {
         }
 
 
-        void insert(spo_triple &triple) {
+        void insert(const spo_triple &triple) {
             if(!m_n_triples) {
                 for(size_type i = 0; i < m_tries.size(); ++i) {
                     m_tries[i] = trie_type(triple, spo_orders[i], i & 0x1);
@@ -173,7 +173,7 @@ namespace cltj {
         }
 
 
-        bool remove(spo_triple &triple) {
+        bool remove(const spo_triple &triple) {
             if(!m_n_triples) return false;
             typedef struct {
                 size_type pos;

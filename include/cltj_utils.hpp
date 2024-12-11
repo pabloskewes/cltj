@@ -1,5 +1,5 @@
 /*
- * utils.hpp
+ * cltj_utils.hpp
  * Copyright (C) 2020 Author removed for double-blind evaluation
  *
  *
@@ -18,8 +18,8 @@
  */
 
 
-#ifndef UTILS_H
-#define UTILS_H
+#ifndef CLTJ_UTILS_H
+#define CLTJ_UTILS_H
 
 #include <iostream>
 #include <set>

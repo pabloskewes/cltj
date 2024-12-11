@@ -26,7 +26,6 @@
 #include <cltj_parser.hpp>
 #include <dict_map.hpp>
 
-#include "utils.hpp"
 #include <time.hpp>
 
 using namespace std;

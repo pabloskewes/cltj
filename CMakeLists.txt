@@ -146,5 +146,8 @@ target_link_libraries(build-index-bulk-triples sdsl divsufsort divsufsort64 hybr
 add_executable(query-index-triples src/query-index-triples.cpp)
 target_link_libraries(query-index-triples sdsl divsufsort divsufsort64 hybridbv_gn)
 
+add_executable(exp-update-ratio src/exp/exp-update-ratio.cpp)
+target_link_libraries(exp-update-ratio sdsl divsufsort divsufsort64 hybridbv_gn)
+
 add_executable(prepare-80 src/prepare-80.cpp)
 target_link_libraries(prepare-80 sdsl divsufsort divsufsort64)

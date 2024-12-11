@@ -181,6 +181,29 @@ namespace util {
             delete buffer;
         }
 
+        bool get_file_content(std::string filename, std::vector<std::string> &vector_of_strings) {
+            // Open the File
+            std::ifstream in(filename.c_str());
+            // Check if object is valid
+            if (!in) {
+                std::cerr << "Cannot open the File : " << filename << std::endl;
+                return false;
+            }
+            std::string str;
+            // Read the next line from File until it reaches the end.
+            while (getline(in, str)) {
+                // Line contains string of length > 0 then save it in vector
+                if (str.size() > 0)
+                    vector_of_strings.push_back(str);
+            }
+            //Close The File
+            in.close();
+            return true;
+        }
+
+
+
+
     }
 
 }

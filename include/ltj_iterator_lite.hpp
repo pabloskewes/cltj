@@ -23,7 +23,7 @@
 #include <triple_pattern.hpp>
 #include <cltj_config.hpp>
 #include <vector>
-#include <utils.hpp>
+#include <cltj_utils.hpp>
 #include <string>
 
 #define VERBOSE 0

@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <array>
+#include <cstdint>
 
 namespace cltj{
     using namespace std;
@@ -13,7 +14,7 @@ namespace cltj{
 //typedef CompactTrieIterator CurrentIterator;
 //typedef CompactTrie CTrie;
 
-    typedef std::array<uint32_t, 3> spo_triple;
+    typedef std::array<uint32_t, 3> spo_triple; //TODO: mover a outro namespace => ltj
     typedef uint8_t spo_order_type[3];
     typedef spo_order_type spo_orders_type[6];
     const static spo_orders_type spo_orders = {{0, 1, 2}, //SPO

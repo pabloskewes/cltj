@@ -5,7 +5,7 @@
 #ifndef DYN_LOUDS_HPP
 #define DYN_LOUDS_HPP
 
-#include <file.hpp>
+#include <util/file_util.hpp>
 #include <sdsl/structure_tree.hpp>
 #include <sdsl/util.hpp>
 
@@ -126,24 +126,24 @@ namespace dyn_cds {
         size_type serialize(std::ostream &out, sdsl::structure_tree_node *v = nullptr, std::string name = "") const {
             sdsl::structure_tree_node *child = sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
             size_type written_bytes = hybridBVIdSpace(m_B) * 8;
-            FILE* f = util::file::create_c_file();
+            FILE* f = ::util::file::create_c_file();
             hybridBVIdSave(m_B, f);
-            util::file::begin_c_file(f);
-            util::file::c_file_to_ostream(f, out);
-            util::file::close_c_file(f);
+            ::util::file::begin_c_file(f);
+            ::util::file::c_file_to_ostream(f, out);
+            ::util::file::close_c_file(f);
             sdsl::structure_tree::add_size(child, written_bytes);
             return written_bytes;
         }
 
         void load(std::istream &in) {
-            FILE* f = util::file::create_c_file();
+            FILE* f = ::util::file::create_c_file();
             int64_t pos = in.tellg();
-            util::file::istream_to_c_file(f, in);
-            util::file::begin_c_file(f);
+            ::util::file::istream_to_c_file(f, in);
+            ::util::file::begin_c_file(f);
             m_B = hybridBVIdLoad(f);
             int64_t offset = ftell(f);
             in.seekg(pos + offset, std::istream::beg);
-            util::file::close_c_file(f);
+            ::util::file::close_c_file(f);
         }
 
         bool check() {

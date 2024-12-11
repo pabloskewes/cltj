@@ -10,7 +10,6 @@
 #include <index/cltj_index_metatrie_dyn.hpp>
 #include <triple_pattern.hpp>
 #include <ltj_algorithm.hpp>
-#include "utils.hpp"
 
 using timer = std::chrono::high_resolution_clock;
 

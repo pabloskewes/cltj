@@ -22,7 +22,6 @@
 #include <chrono>
 #include <triple_pattern.hpp>
 #include <ltj_algorithm.hpp>
-#include "utils.hpp"
 #include <time.hpp>
 #include <index/cltj_index_spo_lite.hpp>
 

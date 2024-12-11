@@ -24,7 +24,7 @@
 #include <triple_pattern.hpp>
 #include <unordered_map>
 #include <vector>
-#include <utils.hpp>
+#include <cltj_utils.hpp>
 #include <unordered_set>
 #include <list>
 #include <configuration.hpp>

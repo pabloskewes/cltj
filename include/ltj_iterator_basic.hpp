@@ -22,8 +22,8 @@
 
 #include <triple_pattern.hpp>
 #include <cltj_config.hpp>
+#include <cltj_utils.hpp>
 #include <vector>
-#include <utils.hpp>
 #include <string>
 
 #define VERBOSE 0
