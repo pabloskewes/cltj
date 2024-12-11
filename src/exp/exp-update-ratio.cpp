@@ -105,7 +105,7 @@ void query_qpu(const std::string &index, const std::vector<query_type> &queries,
 
         auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(stop - start).count();
         cout << nQ << ";" << res.size() << ";" << time << endl;
-
+        nQ++;
         //After upq queries we run an update
         if(nQ % qpu == 0) {
             const auto &u = updates[i_up];
@@ -116,7 +116,6 @@ void query_qpu(const std::string &index, const std::vector<query_type> &queries,
             }
             ++i_up;
         }
-        nQ++;
     }
 }
 
