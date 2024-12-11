@@ -40,6 +40,7 @@ void query_upq(const std::string &index, const std::vector<query_type> &queries,
 
     index_scheme_type graph;
     sdsl::load_from_file(graph, index);
+    std::cout << "Index loaded : " << sdsl::size_in_bytes(graph) << " bytes." << std::endl;
 
     uint64_t i_up = 0; //index of update
     uint64_t nQ = 0;
@@ -90,6 +91,7 @@ void query_qpu(const std::string &index, const std::vector<query_type> &queries,
 
     index_scheme_type graph;
     sdsl::load_from_file(graph, index);
+    std::cout << "Index loaded : " << sdsl::size_in_bytes(graph) << " bytes." << std::endl;
 
     uint64_t i_up = 0; //index of update
     uint64_t nQ = 0;
