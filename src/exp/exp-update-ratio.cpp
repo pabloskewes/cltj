@@ -178,7 +178,7 @@ int main(int argc, char **argv) {
     add_updates(updates, us);
 
     if(ratio < 1) {
-        auto qpu = (uint64_t) (1/ratio);
+        auto qpu = (uint64_t) std::ceil(1/ratio);
         std::cout << "Queries per update: " << qpu << std::endl;
         if (type == "normal") {
             query_qpu<cltj::compact_dyn_ltj, ltj::util::trait_distinct>(index, qs, us, limit, qpu);
