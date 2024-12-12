@@ -18,6 +18,10 @@ namespace cltj {
     public:
         typedef uint64_t size_type;
         typedef uint32_t value_type;
+        typedef struct {
+            bool removed = false;
+            std::array<bool, 3> to_remove = {false, false, false}; //ids to remove in the dictionary
+        } remove_info_type;
         typedef Trie trie_type;
 
     private:
@@ -206,7 +210,9 @@ namespace cltj {
                     if(rem) {
                         //m_tries[i].remove(states[j].pos, states[j].first_child);
                         m_tries[i].remove(states[j].pos, !states[j].rem);
-                        if(j == 1) dec_gaps[i/2] = true;
+                        if(j == 1) {
+                            dec_gaps[i/2] = true;
+                        }
                     }
                     rem &= states[j].rem;
                 }
@@ -217,6 +223,75 @@ namespace cltj {
             }
             --m_n_triples;
             return true;
+        }
+
+        remove_info_type remove_and_report(const spo_triple &triple) {
+            remove_info_type res;
+            if(!m_n_triples) return res;
+            typedef struct {
+                size_type pos;
+                bool first_child;
+                bool rem;
+            } state_type ;
+            std::array<bool, 3> dec_gaps = {false, false, false}; //nodes that are candidates to be removed
+            std::array<state_type, 4> states;
+            states[0].pos = 0; states[0].first_child = true; states[0].rem = false;
+            size_type b, e, gap;
+            for(size_type i = 0; i < m_tries.size(); ++i) {
+            //for(size_type i = 2; i < 3; ++i) {
+                bool skip_level = i & 0x1;
+                for(size_type l = skip_level; l < 3; ++l) {
+                    gap = 1;
+                    if(skip_level) gap = (l==1) ? 0 : m_gaps[i/2];
+                    b = (l==0) ? 0 : m_tries[i].child(states[l].pos, 1, gap);
+                    e = b+m_tries[i].children(b)-1;
+                    auto p = m_tries[i].next(b, e, triple[spo_orders[i][l]]);
+                    if(p.first != triple[spo_orders[i][l]]) {
+                        //m_tries[i].print();
+                        return res;
+                    }
+                    states[l+1].pos = p.second;
+                    //states[l+1].first_child = (b==bs.first);
+                    states[l+1].rem = (b==e);
+                }
+                bool rem = true;
+                for(int64_t j = 3; j >= 1+skip_level; --j) {
+                    if(rem) {
+                        //m_tries[i].remove(states[j].pos, states[j].first_child);
+                        m_tries[i].remove(states[j].pos, !states[j].rem);
+                        if(j == 1) {
+                            dec_gaps[i/2] = true;
+                        }
+                    }
+                    rem &= states[j].rem;
+                }
+                //std::cout << "Fin: " << i << std::endl;
+            }
+
+            //Update degrees in roots
+            for(size_type i = 0; i < 3; ++i) {
+                m_gaps[i] -= dec_gaps[i]; //updating gaps because of deletions in the first level
+            }
+
+            //Compute nodes to remove
+            if(dec_gaps[0]) {
+                //Check if the node exists as object
+                auto p = m_tries[4].next(0, m_gaps[2], triple[0]);
+                if(p.first != triple[0]) {
+                    res.to_remove[0]=true;
+                }
+            }
+            if(dec_gaps[1]) res.to_remove[1]=true;
+            if(triple[0] != triple[2] && dec_gaps[2]) {
+                //Check if the node exists as subject
+                auto p = m_tries[0].next(0, m_gaps[0], triple[2]);
+                if(p.first != triple[2]) {
+                    res.to_remove[2]=true;
+                }
+            }
+            --m_n_triples;
+            res.removed = true;
+            return res;
         }
 
         //Checks if the triple exists, it returns the number of tries where it appears

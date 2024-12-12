@@ -134,11 +134,11 @@ void leafBVIdDestroy(leafBVId B) {
 // saves leaf data to file, which must be opened for writing
 
 void leafBVIdSave(leafBVId B, FILE *file) {
-    myfwrite(&B->size, sizeof(uint64_t), 1, file);
+    myfwrite(&B->size, sizeof(uint), 1, file);
     myfwrite(&B->width, sizeof(byte), 1, file);
     if (B->size != 0) {
-        myfwrite(B->data, sizeof(uint64_t), bitmapSize(B->width)/sizeof(uint64_t), file); //bitvector
-        myfwrite(B->id_data, sizeof(uint64_t), sequenceSize(B->width)/sizeof(uint64_t), file); //sequence
+        myfwrite(B->data, sizeof(uint64_t), (B->size + w64 - 1) / w64, file); //bitvector
+        myfwrite(B->id_data, sizeof(uint64_t), (B->size * B->width + w64 - 1) / w64, file); //sequence
     }
 }
 
@@ -148,9 +148,9 @@ void leafBVIdSave(leafBVId B, FILE *file) {
 leafBVId leafBVIdLoad(FILE *file) {
     leafBVId B;
     uint64_t *bv_data, *id_data;
-    uint64_t size;
+    uint size;
     byte width;
-    myfread(&size, sizeof(uint64_t), 1, file);
+    myfread(&size, sizeof(uint), 1, file);
     myfread(&width, sizeof(byte), 1, file);
 
     bv_data = (uint64_t *) myalloc(((size + w64 - 1) / w64) * sizeof(uint64_t));

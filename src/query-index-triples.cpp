@@ -102,28 +102,34 @@ uint64_t get_constant(string &s) {
 }
 
 template<class map_type>
-ltj::triple_pattern get_triple(cltj::parser::user_triple_type &terms,
-    std::unordered_map<std::string, uint8_t> &hash_table_vars,
-    std::unordered_set<uint8_t> &vars_in_p,
-    map_type &so_mapping, map_type &p_mapping) {
+std::pair<bool, ltj::triple_pattern> get_triple(cltj::user_triple_type &terms,
+                                                std::unordered_map<std::string, uint8_t> &hash_table_vars,
+                                                std::unordered_set<uint8_t> &vars_in_p,
+                                                map_type &so_mapping, map_type &p_mapping) {
 
     ltj::triple_pattern triple;
     if (is_variable(terms[0])) {
         triple.var_s(get_variable(terms[0], hash_table_vars, vars_in_p));
     } else {
-        triple.const_s(so_mapping.locate(terms[0]));
+        auto v = so_mapping.locate(terms[0]);
+        if(v == 0) return {false, triple};
+        triple.const_s(v);
     }
     if (is_variable(terms[1])) {
         triple.var_p(get_variable(terms[1], hash_table_vars, vars_in_p, true));
     } else {
-        triple.const_p(p_mapping.locate(terms[1]));
+        auto v = p_mapping.locate(terms[1]);
+        if(v == 0) return {false, triple};
+        triple.const_p(v);
     }
     if (is_variable(terms[2])) {
         triple.var_o(get_variable(terms[2], hash_table_vars, vars_in_p));
     } else {
-        triple.const_o(so_mapping.locate( terms[2]));
+        auto v = so_mapping.locate( terms[2]);
+        if(v == 0) return {false, triple};
+        triple.const_o(v);
     }
-    return triple;
+    return {true, triple};
 }
 
 std::string get_type(const std::string &file) {
@@ -141,10 +147,9 @@ void query(const std::string &file, const std::string &queries, const uint64_t l
     dict::basic_map dict_so;
     dict::basic_map dict_p;
 
-    sdsl::load_from_file(graph, file + ".cltj");
-    sdsl::load_from_file(dict_so, file + ".so");
-    sdsl::load_from_file(dict_p, file + ".p");
-    //TODO: load dictionaries
+    sdsl::load_from_file(graph, file + ".cltj.cds");
+    sdsl::load_from_file(dict_so, file + ".cltj.so");
+    sdsl::load_from_file(dict_p, file + ".cltj.p");
 
     std::cout << "Index loaded : " << sdsl::size_in_bytes(graph) << " bytes." << std::endl;
     std::cout << "DictSO loaded: " << sdsl::size_in_bytes(dict_so) << " bytes." << std::endl;
@@ -178,11 +183,12 @@ void query(const std::string &file, const std::string &queries, const uint64_t l
             std::vector<ltj::triple_pattern> query;
 
             auto t0 = std::chrono::high_resolution_clock::now();
-            std::vector<cltj::parser::user_triple_type> tokens = cltj::parser::get_query(query_string);
-            for (cltj::parser::user_triple_type &token: tokens) {
-                auto triple_pattern = get_triple(token, hash_table_vars, vars_in_p,
+            std::vector<cltj::user_triple_type> tokens = cltj::parser::get_query(query_string);
+            for (cltj::user_triple_type &token: tokens) {
+                auto p = get_triple(token, hash_table_vars, vars_in_p,
                     dict_so, dict_p);
-                query.push_back(triple_pattern);
+                //assumes the query is correct
+                query.push_back(p.second);
             }
             auto t1 = std::chrono::high_resolution_clock::now();
             algorithm_type ltj(&query, &graph);

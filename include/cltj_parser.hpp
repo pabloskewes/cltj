@@ -5,6 +5,7 @@
 #ifndef CLTJ_PARSER_HPP
 #define CLTJ_PARSER_HPP
 
+#include <cltj_config.hpp>
 #include <cstdint>
 #include <vector>
 #include <regex>
@@ -13,7 +14,6 @@ namespace cltj {
 
     namespace parser {
 
-        typedef std::array<std::string, 3> user_triple_type;
         static const std::regex regex("(?:\".*\"|[^[:space:]])+");
 
         static user_triple_type get_triple(const std::string &str){

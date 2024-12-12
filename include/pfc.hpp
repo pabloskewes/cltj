@@ -288,7 +288,7 @@ namespace dict
      * If its not found it throws an invalid_argument error
      *
      * @param s The string bieng searched
-     * @return uint64_t The ID of the string
+     * @return bool, uint64_t A flag that indicates if s exists and its ID, in that case
      */
     uint64_t locate(const std::string &s)
     {
@@ -317,7 +317,7 @@ namespace dict
         return curr_id;
       }
 
-      throw std::invalid_argument(s + " not in Plain Front Coding");
+      return 0;
     }
 
     /**
