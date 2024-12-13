@@ -62,6 +62,9 @@ target_link_libraries(build-index-dyn sdsl divsufsort divsufsort64 hybridbv_gn)
 add_executable(build-metatrie-index src/build-metatrie-index.cpp)
 target_link_libraries(build-metatrie-index sdsl divsufsort divsufsort64 hybridbv_gn)
 
+add_executable(build-metatrie-index-dyn src/build-metatrie-index-dyn.cpp)
+target_link_libraries(build-metatrie-index-dyn sdsl divsufsort divsufsort64 hybridbv_gn)
+
 add_executable(test-index-dyn src/test-index-dyn.cpp)
 target_link_libraries(test-index-dyn sdsl divsufsort divsufsort64 hybridbv_gn)
 
