@@ -5,7 +5,6 @@
 #ifndef CLTJ_RESULTS_COLLECTOR_HPP
 #define CLTJ_RESULTS_COLLECTOR_HPP
 
-#endif //CLTJ_RESULTS_COLLECTOR_HPP
 
 #include <array>
 
@@ -54,6 +53,10 @@ namespace util {
             return m_cnt;
         }
 
+        inline void clear() {
+            m_cnt = 0;
+        }
+
         //! Copy constructor
         results_collector(const results_collector &o) {
             copy(o);
@@ -89,3 +92,4 @@ namespace util {
     };
 
 }
+#endif //CLTJ_RESULTS_COLLECTOR_HPP

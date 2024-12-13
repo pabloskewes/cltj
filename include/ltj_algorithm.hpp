@@ -25,12 +25,14 @@
 
 #include <triple_pattern.hpp>
 //#include <ltj_iterator.hpp>
+#include <dict_map.hpp>
 #include <ltj_iterator_basic.hpp>
 #include <ltj_iterator_lite.hpp>
 #include <ltj_iterator_metatrie.hpp>
 #include <veo_simple.hpp>
 #include <veo_adaptive.hpp>
 #include <results_collector.hpp>
+#include <util/rdf_util.hpp>
 
 #define EXPT_TIME_SOL 0
 
@@ -50,8 +52,9 @@ namespace ltj {
         typedef veo_t veo_type;
         typedef unordered_map<var_type, vector<ltj_iter_type*>> var_to_iterators_type;
         typedef vector<pair<var_type, value_type>> tuple_type;
+        typedef vector<std::string> tuple_str_type;
         typedef chrono::high_resolution_clock::time_point time_point_type;
-        typedef ::util::results_collector<tuple_type> results_type;
+        //typedef ::util::results_collector<tuple_type> results_type;
 
     private:
         const vector<triple_pattern>* m_ptr_triple_patterns;
@@ -80,6 +83,17 @@ namespace ltj {
                 vector<ltj_iter_type*> vec = {ptr_iterator};
                 m_var_to_iterators.insert({var, vec});
             }
+        }
+
+        void from_id_to_str(tuple_type &t, tuple_str_type &t_str, const std::vector<bool> &in_p,
+                         dict::basic_map &dict_so, dict::basic_map &dict_p) {
+              for(auto &p : t) {
+                  if(in_p[p.first]) {
+                      t_str[p.first] = dict_p.extract(p.second);
+                  }else {
+                      t_str[p.first] = dict_so.extract(p.second);
+                  }
+              }
         }
 
     public:
@@ -166,6 +180,7 @@ namespace ltj {
         * @param limit_results     Limit of results
         * @param timeout_seconds   Timeout in seconds
         */
+        template<class results_type>
         void join(/*vector<tuple_type> &res,*/
                   results_type &res,
                   const size_type limit_results = 0, const size_type timeout_seconds = 0){
@@ -175,6 +190,24 @@ namespace ltj {
             search(0, t, res, start, limit_results, timeout_seconds);
         };
 
+        /**
+        *
+        * @param res               Results
+        * @param limit_results     Limit of results
+        * @param timeout_seconds   Timeout in seconds
+        */
+        template<class results_type>
+        void join_str(/*vector<tuple_type> &res,*/
+                  results_type &res,
+                  const std::vector<bool> &in_p,
+                  dict::basic_map &dict_so, dict::basic_map &dict_p,
+                  const size_type limit_results = 0, const size_type timeout_seconds = 0){
+            if(m_is_empty) return;
+            time_point_type start = chrono::high_resolution_clock::now();
+            tuple_type t(m_veo.size());
+            tuple_str_type t_str(m_veo.size());
+            search_str(0, t, t_str, res, in_p, dict_so, dict_p, start, limit_results, timeout_seconds);
+        };
 
         /**
          *
@@ -185,6 +218,96 @@ namespace ltj {
          * @param limit_results     Limit of results
          * @param timeout_seconds   Timeout in seconds
          */
+        template<class results_type>
+        bool search_str(const size_type j, tuple_type &tuple, tuple_str_type &t_str,
+                        results_type &res,
+                        const std::vector<bool> &in_p,
+                        dict::basic_map &dict_so, dict::basic_map &dict_p,
+                        const time_point_type start,
+                        const size_type limit_results = 0, const size_type timeout_seconds = 0){
+
+            //(Optional) Check timeout
+            if(timeout_seconds > 0){
+                time_point_type stop = chrono::high_resolution_clock::now();
+                auto sec = chrono::duration_cast<chrono::seconds>(stop-start).count();
+                if(sec > timeout_seconds) {
+                    return false;
+                }
+            }
+
+            //(Optional) Check limit
+            if(limit_results > 0 && res.size() == limit_results) {
+                return false;
+            }
+
+            if(j == m_veo.size()){
+                //Report results
+                //res.emplace_back(tuple);
+                from_id_to_str(tuple, t_str, in_p, dict_so, dict_p);
+                res.add(t_str);
+            }else{
+                var_type x_j = m_veo.next();
+                //cout << "Variable: " << (uint64_t) x_j << endl;
+                //cout << (uint64_t) x_j << endl;
+                vector<ltj_iter_type*>& itrs = m_var_to_iterators[x_j];
+                bool ok;
+                if(itrs.size() == 1 && itrs[0]->in_last_level()) {//Lonely variables
+                    //cout << "Seeking (last level)" << endl;
+                    auto results = itrs[0]->seek_all(x_j);
+                    //cout << "Results: " << results.size() << endl;
+                    //cout << "Seek (last level): (" << (uint64_t) x_j << ": size=" << results.size() << ")" <<endl;
+                    for (const auto &c : results) {
+                        //1. Adding result to tuple
+                        tuple[j] = {x_j, c};
+                        //2. Going down in the trie by setting x_j = c (\mu(t_i) in paper)
+                        itrs[0]->down(x_j, c);
+                        m_veo.down();
+                        //2. Search with the next variable x_{j+1}
+                        ok = search_str(j + 1, tuple, t_str, res, in_p, dict_so, dict_p, start, limit_results, timeout_seconds);
+                        if(!ok) return false;
+                        //4. Going up in the trie by removing x_j = c
+                        itrs[0]->up(x_j);
+                        m_veo.up();
+                    }
+                }else {
+                    value_type c = seek(x_j);
+                    //cout << "Seek (init): (" << (uint64_t) x_j << ": " << c << ")" <<endl;
+                    while (c != 0) { //If empty c=0
+                        //1. Adding result to tuple
+                        tuple[j] = {x_j, c};
+                        //2. Going down in the tries by setting x_j = c (\mu(t_i) in paper)
+                        for (ltj_iter_type* iter : itrs) {
+                            iter->down(x_j, c);
+                        }
+                        m_veo.down();
+                        //3. Search with the next variable x_{j+1}
+                        ok = search_str(j + 1, tuple, t_str, res, in_p, dict_so, dict_p, start, limit_results, timeout_seconds);
+                        if(!ok) return false;
+                        //4. Going up in the tries by removing x_j = c
+                        for (ltj_iter_type *iter : itrs) {
+                            iter->up(x_j);
+                        }
+                        m_veo.up();
+                        //5. Next constant for x_j
+                        c = seek(x_j, c + 1);
+                        //cout << "Seek (bucle): (" << (uint64_t) x_j << ": " << c << ")" <<endl;
+                    }
+                }
+                m_veo.done();
+            }
+            return true;
+        };
+
+        /**
+         *
+         * @param j                 Index of the variable
+         * @param tuple             Tuple of the current search
+         * @param res               Results
+         * @param start             Initial time to check timeout
+         * @param limit_results     Limit of results
+         * @param timeout_seconds   Timeout in seconds
+         */
+        template<class results_type>
         bool search(const size_type j, tuple_type &tuple, results_type &res,
                     const time_point_type start,
                     const size_type limit_results = 0, const size_type timeout_seconds = 0){

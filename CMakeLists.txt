@@ -151,8 +151,16 @@ add_executable(exp-update-ratio src/exp/exp-update-ratio.cpp)
 target_compile_definitions(exp-update-ratio PUBLIC ADAPTIVE=0)
 target_link_libraries(exp-update-ratio sdsl divsufsort divsufsort64 hybridbv_gn)
 
+add_executable(exp-update-metatrie-ratio src/exp/exp-update-metatrie-ratio.cpp)
+target_compile_definitions(exp-update-metatrie-ratio PUBLIC ADAPTIVE=0)
+target_link_libraries(exp-update-metatrie-ratio sdsl divsufsort divsufsort64 hybridbv_gn)
+
+
 add_executable(update-index-triples src/update-index-triples.cpp)
 target_link_libraries(update-index-triples sdsl divsufsort divsufsort64 hybridbv_gn)
+
+add_executable(dyn_rdf src/example/dyn_rdf.cpp)
+target_link_libraries(dyn_rdf sdsl divsufsort divsufsort64 hybridbv_gn)
 
 add_executable(prepare-80 src/prepare-80.cpp)
 target_link_libraries(prepare-80 sdsl divsufsort divsufsort64)

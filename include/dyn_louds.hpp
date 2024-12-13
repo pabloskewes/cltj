@@ -78,7 +78,7 @@ namespace dyn_cds {
             return hybridBVIdRank(m_B, i-1);
         }
 
-        size_type select(size_type i) const { //TODO: mellor que tivera succ en lugar de select [falar con Gonzalo]
+        size_type select(size_type i) const {
             return hybridBVIdSelect(m_B, i);
         }
 
@@ -101,6 +101,7 @@ namespace dyn_cds {
         //! Move constructor
         dyn_louds(dyn_louds &&o) {
             *this = std::move(o);
+            o.m_B = nullptr;
         }
 
         //! Copy Operator=

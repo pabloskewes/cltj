@@ -33,7 +33,7 @@ namespace dict
   struct EmptyOrPFC
   {
     union {
-      PFC *pfc;
+      PFC* pfc;
       uint64_t next_empty;
     } info;
     uint64_t ptr_str = 0; //0 => no cached string
@@ -52,7 +52,12 @@ namespace dict
   public:
     PFC() : text_string(""), current_size(0) {}
 
-    PFC(std::string initial_string, uint64_t initial_size) : text_string(initial_string), current_size(initial_size) {}
+    PFC(std::string &initial_string, uint64_t initial_size) : text_string(initial_string), current_size(initial_size) {}
+
+    explicit PFC(PFC* o) {
+      text_string = o->text_string;
+      current_size = o->current_size;
+    }
 
     /**
      * @brief Function that serializes the data structure.

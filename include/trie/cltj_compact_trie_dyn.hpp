@@ -69,7 +69,7 @@ namespace cltj {
                 bv[pos_bv] = 1;
             }
 
-            std::cout << "n_nodes=" << syms.size() << " pos_seq=" << pos_seq << " pos_bv=" << pos_bv << std::endl;
+            //std::cout << "n_nodes=" << syms.size() << " pos_seq=" << pos_seq << " pos_bv=" << pos_bv << std::endl;
             m_seq = dyn_cds::dyn_louds(bv.data(), s.data(), bv.size(), width);
         }
 

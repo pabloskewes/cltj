@@ -242,7 +242,7 @@ namespace cltj {
             return &m_tries[i];
         }
 
-        void insert(spo_triple &triple) {
+        void insert(const spo_triple &triple) {
             if(!m_n_triples) {
                 m_tries[0] = create_full_trie(triple, 0);
                 m_tries[1] = create_partial_trie(triple, 1);
@@ -317,7 +317,7 @@ namespace cltj {
             ++m_n_triples;
         }
 
-        bool remove(spo_triple &triple) {
+        bool remove(const spo_triple &triple) {
             if(!m_n_triples) return false;
             typedef struct {
                 size_type pos;

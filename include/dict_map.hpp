@@ -40,12 +40,39 @@ namespace dict
   public:
     typedef uint64_t size_type;
     typedef uint64_t value_type;
+
+  private:
+    class node;
+    node *root = NULL;
+    std::vector<EmptyOrPFC> id_map;
+    //Cached strings
+    std::vector<std::string> cache;
+    // Values used to represent the Queue of free IDs
+    uint64_t first_empty = 0, last_empty = 0, free_ids_size = 0;
+
+    void copy(const dict_map &o) {
+      std::unordered_map<PFC*, PFC*> ht; //mapping between PFCs
+      root = (o.root)->clone(ht);
+      cache = o.cache;
+      first_empty = o.first_empty;
+      last_empty = o.last_empty;
+      free_ids_size = o.free_ids_size;
+      id_map = o.id_map;
+      for(uint64_t i = 0; i < id_map.size(); ++i) {
+        auto it = ht.find(id_map[i].info.pfc);
+        if(it != ht.end()) {
+          id_map[i].info.pfc = it->second;
+        }
+      }
+    }
+
+  public:
     dict_map()
     {
       root = new node();
     }
 
-    dict_map(std::string val)
+    explicit dict_map(std::string &val)
     {
       root = new node(val, 1);
       id_map.push_back({ .pfc = root->get_pfc()});
@@ -53,7 +80,7 @@ namespace dict
 
 
     //Bulk load from a map
-    dict_map(std::map<std::string, uint64_t> &dict)
+    explicit dict_map(std::map<std::string, uint64_t> &dict)
     {
       auto pfc_size = (MAXSIZE + MINSIZE) / 2;
       auto size = (dict.size() + pfc_size - 1) / pfc_size;
@@ -95,16 +122,56 @@ namespace dict
       root = nodes[0];
     }
 
-    // Move constructor
-    dict_map(dict_map &&o)
-    {
+    //! Copy constructor
+    dict_map(const dict_map &o) {
+      copy(o);
+    }
+
+    //! Move constructor
+    dict_map(dict_map &&o) {
       *this = std::move(o);
+      o.root = NULL;
+    }
+
+    //! Copy Operator=
+    dict_map &operator=(const dict_map &o) {
+      if (this != &o) {
+        copy(o);
+      }
+      return *this;
+    }
+
+    //! Move Operator=
+    dict_map &operator=(dict_map &&o) {
+      if (this != &o) {
+        root = o.root;
+        o.root = NULL; //prevent remove dynamic info
+        cache = std::move(o.cache);
+        id_map = std::move(o.id_map);
+        first_empty = o.first_empty;
+        last_empty = o.last_empty;
+        free_ids_size = o.free_ids_size;
+      }
+      return *this;
+    }
+
+    void swap(dict_map &o) {
+      // m_bp.swap(bp_support.m_bp); use set_vector to set the supported bit_vector
+      std::swap(root, o.root);
+      std::swap(cache, o.cache);
+      std::swap(id_map, o.id_map);
+      std::swap(first_empty, o.first_empty);
+      std::swap(last_empty, o.last_empty);
+      std::swap(free_ids_size, o.free_ids_size);
     }
 
     ~dict_map()
     {
-      root->free_mem();
-      delete root;
+      if(root != NULL) {
+        root->free_mem();
+        delete root;
+      }
+
     }
 
 
@@ -394,14 +461,7 @@ namespace dict
       return root->get_pfc();
     }
 
-  private:
-    class node;
-    node *root = NULL;
-    std::vector<EmptyOrPFC> id_map;
-    //Cached strings
-    std::vector<std::string> cache;
-    // Values used to represent the Queue of free IDs
-    uint64_t first_empty = 0, last_empty = 0, free_ids_size = 0;
+
   };
 
   /**
@@ -448,11 +508,35 @@ namespace dict
       }
       else
       {
-        left->free_mem();
-        right->free_mem();
-        delete left;
-        delete right;
+        if(left != NULL) {
+          left->free_mem();
+          delete left;
+        }
+        if(right != NULL) {
+          right->free_mem();
+          delete right;
+        }
+
       }
+    }
+
+    node* clone(std::unordered_map<PFC*, PFC*> &ht)
+    {
+      node* n;
+      if (_is_leaf)
+      {
+        n = new node();
+        n->_is_leaf = _is_leaf;
+        n->pfc = new PFC(pfc);
+        ht.insert({pfc, n->pfc});
+      }
+      else
+      {
+        node* l = left->clone(ht);
+        node* r = right->clone(ht);
+        n = new node(l, r);
+      }
+      return n;
     }
 
     bool is_leaf() { return _is_leaf; }
