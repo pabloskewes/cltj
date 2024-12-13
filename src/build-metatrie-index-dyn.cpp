@@ -15,7 +15,7 @@ int main(int argc, char **argv){
         }
 
         std::string dataset = argv[1];
-        std::string index_name = dataset + ".cltj-dyn";
+        std::string index_name = dataset + ".cltj-mt-dyn";
         vector<cltj::spo_triple> D;
 
         std::ifstream ifs(dataset);
