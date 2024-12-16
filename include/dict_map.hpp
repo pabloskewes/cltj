@@ -366,10 +366,6 @@ namespace dict
     uint64_t eliminate(const std::string &val)
     {
       uint64_t elim_id = std::get<0>(root->eliminate(val, id_map));
-      if(id_map[elim_id-1].ptr_str != 0) {
-        cache.erase(cache.begin()+id_map[elim_id-1].ptr_str-1);
-        id_map[elim_id-1].ptr_str = 0;
-      }
       // First in "Symbolic queue"
       if (free_ids_size == 0)
       {
@@ -392,10 +388,6 @@ namespace dict
      */
     void eliminate(const uint64_t id)
     {
-      if(id_map[id-1].ptr_str != 0) {
-        cache.erase(cache.begin()+id_map[id-1].ptr_str-1);
-        id_map[id-1].ptr_str = 0;
-      }
       id_map[id - 1].info.pfc->elim(id);
       id_map[id - 1].info.pfc = nullptr;
       // First in "Symbolic queue"

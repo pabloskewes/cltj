@@ -159,6 +159,9 @@ target_compile_definitions(exp-update-metatrie-ratio PUBLIC ADAPTIVE=0)
 target_link_libraries(exp-update-metatrie-ratio sdsl divsufsort divsufsort64 hybridbv_gn)
 
 
+add_executable(interactive-metatrie src/interactive-metatrie.cpp)
+target_link_libraries(interactive-metatrie sdsl divsufsort divsufsort64 hybridbv_gn)
+
 add_executable(update-index-triples src/update-index-triples.cpp)
 target_link_libraries(update-index-triples sdsl divsufsort divsufsort64 hybridbv_gn)
 

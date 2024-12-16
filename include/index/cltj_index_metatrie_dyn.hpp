@@ -401,6 +401,7 @@ namespace cltj {
         size_type serialize(std::ostream &out, sdsl::structure_tree_node *v = nullptr, std::string name = "") const {
             sdsl::structure_tree_node *child = sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
             size_type written_bytes = 0;
+            sdsl::write_member(m_n_triples, out, child, "ntriples");
             for(const auto & trie : m_tries){
                 written_bytes += trie.serialize(out, child, "tries");
             }
@@ -409,6 +410,7 @@ namespace cltj {
         }
 
         void load(std::istream &in) {
+            sdsl::read_member(m_n_triples, in);
             for(auto & trie : m_tries){
                 trie.load(in);
             }

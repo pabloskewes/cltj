@@ -135,6 +135,17 @@ namespace util {
             triple[2] = get_constant(terms[2]);
             return triple;
         }
+
+        inline std::vector<ltj::triple_pattern> get_query(std::string &s) {
+            std::unordered_map<std::string, uint8_t> hash_table_vars;
+            std::vector<ltj::triple_pattern> query;
+            std::vector<std::string> tokens_query = tokenizer(s, '.');
+            for (std::string &token: tokens_query) {
+                auto triple_pattern = get_triple_pattern(token, hash_table_vars);
+                query.push_back(triple_pattern);
+            }
+            return query;
+        }
     }
 }
 
