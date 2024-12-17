@@ -22,11 +22,10 @@
 #include <chrono>
 #include <index/cltj_index_spo_dyn.hpp>
 #include <triple_pattern.hpp>
-#include <ltj_algorithm.hpp>
-#include <cltj_parser.hpp>
-#include <dict_map.hpp>
+#include <query/ltj_algorithm.hpp>
+#include <dict/dict_map.hpp>
 
-#include <time.hpp>
+#include <util/time_util.hpp>
 
 using namespace std;
 
@@ -102,7 +101,7 @@ uint64_t get_constant(string &s) {
 }
 
 template<class map_type>
-std::pair<bool, ltj::triple_pattern> get_triple(cltj::user_triple_type &terms,
+std::pair<bool, ltj::triple_pattern> get_triple(cltj::user_triple &terms,
                                                 std::unordered_map<std::string, uint8_t> &hash_table_vars,
                                                 std::unordered_set<uint8_t> &vars_in_p,
                                                 map_type &so_mapping, map_type &p_mapping) {
@@ -183,8 +182,8 @@ void query(const std::string &file, const std::string &queries, const uint64_t l
             std::vector<ltj::triple_pattern> query;
 
             auto t0 = std::chrono::high_resolution_clock::now();
-            std::vector<cltj::user_triple_type> tokens = cltj::parser::get_query(query_string);
-            for (cltj::user_triple_type &token: tokens) {
+            std::vector<cltj::user_triple> tokens = ::util::rdf::str::get_query(query_string);
+            for (cltj::user_triple &token: tokens) {
                 auto p = get_triple(token, hash_table_vars, vars_in_p,
                     dict_so, dict_p);
                 //assumes the query is correct

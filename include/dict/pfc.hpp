@@ -20,7 +20,7 @@
 #ifndef TREE_PFC_H
 #define TREE_PFC_H
 
-#include "configuration.hpp"
+#include <vector>
 
 namespace dict
 {

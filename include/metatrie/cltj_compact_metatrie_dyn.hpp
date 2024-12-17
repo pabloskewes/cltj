@@ -7,7 +7,7 @@
 #include <string>
 #include <queue>
 #include <sdsl/bit_vectors.hpp>
-#include <dyn_louds.hpp>
+#include <cds/dyn_louds.hpp>
 #include <cltj_config.hpp>
 
 namespace cltj {

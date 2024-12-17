@@ -2,9 +2,9 @@
 // Created by adrian on 29/11/24.
 //
 
-#include <dict_map.hpp>
+#include <dict/dict_map.hpp>
 #include <map>
-#include <cltj_parser.hpp>
+#include <util/rdf_util.hpp>
 
 int main(int argc, char **argv) {
 
@@ -35,7 +35,7 @@ int main(int argc, char **argv) {
     do {
         std::getline(ifs, line);
         if(line.empty()) break;
-        auto spo_str = cltj::parser::get_triple(line);
+        auto spo_str = ::util::rdf::str::get_triple(line);
         if(map.find(spo_str[0]) == map.end()) {
             map.insert({spo_str[0], ++id});
         }

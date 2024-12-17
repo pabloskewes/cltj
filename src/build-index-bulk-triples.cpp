@@ -1,8 +1,8 @@
 #include <iostream>
 #include <index/cltj_index_spo_dyn.hpp>
-#include <cltj_parser.hpp>
-#include <dict_map.hpp>
+#include <dict/dict_map.hpp>
 #include <regex>
+#include <util/rdf_util.hpp>
 
 using namespace std;
 
@@ -35,7 +35,7 @@ int main(int argc, char **argv){
         do {
             std::getline(ifs, line);
             if(line.empty()) break;
-            auto spo_str = cltj::parser::get_triple(line);
+            auto spo_str = ::util::rdf::str::get_triple(line);
             if((it = map_so.find(spo_str[0])) == map_so.end()) {
                 map_so.insert({spo_str[0], ++id_so});
                 spo[0] = id_so;

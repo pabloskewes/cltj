@@ -8,7 +8,7 @@
 #include <queue>
 #include <sdsl/vectors.hpp>
 #include <sdsl/select_support_mcl.hpp>
-#include <succ_support_v.hpp>
+#include <cds/succ_support_v.hpp>
 
 namespace cltj {
 
@@ -64,10 +64,10 @@ namespace cltj {
 
             //m_bv.resize(pos_bv+1);
             //m_seq.resize(pos_seq);
-            std::cout << "n_nodes=" << syms.size() << " pos_seq=" << pos_seq << " pos_bv=" << pos_bv << std::endl;
+           // std::cout << "n_nodes=" << syms.size() << " pos_seq=" << pos_seq << " pos_bv=" << pos_bv << std::endl;
 
             sdsl::util::bit_compress(m_seq);
-            std::cout << "width of trie seq = " << (uint64_t) m_seq.width() << std::endl;
+            //std::cout << "width of trie seq = " << (uint64_t) m_seq.width() << std::endl;
             sdsl::util::init_support(m_succ0, &m_bv);
             sdsl::util::init_support(m_select0, &m_bv);
 

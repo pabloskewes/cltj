@@ -168,5 +168,11 @@ target_link_libraries(update-index-triples sdsl divsufsort divsufsort64 hybridbv
 add_executable(dyn_rdf src/example/dyn_rdf.cpp)
 target_link_libraries(dyn_rdf sdsl divsufsort divsufsort64 hybridbv_gn)
 
+add_executable(dyn_ids src/example/dyn_ids.cpp)
+target_link_libraries(dyn_ids sdsl divsufsort divsufsort64 hybridbv_gn)
+
+add_executable(static_ids src/example/static_ids.cpp)
+target_link_libraries(static_ids sdsl divsufsort divsufsort64 hybridbv_gn)
+
 add_executable(prepare-80 src/prepare-80.cpp)
 target_link_libraries(prepare-80 sdsl divsufsort divsufsort64)

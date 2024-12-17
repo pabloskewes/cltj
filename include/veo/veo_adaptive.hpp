@@ -27,11 +27,12 @@
 #include <cltj_utils.hpp>
 #include <unordered_set>
 #include <list>
-#include <configuration.hpp>
+#include <cltj_config.hpp>
 #include<index/cltj_index_spo_lite.hpp>
 
 namespace ltj {
 
+    using namespace std;
     namespace veo {
 
 

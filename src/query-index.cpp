@@ -21,8 +21,8 @@
 #include <utility>
 #include <chrono>
 #include <triple_pattern.hpp>
-#include <ltj_algorithm.hpp>
-#include <time.hpp>
+#include <query/ltj_algorithm.hpp>
+#include <util/time_util.hpp>
 #include <index/cltj_index_spo_lite.hpp>
 
 using namespace std;

@@ -25,13 +25,13 @@
 
 #include <triple_pattern.hpp>
 //#include <ltj_iterator.hpp>
-#include <dict_map.hpp>
-#include <ltj_iterator_basic.hpp>
-#include <ltj_iterator_lite.hpp>
-#include <ltj_iterator_metatrie.hpp>
-#include <veo_simple.hpp>
-#include <veo_adaptive.hpp>
-#include <results_collector.hpp>
+#include <dict/dict_map.hpp>
+#include <query/ltj_iterator_basic.hpp>
+#include <query/ltj_iterator_lite.hpp>
+#include <query/ltj_iterator_metatrie.hpp>
+#include <veo/veo_simple.hpp>
+#include <veo/veo_adaptive.hpp>
+#include <results/results_collector.hpp>
 #include <util/rdf_util.hpp>
 
 #define EXPT_TIME_SOL 0

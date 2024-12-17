@@ -1,11 +1,10 @@
-#include <cltj_parser.hpp>
 //
 // Created by adrian on 12/12/24.
 //
 #include <iostream>
 #include <cstdint>
-#include <dict_map.hpp>
-#include <ltj_algorithm.hpp>
+#include <dict/dict_map.hpp>
+#include <query/ltj_algorithm.hpp>
 #include <index/cltj_index_spo_dyn.hpp>
 
 int main(int argc, char *argv[]) {
@@ -35,20 +34,20 @@ int main(int argc, char *argv[]) {
     while(true) {
         std::getline(std::cin, line);
         if(line == "q") break;
-        auto ut = cltj::parser::get_triple(line);
+        auto ut = ::util::rdf::str::get_triple(line);
         cltj::spo_triple triple;
         triple[0] = dict_so.locate(ut[0]);
         triple[1] = dict_p.locate(ut[1]);
         triple[2] = dict_so.locate(ut[2]);
         auto r = graph.remove_and_report(triple);
-        std::cout << "removed: " << r.removed << " dict: [" << r.to_remove[0] << ", " << r.to_remove[1] << ", " << r.to_remove[2] << "]" << std::endl;
-        if(r.to_remove[0]) {
+        std::cout << "removed: " << r.removed << " dict: [" << r.rem_in_dict[0] << ", " << r.rem_in_dict[1] << ", " << r.rem_in_dict[2] << "]" << std::endl;
+        if(r.rem_in_dict[0]) {
             dict_so.eliminate(triple[0]);
         }
-        if(r.to_remove[1]) {
+        if(r.rem_in_dict[1]) {
             dict_p.eliminate(triple[1]);
         }
-        if(r.to_remove[2]) {
+        if(r.rem_in_dict[2]) {
             dict_so.eliminate(triple[2]);
         }
     }

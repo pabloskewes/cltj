@@ -21,7 +21,11 @@
 #define DICT_MAP_HPP
 
 #include <pfc.hpp>
+#include <map>
+#include <sdsl/int_vector.hpp>
 #include <cltj_config.hpp>
+
+using namespace std;
 
 namespace dict
 {

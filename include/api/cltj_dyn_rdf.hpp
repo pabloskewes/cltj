@@ -5,9 +5,8 @@
 #ifndef CLTJ_DYN_RDF_HPP
 #define CLTJ_DYN_RDF_HPP
 
-#include <ltj_algorithm.hpp>
-#include <dict_map.hpp>
-#include <cltj_parser.hpp>
+#include <query/ltj_algorithm.hpp>
+#include <dict/dict_map.hpp>
 #include <index/cltj_index_spo_dyn.hpp>
 #include <util/rdf_util.hpp>
 
@@ -26,6 +25,7 @@ namespace cltj {
         typedef ltj::util::trait_size trait_type;
         typedef ltj::ltj_iterator_lite<index_type, uint8_t, uint64_t> iterator_type;
         typedef ltj::ltj_algorithm<iterator_type, ltj::veo::veo_adaptive<iterator_type, trait_type> > algorithm_type;
+        typedef typename algorithm_type::tuple_str_type tuple_type;
 
     private:
 
@@ -55,7 +55,7 @@ namespace cltj {
             do {
                 std::getline(ifs, line);
                 if(line.empty()) break;
-                auto spo_str = cltj::parser::get_triple(line);
+                auto spo_str = ::util::rdf::str::get_triple(line);
                 if((it = map_so.find(spo_str[0])) == map_so.end()) {
                     map_so.insert({spo_str[0], ++id_so});
                     spo[0] = id_so;
@@ -100,7 +100,7 @@ namespace cltj {
             //STEP2: Build index
             std::cout << "Building index... " << std::flush;
             start = timer::now();
-            m_index = cltj::compact_dyn_ltj(D);
+            m_index = index_type(D);
             stop = timer::now();
             secs = duration_cast<seconds>(stop-start).count();
             std::cout << "done. [" << secs << " secs. ]" << std::endl;
@@ -135,9 +135,9 @@ namespace cltj {
             std::vector<bool> var_in_p;
             std::vector<ltj::triple_pattern> query;
 
-            std::vector<cltj::user_triple_type> tokens = cltj::parser::get_query(query_str);
-            for (cltj::user_triple_type &token: tokens) {
-                auto p = ::util::rdf::get_triple_pattern_str(token, ht_var_id, var_in_p, m_dict_so, m_dict_p);
+            std::vector<cltj::user_triple> tokens = ::util::rdf::str::get_query(query_str);
+            for (cltj::user_triple &token: tokens) {
+                auto p = ::util::rdf::str::get_triple_pattern(token, ht_var_id, var_in_p, m_dict_so, m_dict_p);
                 if(!p.first) return false;
                 query.push_back(p.second);
             }
@@ -151,7 +151,7 @@ namespace cltj {
         }
 
         void insert(const std::string &triple) {
-            auto spo_str = cltj::parser::get_triple(triple);
+            auto spo_str = ::util::rdf::str::get_triple(triple);
             cltj::spo_triple spo;
             spo[0] = m_dict_so.get_or_insert(spo_str[0]);
             spo[1] = m_dict_p.get_or_insert(spo_str[1]);
@@ -160,7 +160,7 @@ namespace cltj {
         }
 
         bool remove(const std::string &triple) {
-            auto spo_str = cltj::parser::get_triple(triple);
+            auto spo_str = ::util::rdf::str::get_triple(triple);
             cltj::spo_triple spo;
             spo[0] = m_dict_so.locate(spo_str[0]);
             if(!spo[0]) return false;
@@ -170,9 +170,9 @@ namespace cltj {
             if(!spo[2]) return false;
             auto r = m_index.remove_and_report(spo);
             if(r.removed) {
-                if(r.to_remove[0]) m_dict_so.eliminate(spo[0]);
-                if(r.to_remove[1]) m_dict_p.eliminate(spo[1]);
-                if(r.to_remove[2]) m_dict_so.eliminate(spo[2]);
+                if(r.rem_in_dict[0]) m_dict_so.eliminate(spo[0]);
+                if(r.rem_in_dict[1]) m_dict_p.eliminate(spo[1]);
+                if(r.rem_in_dict[2]) m_dict_so.eliminate(spo[2]);
                 return true;
             }
             return false;

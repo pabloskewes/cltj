@@ -4,8 +4,8 @@
 
 #include <iostream>
 #include <index/cltj_index_metatrie_dyn.hpp>
-#include <ltj_iterator_metatrie.hpp>
-#include <ltj_algorithm.hpp>
+#include <query/ltj_iterator_metatrie.hpp>
+#include <query/ltj_algorithm.hpp>
 #include <util/rdf_util.hpp>
 
 template<class index_scheme_type, class trait_type>
@@ -59,15 +59,15 @@ int main(int argc, char *argv[]) {
         if(line == "quit") break;
         if(line == "insert") {
             std::getline(std::cin, line);
-            auto t = ::util::rdf::get_triple(line);
+            auto t = ::util::rdf::ids::get_triple(line);
             graph.insert(t);
         }else if (line == "delete") {
             std::getline(std::cin, line);
-            auto t = ::util::rdf::get_triple(line);
+            auto t = ::util::rdf::ids::get_triple(line);
             graph.remove(t);
         }else if (line == "query") {
             std::getline(std::cin, line);
-            auto q = ::util::rdf::get_query(line);
+            auto q = ::util::rdf::ids::get_query(line);
             query<cltj::compact_ltj_metatrie_dyn, ltj::util::trait_size>(q, graph);
         }
     }

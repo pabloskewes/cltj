@@ -8,7 +8,7 @@
 #include <queue>
 #include <sdsl/vectors.hpp>
 #include <sdsl/select_support_mcl.hpp>
-#include <succ_support_v.hpp>
+#include <cdsd/succ_support_v.hpp>
 #include <cltj_config.hpp>
 
 namespace cltj {

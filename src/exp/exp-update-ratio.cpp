@@ -10,7 +10,7 @@
 #include <triple_pattern.hpp>
 #include <util/file_util.hpp>
 #include <util/rdf_util.hpp>
-#include <ltj_algorithm.hpp>
+#include <query/ltj_algorithm.hpp>
 #include <index/cltj_index_spo_dyn.hpp>
 
 typedef struct {
@@ -128,7 +128,7 @@ void add_queries(const std::string &from, std::vector<query_type> &queries) {
             query_type query;
             std::vector<std::string> tokens_query = ::util::rdf::tokenizer(q, '.');
             for (std::string &token: tokens_query) {
-                auto triple_pattern = ::util::rdf::get_triple_pattern(token, hash_table_vars);
+                auto triple_pattern = ::util::rdf::ids::get_triple_pattern(token, hash_table_vars);
                 query.push_back(triple_pattern);
             }
             queries.push_back(query);
@@ -143,7 +143,7 @@ void add_updates(const std::string &from, std::vector<update_type> &updates) {
         for(uint64_t i = 0; i < lines.size(); i+=2) {
             update_type update;
             update.insert = (lines[i] == "Insert");
-            update.triple = ::util::rdf::get_triple(lines[i+1]);
+            update.triple = ::util::rdf::ids::get_triple(lines[i+1]);
             updates.push_back(update);
         }
     }

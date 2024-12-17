@@ -97,9 +97,9 @@ namespace ltj {
         }
 
         void print_path() {
-            cout << "Current path: ";
-            for (int i = 0; i < m_nfixed; i++) cout << m_path_label[i] << " ";
-            cout << endl;
+            std::cout << "Current path: ";
+            for (int i = 0; i < m_nfixed; i++) std::cout << m_path_label[i] << " ";
+            std::cout << std::endl;
         }
 
         void process_constants() {

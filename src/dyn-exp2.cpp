@@ -9,7 +9,7 @@
 #include <iostream>
 #include <index/cltj_index_spo_dyn.hpp>
 #include <triple_pattern.hpp>
-#include <ltj_algorithm.hpp>
+#include <query/ltj_algorithm.hpp>
 
 using timer = std::chrono::high_resolution_clock;
 std::random_device rd;

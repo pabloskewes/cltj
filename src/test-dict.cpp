@@ -2,7 +2,7 @@
 // Created by adrian on 26/11/24.
 //
 
-#include <dict_map.hpp>
+#include <dict/dict_map.hpp>
 
 int main() {
 
