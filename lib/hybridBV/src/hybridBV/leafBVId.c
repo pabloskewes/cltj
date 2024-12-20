@@ -298,15 +298,20 @@ void leafBVIdInsert(leafBVId B, uint i, uint bv_v, uint64_t v, uint first) {
     ib = i / w64;
     for (b = nb; b > ib; b--)
         B->data[b] = (B->data[b] << 1) | (B->data[b - 1] >> (w64 - 1));
-    if ((i + 1) % w64)
+    if ((i + 1) % w64) {
         B->data[ib] = (B->data[ib] & ((((uint64_t) 1) << (i % w64)) - 1)) |
                       (((uint64_t) bv_v) << (i % w64)) |
                       ((B->data[ib] << 1) & (~((uint64_t) 0) << ((i + 1) % w64)));
-    else
-        B->data[ib] = (B->data[ib] & ((((uint64_t) 1) << (i % w64)) - 1)) |
+        if(!bv_v && first) B->data[ib] ^= (((uint64_t) 3) << (i % w64)); //xor to interchange 0-bit and 1-bit
+    }else{
+        if(!bv_v && first) { //first child but there are more than one children
+            B->data[ib] = (B->data[ib] & ((((uint64_t) 1) << (i % w64)) - 1)) |
+                      (((uint64_t) 1) << (i % w64));
+            B->data[ib+1] = (B->data[ib+1] & (~((uint64_t) 0) << 1));
+        }else {
+            B->data[ib] = (B->data[ib] & ((((uint64_t) 1) << (i % w64)) - 1)) |
                       (((uint64_t) bv_v) << (i % w64));
-    if(!bv_v && first) {
-        B->data[ib] ^= (((uint64_t) 3) << (i % w64));
+        }
     }
     B->ones += bv_v;
     B->size++;
@@ -563,4 +568,14 @@ uint leafBVIdNext (leafBVId B, uint i, uint j, uint64_t c, uint64_t *value)
     v &= ((((uint64_t)1) << width) - 1);
     *value = v;
     return d;
+}
+
+uint leafBVIdCheckOnes(leafBVId B) {
+    uint p;
+    uint i = B->size;
+    uint ib = B->size / w64;
+    uint ones = 0;
+    for (p = 0; p < ib; p++) ones += popcount(B->data[p]);
+    if (i % w64) ones += popcount(B->data[p] & ((((uint64_t) 1) << (i % w64)) - 1));
+    return B->ones == ones;
 }

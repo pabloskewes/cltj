@@ -181,7 +181,7 @@ namespace util {
             delete buffer;
         }
 
-        bool get_file_content(std::string filename, std::vector<std::string> &vector_of_strings) {
+        bool get_file_content(const std::string &filename, std::vector<std::string> &vector_of_strings) {
             // Open the File
             std::ifstream in(filename.c_str());
             // Check if object is valid

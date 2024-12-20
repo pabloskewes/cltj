@@ -1,13 +1,10 @@
 #include <iostream>
-#include <index/cltj_index_spo_lite.hpp>
+#include <index/cltj_index_metatrie.hpp>
 
 using namespace std;
 
 using namespace std::chrono;
 using timer = std::chrono::high_resolution_clock;
-
-std::random_device rd;
-std::mt19937 g(rd());
 
 int main(int argc, char **argv){
     try{
@@ -18,7 +15,7 @@ int main(int argc, char **argv){
         }
 
         std::string dataset = argv[1];
-        std::string index_name = dataset + ".random80.cltj";
+        std::string index_name = dataset + ".cltj-mt";
         vector<cltj::spo_triple> D;
 
         std::ifstream ifs(dataset);
@@ -36,12 +33,8 @@ int main(int argc, char **argv){
         std::cout << "Dataset: " << 3*D.size()*sizeof(::uint32_t) << " bytes." << std::endl;
         //sdsl::memory_monitor::start();
 
-        std::shuffle(D.begin(), D.end(), g);
-        uint64_t n = D.size() * 0.8; //num triples in the build phase
-        D.resize(n);
-
         auto start = timer::now();
-        cltj::compact_ltj index(D);
+        cltj::compact_ltj_metatrie index(D);
         auto stop = timer::now();
 
         //sdsl::memory_monitor::stop();

@@ -7,7 +7,7 @@ project(CLTJ)
 set(CMAKE_PROJECT_NAME "CLTJ")
 
 #Change to "Debug" when you need it
-set(CMAKE_BUILD_TYPE "Release")
+set(CMAKE_BUILD_TYPE "Debug")
 
 # C++11 compiler Check
 if(NOT CMAKE_CXX_COMPILER_VERSION) # work around for cmake versions smaller than 2.8.10
@@ -50,20 +50,95 @@ include_directories(~/include
 link_directories(~/lib)
 add_subdirectory(lib/hybridBV)
 
-add_executable(build-index src/build-index.cpp)
+#BENCH EXECUTABLES
+add_executable(build-index src/bench/build-index.cpp)
 target_link_libraries(build-index sdsl divsufsort divsufsort64)
+set_target_properties(build-index PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
 
-add_executable(build-index-rand src/build-index-random.cpp)
-target_link_libraries(build-index-rand sdsl divsufsort divsufsort64)
-
-add_executable(build-index-dyn src/build-index-dyn.cpp)
+add_executable(build-index-dyn src/bench/build-index-dyn.cpp)
 target_link_libraries(build-index-dyn sdsl divsufsort divsufsort64 hybridbv_gn)
+set_target_properties(build-index-dyn PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
 
-add_executable(build-metatrie-index src/build-metatrie-index.cpp)
+add_executable(build-metatrie-index src/bench/build-metatrie-index.cpp)
 target_link_libraries(build-metatrie-index sdsl divsufsort divsufsort64 hybridbv_gn)
+set_target_properties(build-metatrie-index PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
 
-add_executable(build-metatrie-index-dyn src/build-metatrie-index-dyn.cpp)
+add_executable(build-metatrie-index-dyn src/bench/build-metatrie-index-dyn.cpp)
 target_link_libraries(build-metatrie-index-dyn sdsl divsufsort divsufsort64 hybridbv_gn)
+set_target_properties(build-metatrie-index-dyn PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
+
+add_executable(build-uncltj-index src/bench/build-uncltj-index.cpp)
+target_link_libraries(build-uncltj-index sdsl divsufsort divsufsort64)
+set_target_properties(build-uncltj-index PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
+
+add_executable(build-index-triples src/bench/build-index-triples.cpp)
+target_link_libraries(build-index-triples sdsl divsufsort divsufsort64 hybridbv_gn)
+set_target_properties(build-index-triples PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
+
+add_executable(build-index-bulk-triples src/bench/build-index-bulk-triples.cpp)
+target_link_libraries(build-index-bulk-triples sdsl divsufsort divsufsort64 hybridbv_gn)
+set_target_properties(build-index-bulk-triples PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
+
+add_executable(bench-query-index src/bench/bench-query-index.cpp)
+target_compile_definitions(bench-query-index PUBLIC ADAPTIVE=1)
+target_link_libraries(bench-query-index sdsl divsufsort divsufsort64)
+set_target_properties(bench-query-index PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
+
+add_executable(bench-query-index-global src/bench/bench-query-index.cpp)
+target_compile_definitions(bench-query-index-global PUBLIC ADAPTIVE=0)
+target_link_libraries(bench-query-index-global sdsl divsufsort divsufsort64)
+set_target_properties(bench-query-index-global PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
+
+add_executable(bench-query-uncltj-index src/bench/bench-query-uncltj-index.cpp)
+target_compile_definitions(bench-query-uncltj-index PUBLIC ADAPTIVE=1)
+target_link_libraries(bench-query-uncltj-index sdsl divsufsort divsufsort64)
+set_target_properties(bench-query-uncltj-index PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
+
+add_executable(bench-query-uncltj-index-global src/bench/bench-query-uncltj-index.cpp)
+target_compile_definitions(bench-query-uncltj-index-global PUBLIC ADAPTIVE=0)
+target_link_libraries(bench-query-uncltj-index-global sdsl divsufsort divsufsort64)
+set_target_properties(bench-query-uncltj-index-global PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
+
+add_executable(bench-query-metatrie-index src/bench/bench-query-metatrie-index.cpp)
+target_compile_definitions(bench-query-metatrie-index PUBLIC ADAPTIVE=1)
+target_link_libraries(bench-query-metatrie-index sdsl divsufsort divsufsort64)
+set_target_properties(bench-query-metatrie-index PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
+
+add_executable(bench-query-metatrie-index-global src/bench/bench-query-metatrie-index.cpp)
+target_compile_definitions(bench-query-metatrie-index-global PUBLIC ADAPTIVE=0)
+target_link_libraries(bench-query-metatrie-index-global sdsl divsufsort divsufsort64)
+set_target_properties(bench-query-metatrie-index-global PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
+
+add_executable(bench-query-index-triples src/bench/bench-query-index-triples.cpp)
+target_link_libraries(bench-query-index-triples sdsl divsufsort divsufsort64 hybridbv_gn)
+set_target_properties(bench-query-index-triples PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
+
+add_executable(bench-update-ratio src/bench/bench-update-ratio.cpp)
+target_compile_definitions(bench-update-ratio PUBLIC ADAPTIVE=1)
+target_link_libraries(bench-update-ratio sdsl divsufsort divsufsort64 hybridbv_gn)
+set_target_properties(bench-update-ratio PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
+
+add_executable(bench-update-metatrie-ratio src/bench/bench-update-metatrie-ratio.cpp)
+target_compile_definitions(bench-update-metatrie-ratio PUBLIC ADAPTIVE=1)
+target_link_libraries(bench-update-metatrie-ratio sdsl divsufsort divsufsort64 hybridbv_gn)
+set_target_properties(bench-update-metatrie-ratio PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
+
+
+#EXAMPLE
+
+add_executable(ex_dyn_rdf src/example/ex_dyn_rdf.cpp)
+target_link_libraries(ex_dyn_rdf sdsl divsufsort divsufsort64 hybridbv_gn)
+set_target_properties(ex_dyn_rdf PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/example)
+
+add_executable(ex_dyn_ids src/example/ex_dyn_ids.cpp)
+target_link_libraries(ex_dyn_ids sdsl divsufsort divsufsort64 hybridbv_gn)
+set_target_properties(ex_dyn_ids PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/example)
+
+add_executable(ex_static_ids src/example/ex_static_ids.cpp)
+target_link_libraries(ex_static_ids sdsl divsufsort divsufsort64 hybridbv_gn)
+set_target_properties(ex_static_ids PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/example)
+
+
 
 add_executable(test-index-dyn src/test-index-dyn.cpp)
 target_link_libraries(test-index-dyn sdsl divsufsort divsufsort64 hybridbv_gn)
@@ -74,34 +149,17 @@ target_link_libraries(test-index-static sdsl divsufsort divsufsort64)
 add_executable(main src/main.cpp)
 target_link_libraries(main sdsl divsufsort divsufsort64 hybridbv_gn)
 
-add_executable(build-uncltj-index src/build-uncltj-index.cpp)
-target_link_libraries(build-uncltj-index sdsl divsufsort divsufsort64)
-
-add_executable(query-index src/query-index.cpp)
-target_compile_definitions(query-index PUBLIC ADAPTIVE=1)
-target_link_libraries(query-index sdsl divsufsort divsufsort64)
-
-add_executable(query-index-fixed src/query-index.cpp)
-target_compile_definitions(query-index-fixed PUBLIC ADAPTIVE=0)
-target_link_libraries(query-index-fixed sdsl divsufsort divsufsort64)
 
 
-add_executable(query-uncltj-index src/query-uncltj-index.cpp)
-target_compile_definitions(query-uncltj-index PUBLIC ADAPTIVE=1)
-target_link_libraries(query-uncltj-index sdsl divsufsort divsufsort64)
-
-add_executable(query-uncltj-index-fixed src/query-uncltj-index.cpp)
-target_compile_definitions(query-uncltj-index-fixed PUBLIC ADAPTIVE=0)
-target_link_libraries(query-uncltj-index-fixed sdsl divsufsort divsufsort64)
 
 
-add_executable(query-metatrie-index src/query-metatrie-index.cpp)
-target_compile_definitions(query-metatrie-index PUBLIC ADAPTIVE=1)
-target_link_libraries(query-metatrie-index sdsl divsufsort divsufsort64)
 
-add_executable(query-metatrie-index-fixed src/query-metatrie-index.cpp)
-target_compile_definitions(query-metatrie-index-fixed PUBLIC ADAPTIVE=0)
-target_link_libraries(query-metatrie-index-fixed sdsl divsufsort divsufsort64)
+
+
+
+
+#TODO: activar ADAPTIVE
+
 
 add_executable(dyn-exp1 src/dyn-exp1.cpp)
 target_compile_definitions(dyn-exp1 PUBLIC ADAPTIVE=1)
@@ -140,23 +198,12 @@ target_link_libraries(test-regex sdsl divsufsort divsufsort64)
 add_executable(test-bulk-load src/test-bulk-load.cpp)
 target_link_libraries(test-bulk-load sdsl divsufsort divsufsort64)
 
-add_executable(build-index-triples src/build-index-triples.cpp)
-target_link_libraries(build-index-triples sdsl divsufsort divsufsort64 hybridbv_gn)
+add_executable(test-mt-dyn src/test-mt-dyn.cpp)
+target_link_libraries(test-mt-dyn sdsl divsufsort divsufsort64 hybridbv_gn)
 
-add_executable(build-index-bulk-triples src/build-index-bulk-triples.cpp)
-target_link_libraries(build-index-bulk-triples sdsl divsufsort divsufsort64 hybridbv_gn)
 
-add_executable(query-index-triples src/query-index-triples.cpp)
-target_link_libraries(query-index-triples sdsl divsufsort divsufsort64 hybridbv_gn)
 
-#TODO: activar ADAPTIVE
-add_executable(exp-update-ratio src/exp/exp-update-ratio.cpp)
-target_compile_definitions(exp-update-ratio PUBLIC ADAPTIVE=0)
-target_link_libraries(exp-update-ratio sdsl divsufsort divsufsort64 hybridbv_gn)
 
-add_executable(exp-update-metatrie-ratio src/exp/exp-update-metatrie-ratio.cpp)
-target_compile_definitions(exp-update-metatrie-ratio PUBLIC ADAPTIVE=0)
-target_link_libraries(exp-update-metatrie-ratio sdsl divsufsort divsufsort64 hybridbv_gn)
 
 
 add_executable(interactive-metatrie src/interactive-metatrie.cpp)
@@ -165,14 +212,10 @@ target_link_libraries(interactive-metatrie sdsl divsufsort divsufsort64 hybridbv
 add_executable(update-index-triples src/update-index-triples.cpp)
 target_link_libraries(update-index-triples sdsl divsufsort divsufsort64 hybridbv_gn)
 
-add_executable(dyn_rdf src/example/dyn_rdf.cpp)
-target_link_libraries(dyn_rdf sdsl divsufsort divsufsort64 hybridbv_gn)
 
-add_executable(dyn_ids src/example/dyn_ids.cpp)
-target_link_libraries(dyn_ids sdsl divsufsort divsufsort64 hybridbv_gn)
-
-add_executable(static_ids src/example/static_ids.cpp)
-target_link_libraries(static_ids sdsl divsufsort divsufsort64 hybridbv_gn)
 
 add_executable(prepare-80 src/prepare-80.cpp)
 target_link_libraries(prepare-80 sdsl divsufsort divsufsort64)
+
+add_executable(test-dyn src/test-dyn.cpp)
+target_link_libraries(test-dyn sdsl divsufsort divsufsort64 hybridbv_gn)

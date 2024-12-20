@@ -429,3 +429,13 @@ uint64_t staticBVIdNext (staticBVId B, uint64_t i, uint64_t j, uint64_t c, uint6
     *value = v;
     return d;
 }
+
+uint staticBVIdCheckOnes(staticBVId B) {
+    uint p;
+    uint i = B->size;
+    uint ib = B->size / w64;
+    uint ones = 0;
+    for (p = 0; p < ib; p++) ones += popcount(B->data[p]);
+    if (i % w64) ones += popcount(B->data[p] & ((((uint64_t) 1) << (i % w64)) - 1));
+    return B->ones == ones;
+}

@@ -127,7 +127,8 @@ namespace util {
                 }
             }
 
-            template<class map_type> std::pair<bool, ltj::triple_pattern> get_triple_pattern(cltj::user_triple &terms,
+            template<class map_type>
+            std::pair<bool, ltj::triple_pattern> get_triple_pattern(cltj::user_triple &terms,
                                                 ht_var_id_type &ht_var_id,
                                                 std::vector<bool> &var_in_p,
                                                 map_type &so_mapping, map_type &p_mapping) {

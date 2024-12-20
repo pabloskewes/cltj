@@ -984,6 +984,12 @@ uint checkOnes(hybridBVId B) {
         uint64_t ones = hybridBVIdOnes(B->bv.dyn->left) + hybridBVIdOnes(B->bv.dyn->right);
         return ones == hybridBVIdOnes(B) && checkOnes(B->bv.dyn->left) && checkOnes(B->bv.dyn->right);
     }
+    if(B->type == tLeaf) {
+        return leafBVIdCheckOnes(B->bv.leaf);
+    }
+    if(B->type == tStatic) {
+        return staticBVIdCheckOnes(B->bv.stat);
+    }
     return 1;
 }
 

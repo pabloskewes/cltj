@@ -153,6 +153,10 @@ namespace cltj {
             return make_pair(m_seq[i], i);
         }
 
+        bool check() {
+            return m_seq.check();
+        }
+
 
         //! Serializes the data structure into the given ostream
         size_type serialize(std::ostream &out, sdsl::structure_tree_node *v = nullptr, std::string name = "") const {

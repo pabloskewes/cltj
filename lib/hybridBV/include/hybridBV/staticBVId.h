@@ -65,5 +65,7 @@ extern uint64_t staticBVIdSelect (staticBVId B, uint64_t j);
 int64_t staticBVIdNext1(staticBVId B, uint64_t i);
 
 uint64_t staticBVIdNext (staticBVId B, uint64_t i, uint64_t j, uint64_t c, uint64_t *value);
+uint staticBVIdCheckOnes(staticBVId B);
+
 
 #endif

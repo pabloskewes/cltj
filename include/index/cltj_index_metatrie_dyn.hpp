@@ -250,7 +250,7 @@ namespace cltj {
                 m_tries[3] = create_partial_trie(triple, 3);
                 m_tries[4] = create_full_trie(triple, 4);
                 m_tries[5] = create_partial_trie(triple, 5);
-                for(size_type i = 0; i < m_tries.size(); ++i) {
+                for(size_type i = 0; i < m_tries.size(); i+=2) {
                     m_tries[i].inc_root_degree();
                 }
                 ++m_n_triples;
@@ -311,7 +311,7 @@ namespace cltj {
             }
 
             //Update root degree because insertion of a new element in the first level
-            for(auto i = 0; i < m_tries.size(); ++i) {
+            for(auto i = 0; i < m_tries.size(); i+=2) {
                 if(inc_gaps[i/2]) m_tries[i].inc_root_degree();
             }
             ++m_n_triples;
@@ -368,7 +368,7 @@ namespace cltj {
                 }
             }
             //Updating root degree
-            for(auto i = 0; i < m_tries.size(); ++i) {
+            for(auto i = 0; i < m_tries.size(); i+=2) {
                 if(dec_gaps[i/2]) m_tries[i].dec_root_degree();
             }
             --m_n_triples;
@@ -377,7 +377,7 @@ namespace cltj {
 
         //Checks if the triple exists, it returns the number of tries where it appears
         //The only possible outputs should be 3 or 0.
-        uint64_t test_exists(spo_triple &triple) {
+        uint64_t test_exists(const spo_triple &triple) {
             if(m_n_triples == 0) return 0;
             size_type r = 0;
             std::array<size_type, 4> states;
@@ -414,6 +414,18 @@ namespace cltj {
             for(auto & trie : m_tries){
                 trie.load(in);
             }
+        }
+
+        bool check() {
+            bool ok = true;
+            for(uint64_t i = 0; i < 6; ++i) {
+                ok &= m_tries[i].check();
+                if(!ok) {
+                    std::cout << "Error in trie: " << i << std::endl;
+                    break;
+                }
+            }
+            return ok;
         }
 
     };

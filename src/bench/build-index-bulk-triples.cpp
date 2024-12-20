@@ -12,39 +12,60 @@ using timer = std::chrono::high_resolution_clock;
 int main(int argc, char **argv){
     try{
 
-        if(argc != 2){
-            cout<< argv[0] << " <dataset>" <<endl;
+        if(argc != 3){
+            cout<< argv[0] << " <dataset> <n-triples>" <<endl;
             return 0;
         }
 
         std::string dataset = argv[1];
-        std::string index_name = dataset + ".cltj";
-        std::string dict_so_name = dataset + ".so";
-        std::string dict_p_name = dataset + ".p";
+        uint64_t n_triples = std::atoll(argv[2]);
+        std::string index_name = dataset + "." + std::to_string(n_triples) + ".cltj.idx";
+        std::string dict_so_name = dataset + "." + std::to_string(n_triples) + ".cltj.so";
+        std::string dict_p_name = dataset + "." + std::to_string(n_triples) + ".cltj.p";
 
         std::ifstream ifs(dataset);
         cltj::spo_triple spo;
         std::string line;
 
-        dict::basic_map dict_so;
-        dict::basic_map dict_p;
         vector<cltj::spo_triple> D;
         auto start = timer::now();
+        std::map<std::string, uint64_t> map_so, map_p;
+        std::map<std::string, uint64_t>::iterator it;
+        uint64_t id_so = 0, id_p = 0;
         do {
             std::getline(ifs, line);
             if(line.empty()) break;
             auto spo_str = ::util::rdf::str::get_triple(line);
-            spo[0] = dict_so.get_or_insert(spo_str[0]);
-            spo[1] = dict_p.get_or_insert(spo_str[1]);
-            spo[2] = dict_so.get_or_insert(spo_str[2]);
+            if((it = map_so.find(spo_str[0])) == map_so.end()) {
+                map_so.insert({spo_str[0], ++id_so});
+                spo[0] = id_so;
+            }else{
+                spo[0] = it->second;
+            }
+            if((it = map_p.find(spo_str[1])) == map_p.end()) {
+                map_p.insert({spo_str[1], ++id_p});
+                spo[1] = id_p;
+            }else{
+                spo[1] = it->second;
+            }
+            if((it=map_so.find(spo_str[2])) == map_so.end()) {
+                map_so.insert({spo_str[2], ++id_so});
+                spo[2] = id_so;
+            }else{
+                spo[2] = it->second;
+            }
             D.emplace_back(spo);
-
-        } while (!ifs.eof());
+        } while (!ifs.eof() && D.size() < n_triples);
         auto stop = timer::now();
         cout << "Mapping: " << duration_cast<seconds>(stop-start).count() << " seconds." << endl;
         D.shrink_to_fit();
         std::cout << "Dataset: " << 3*D.size()*sizeof(::uint32_t) << " bytes." << std::endl;
         //sdsl::memory_monitor::start();
+        start = timer::now();
+        dict::basic_map dict_so(map_so);
+        dict::basic_map dict_p(map_p);
+        stop = timer::now();
+        cout << "Dictionaries: " << duration_cast<seconds>(stop-start).count() << " seconds." << endl;
 
         start = timer::now();
         cltj::compact_dyn_ltj index(D);
