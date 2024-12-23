@@ -295,6 +295,7 @@ void leafBVIdInsert(leafBVId B, uint i, uint bv_v, uint64_t v, uint first) {
 
     //bitvector
     nb = (B->size+1) / w64;
+    if(!bv_v && first) ++i; //append the 0-bit after the first child (current position i)
     ib = i / w64;
     for (b = nb; b > ib; b--)
         B->data[b] = (B->data[b] << 1) | (B->data[b - 1] >> (w64 - 1));
@@ -302,16 +303,16 @@ void leafBVIdInsert(leafBVId B, uint i, uint bv_v, uint64_t v, uint first) {
         B->data[ib] = (B->data[ib] & ((((uint64_t) 1) << (i % w64)) - 1)) |
                       (((uint64_t) bv_v) << (i % w64)) |
                       ((B->data[ib] << 1) & (~((uint64_t) 0) << ((i + 1) % w64)));
-        if(!bv_v && first) B->data[ib] ^= (((uint64_t) 3) << (i % w64)); //xor to interchange 0-bit and 1-bit
+        //if(!bv_v && first) B->data[ib] ^= (((uint64_t) 3) << (i % w64)); //xor to interchange 0-bit and 1-bit
     }else{
-        if(!bv_v && first) { //first child but there are more than one children
+        /*if(!bv_v && first) { //first child but there are more than one children
             B->data[ib] = (B->data[ib] & ((((uint64_t) 1) << (i % w64)) - 1)) |
                       (((uint64_t) 1) << (i % w64));
             B->data[ib+1] = (B->data[ib+1] & (~((uint64_t) 0) << 1));
-        }else {
+        }else {*/
             B->data[ib] = (B->data[ib] & ((((uint64_t) 1) << (i % w64)) - 1)) |
                       (((uint64_t) bv_v) << (i % w64));
-        }
+        //}
     }
     B->ones += bv_v;
     B->size++;
