@@ -114,14 +114,14 @@ namespace cltj {
         }
 
 
-        void insert(const spo_triple &triple) {
+        bool insert(const spo_triple &triple) {
             if(!m_n_triples) {
                 for(size_type i = 0; i < m_tries.size(); ++i) {
                     m_tries[i] = trie_type(triple, spo_orders[i], i & 0x1);
                 }
                 m_gaps = {1,1,1};
                 ++m_n_triples;
-                return;
+                return true;
             }
             typedef struct {
                 size_type pos;
@@ -154,7 +154,7 @@ namespace cltj {
                         states[l+1].ins = true;
                     }
                 }
-                if(i == 0 && !insert) return;
+                if(i == 0 && !insert) return false;
                 for(int64_t j = 3; j >= 1+skip_level; --j) {
                     //When the triple is not found in the previous level, it means that we are in the first child (1-bit) of the current level.
                     //Otherwise, we have to add a new child to the current level, thus we add a 0-bit.
@@ -170,6 +170,7 @@ namespace cltj {
                 m_gaps[i] += inc_gaps[i]; //updating gaps because of insertions in the first level
             }
             ++m_n_triples;
+            return true;
             //m_tries[4].print();
             /*for(uint64_t i = 0; i < 6; ++i) {
                 m_tries[i].print();

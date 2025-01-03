@@ -103,9 +103,9 @@ namespace cltj {
             return true;
         }
 
-        void insert(const std::string &triple) {
+        bool insert(const std::string &triple) {
             auto spo = ::util::rdf::ids::get_triple(triple);
-            m_index.insert(spo);
+            return m_index.insert(spo);
         }
 
         bool remove(const std::string &triple) {

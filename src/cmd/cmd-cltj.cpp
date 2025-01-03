@@ -30,68 +30,74 @@ void interactive(const std::string &index_name) {
     std::cout << "===== CLTJ =====" << std::endl << std::endl;
     uint64_t cnt;
     std::string line, op;
-    std::cout << "> " << std::flush;
+    std::cout << "CLTJ> " << std::flush;
     std::getline(std::cin, op);
     while(op != "quit") {
         if(op == "commit") {
-            std::cout << "! Commit updates... " << std::flush;
+            std::cout << "    ! Commit updates... " << std::flush;
             sdsl::store_to_file(m_index, index_name);
             std::cout << "done." << std::endl;
         }else {
             auto in = ::util::rdf::tokenizer(op, ' ');
-            op = in[0];
-            cnt = std::stoull(in[1]);
-            if(op == "insert"){
-                std::vector<std::string> to_run;
-                for(auto i = 0; i < cnt; ++i) {
-                    std::cout << "> [" << i+1 << "/" << cnt << "] " << std::flush;
-                    std::getline(std::cin, line);
-                    to_run.push_back(line);
-                }
-                std::cout << "! Running insertions: " << std::flush;
-                auto start = std::chrono::high_resolution_clock::now();
-                for(auto i = 0; i < cnt; ++i) {
-                    m_index.insert(to_run[i]);
-                }
-                auto stop = std::chrono::high_resolution_clock::now();
-                std::cout << cnt << " insertions took " << time << " ns." << std::endl;
-                auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(stop - start).count();
-            }else if(op == "delete"){
-                std::vector<std::string> to_run;
-                for(auto i = 0; i < cnt; ++i) {
-                    std::cout << "> [" << i+1 << "/" << cnt << "] " << std::flush;
-                    std::getline(std::cin, line);
-                    to_run.push_back(line);
-                }
-                std::cout << "! Running deletions: " << std::flush;
-                auto start = std::chrono::high_resolution_clock::now();
-                for(auto i = 0; i < cnt; ++i) {
-                    m_index.remove(to_run[i]);
-                }
-                auto stop = std::chrono::high_resolution_clock::now();
-                std::cout << cnt << " deletions took " << time << " ns." << std::endl;
-                auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(stop - start).count();
-            }else if (op == "query"){
-                std::vector<std::string> to_run;
-                for(auto i = 0; i < cnt; ++i) {
-                    std::cout << "> [" << i+1 << "/" << cnt << "] " << std::flush;
-                    std::getline(std::cin, line);
-                    to_run.push_back(line);
-                }
-                ::util::results_collector<tuple_type> res;
-                for(auto i = 0; i < cnt; ++i) {
-                    std::cout << "! Running query " << (i+1) << ": " << std::flush;
+            if(in.size() < 2) {
+                std::cout << "    ! Operation " << op << " is not supported." << std::endl;
+            }else {
+                op = in[0];
+                cnt = std::stoull(in[1]);
+                if(op == "insert"){
+                    std::vector<std::string> to_run;
+                    for(auto i = 0; i < cnt; ++i) {
+                        std::cout << "CLTJ> [" << i+1 << "/" << cnt << "] " << std::flush;
+                        std::getline(std::cin, line);
+                        to_run.push_back(line);
+                    }
+                    std::cout << "    ! Running insertions: " << std::flush;
+                    uint64_t ins = 0;
                     auto start = std::chrono::high_resolution_clock::now();
-                    m_index.query(to_run[i], res);
+                    for(auto i = 0; i < cnt; ++i) {
+                        ins += m_index.insert(to_run[i]);
+                    }
                     auto stop = std::chrono::high_resolution_clock::now();
-                    std::cout << res.size() << " results in " << time << " ns." << std::endl;
-                    res.clear();
+                    std::cout << ins << " insertions took " << time << " ns." << std::endl;
+                    auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(stop - start).count();
+                }else if(op == "delete"){
+                    std::vector<std::string> to_run;
+                    for(auto i = 0; i < cnt; ++i) {
+                        std::cout << "CLTJ> [" << i+1 << "/" << cnt << "] " << std::flush;
+                        std::getline(std::cin, line);
+                        to_run.push_back(line);
+                    }
+                    uint64_t dels = 0;
+                    std::cout << "    ! Running deletions: " << std::flush;
+                    auto start = std::chrono::high_resolution_clock::now();
+                    for(auto i = 0; i < cnt; ++i) {
+                        dels += m_index.remove(to_run[i]);
+                    }
+                    auto stop = std::chrono::high_resolution_clock::now();
+                    std::cout << dels << " deletions took " << time << " ns." << std::endl;
+                    auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(stop - start).count();
+                }else if (op == "query"){
+                    std::vector<std::string> to_run;
+                    for(auto i = 0; i < cnt; ++i) {
+                        std::cout << "CLTJ> [" << i+1 << "/" << cnt << "] " << std::flush;
+                        std::getline(std::cin, line);
+                        to_run.push_back(line);
+                    }
+                    ::util::results_collector<tuple_type> res;
+                    for(auto i = 0; i < cnt; ++i) {
+                        std::cout << "    ! Running query " << (i+1) << ": " << std::flush;
+                        auto start = std::chrono::high_resolution_clock::now();
+                        m_index.query(to_run[i], res);
+                        auto stop = std::chrono::high_resolution_clock::now();
+                        std::cout << res.size() << " results in " << time << " ns." << std::endl;
+                        res.clear();
+                    }
+                }else{
+                    std::cout << "    ! Operation " << op << " is not supported." << std::endl;
                 }
-            }else{
-                std::cout << "! Operation " << op << " is not supported." << std::endl;
             }
         }
-        std::cout << "> " << std::flush;
+        std::cout << "CLTJ> " << std::flush;
         std::getline(std::cin, op);
     }
 }

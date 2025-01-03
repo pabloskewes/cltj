@@ -156,13 +156,13 @@ namespace cltj {
             return true;
         }
 
-        void insert(const std::string &triple) {
+        bool insert(const std::string &triple) {
             auto spo_str = ::util::rdf::str::get_triple(triple);
             cltj::spo_triple spo;
             spo[0] = m_dict_so.get_or_insert(spo_str[0]);
             spo[1] = m_dict_p.get_or_insert(spo_str[1]);
             spo[2] = m_dict_so.get_or_insert(spo_str[2]);
-            m_index.insert(spo);
+            return m_index.insert(spo);
         }
 
         bool remove(const std::string &triple) {

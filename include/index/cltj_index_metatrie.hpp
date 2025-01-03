@@ -224,12 +224,12 @@ namespace cltj {
             return *this;
         }
 
-        void insert(const spo_triple &triple) {
+        bool insert(const spo_triple &triple) {
             std::cout << "Insert operation is not supported (static version)." << std::endl;
             std::exit(EXIT_FAILURE);
         }
 
-        void remove(const spo_triple &triple) {
+        bool remove(const spo_triple &triple) {
             std::cout << "Remove operation is not supported (static version)." << std::endl;
             std::exit(EXIT_FAILURE);
         }
