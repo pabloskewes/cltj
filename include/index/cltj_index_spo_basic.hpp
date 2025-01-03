@@ -77,6 +77,16 @@ namespace cltj {
             return &m_tries[i];
         }
 
+        void insert(const spo_triple &triple) {
+            std::cout << "Insert operation is not supported (static version)." << std::endl;
+            std::exit(EXIT_FAILURE);
+        }
+
+        void remove(const spo_triple &triple) {
+            std::cout << "Remove operation is not supported (static version)." << std::endl;
+            std::exit(EXIT_FAILURE);
+        }
+
         size_type serialize(std::ostream &out, sdsl::structure_tree_node *v = nullptr, std::string name = "") const {
             sdsl::structure_tree_node *child = sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
             size_type written_bytes = 0;

@@ -224,6 +224,16 @@ namespace cltj {
             return *this;
         }
 
+        void insert(const spo_triple &triple) {
+            std::cout << "Insert operation is not supported (static version)." << std::endl;
+            std::exit(EXIT_FAILURE);
+        }
+
+        void remove(const spo_triple &triple) {
+            std::cout << "Remove operation is not supported (static version)." << std::endl;
+            std::exit(EXIT_FAILURE);
+        }
+
         void swap(cltj_index_metatrie &o) {
             // m_bp.swap(bp_support.m_bp); use set_vector to set the supported bit_vector
             std::swap(m_tries, o.m_tries);

@@ -31,7 +31,7 @@
 #include <query/ltj_iterator_metatrie.hpp>
 #include <veo/veo_simple.hpp>
 #include <veo/veo_adaptive.hpp>
-#include <results/results_collector.hpp>
+#include <results/results.hpp>
 #include <util/rdf_util.hpp>
 
 #define EXPT_TIME_SOL 0
@@ -51,7 +51,7 @@ namespace ltj {
         typedef typename ltj_iter_type::value_type const_type;
         typedef veo_t veo_type;
         typedef unordered_map<var_type, vector<ltj_iter_type*>> var_to_iterators_type;
-        typedef vector<pair<var_type, value_type>> tuple_type;
+        typedef vector<pair<var_type, const_type>> tuple_type;
         typedef vector<std::string> tuple_str_type;
         typedef chrono::high_resolution_clock::time_point time_point_type;
         //typedef ::util::results_collector<tuple_type> results_type;

@@ -40,7 +40,7 @@ int main(int argc, char **argv) {
     std::mt19937 g(rd());
     //std::shuffle(D.begin(), D.end(), g);
 
-    cltj::cltj_index_spo_dyn<cltj::compact_trie_dyn_v2<>> index;
+    cltj::compact_dyn_ltj index;
 
 
     uint64_t block_size = D.size() / 100;

@@ -2,12 +2,12 @@
 // Created by adrian on 17/12/24.
 //
 
-#include <api/cltj_static_ids.hpp>
+#include <api/cltj_ids.hpp>
 
 int main(int argc, char **argv) {
-    typedef cltj::cltj_dyn_ids::tuple_type tuple_type;
+    typedef cltj::cltj_ids_static::tuple_type tuple_type;
     {
-        cltj::cltj_dyn_ids  cltj(argv[1]);
+        cltj::cltj_ids_static  cltj(argv[1]);
         std::string query = "?x 8 ?y . ?z 13 ?y";
         ::util::results_collector<tuple_type> res;
         cltj.query(query, res);
@@ -21,7 +21,7 @@ int main(int argc, char **argv) {
     }
     std::cout << std::endl;
     {
-        cltj::cltj_dyn_ids  cltj;
+        cltj::cltj_ids_static  cltj;
         std::cout << "Reading from file" << std::endl;
         sdsl::load_from_file(cltj, "cltj-star.bin");
         std::string query = "?x 8 ?y . ?z 13 ?y";

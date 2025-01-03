@@ -17,6 +17,10 @@ namespace cltj {
         typedef uint64_t size_type;
         typedef uint32_t value_type;
         typedef Trie trie_type;
+        typedef struct {
+            bool removed = false;
+            std::array<bool, 3> rem_in_dict = {false, false, false}; //ids to remove in the dictionary
+        } remove_info_type;
 
     private:
         std::array<trie_type, 6> m_tries;
@@ -373,6 +377,78 @@ namespace cltj {
             }
             --m_n_triples;
             return true;
+        }
+
+        remove_info_type remove_and_report(const spo_triple &triple) {
+            remove_info_type res;
+            if(!m_n_triples) return res;
+            typedef struct {
+                size_type pos;
+                bool rem;
+            } state_type ;
+            std::array<bool, 3> dec_gaps = {false, false, false};
+            std::array<state_type, 3> u_part; //info to update partial trie
+            std::array<state_type, 4> states;
+            states[0].pos = 0; states[0].rem = false;
+            size_type b, e, gap;
+            for(size_type i = 0; i < m_tries.size(); i+=2) { //just full tries
+                for(size_type l = 0; l < 3; ++l) {
+                    b = (l==0) ? 0 : m_tries[i].child(states[l].pos, 1);
+                    e = b+m_tries[i].children(b)-1;
+                    auto p = m_tries[i].next(b, e, triple[spo_orders[i][l]]);
+                    if(p.first != triple[spo_orders[i][l]]) {
+                        //m_tries[i].print();
+                        return res;
+                    }
+                    states[l+1].pos = p.second;
+                    //states[l+1].first_child = (b==bs.first);
+                    states[l+1].rem = (b==e); //
+                }
+                bool rem = true; //starts removing in the last level
+                for(int64_t j = 3; j >= 1; --j) {
+                    if(rem) {
+                        //m_tries[i].remove(states[j].pos, states[j].first_child);
+                        m_tries[i].remove(states[j].pos, !states[j].rem);
+                        if(j == 1) dec_gaps[i/2] = true;
+                    }
+                    rem &= states[j].rem;
+                }
+                u_part[i/2].pos = states[1].pos; //to sync with the first level
+                auto pt = ts_part_map[i/2];
+                u_part[pt/2].rem = states[3].rem; //true => the last level of the subtree is empty
+            }
+
+            //Update partial trees
+            for(uint i = 0; i < 3; ++i) {
+                if(u_part[i].rem) {
+                    auto pt = 2*i+1; //partial trie
+                    //[b,e] is the range after a down in the first level
+                    b = m_tries[pt].child(u_part[i].pos, 1, 0);
+                    e = b+m_tries[pt].children(b)-1;
+                    //look for the position of the second level
+                    auto p = m_tries[pt].next(b, e, triple[spo_orders[pt][1]]); //must exist
+                    m_tries[pt].remove(p.second, b!=e); //remove it
+                }
+            }
+            //Updating root degree
+            for(auto i = 0; i < m_tries.size(); i+=2) {
+                if(dec_gaps[i/2]) m_tries[i].dec_root_degree();
+            }
+            //Compute nodes to remove
+            if(dec_gaps[0]) {
+                //Check if the node exists as object
+                auto p = m_tries[4].next(0, m_tries[4].root_degree(), triple[0]);
+                res.rem_in_dict[0] = (p.first != triple[0]);
+            }
+            res.rem_in_dict[1] = dec_gaps[1];
+            if(triple[0] != triple[2] && dec_gaps[2]) {
+                //Check if the node exists as subject
+                auto p = m_tries[0].next(0, m_tries[0].root_degree(), triple[2]);
+                res.rem_in_dict[2] = (p.first != triple[2]);
+            }
+            --m_n_triples;
+            res.removed = true;
+            return res;
         }
 
         //Checks if the triple exists, it returns the number of tries where it appears

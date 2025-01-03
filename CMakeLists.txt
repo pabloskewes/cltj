@@ -7,7 +7,7 @@ project(CLTJ)
 set(CMAKE_PROJECT_NAME "CLTJ")
 
 #Change to "Debug" when you need it
-set(CMAKE_BUILD_TYPE "Debug")
+set(CMAKE_BUILD_TYPE "Release")
 
 # C++11 compiler Check
 if(NOT CMAKE_CXX_COMPILER_VERSION) # work around for cmake versions smaller than 2.8.10
@@ -125,7 +125,6 @@ set_target_properties(bench-update-metatrie-ratio PROPERTIES RUNTIME_OUTPUT_DIRE
 
 
 #EXAMPLE
-
 add_executable(ex_dyn_rdf src/example/ex_dyn_rdf.cpp)
 target_link_libraries(ex_dyn_rdf sdsl divsufsort divsufsort64 hybridbv_gn)
 set_target_properties(ex_dyn_rdf PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/example)
@@ -138,15 +137,19 @@ add_executable(ex_static_ids src/example/ex_static_ids.cpp)
 target_link_libraries(ex_static_ids sdsl divsufsort divsufsort64 hybridbv_gn)
 set_target_properties(ex_static_ids PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/example)
 
+#CMD
+add_executable(cmd-cltj src/cmd/cmd-cltj.cpp)
+target_link_libraries(cmd-cltj sdsl divsufsort divsufsort64 hybridbv_gn)
+set_target_properties(cmd-cltj PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/cmd)
 
-
-add_executable(test-index-dyn src/test-index-dyn.cpp)
+#TEST
+add_executable(test-index-dyn src/test/test-index-dyn.cpp)
 target_link_libraries(test-index-dyn sdsl divsufsort divsufsort64 hybridbv_gn)
 
-add_executable(test-index-static src/test-index-static.cpp)
+add_executable(test-index-static src/test/test-index-static.cpp)
 target_link_libraries(test-index-static sdsl divsufsort divsufsort64)
 
-add_executable(main src/main.cpp)
+add_executable(main src/test/main.cpp)
 target_link_libraries(main sdsl divsufsort divsufsort64 hybridbv_gn)
 
 
@@ -161,61 +164,54 @@ target_link_libraries(main sdsl divsufsort divsufsort64 hybridbv_gn)
 #TODO: activar ADAPTIVE
 
 
-add_executable(dyn-exp1 src/dyn-exp1.cpp)
+add_executable(dyn-exp1 src/test/dyn-exp1.cpp)
 target_compile_definitions(dyn-exp1 PUBLIC ADAPTIVE=1)
 target_link_libraries(dyn-exp1 sdsl divsufsort divsufsort64 hybridbv_gn)
 
-add_executable(dyn-exp1-metatrie src/dyn-exp1-metatrie.cpp)
+add_executable(dyn-exp1-metatrie src/test/dyn-exp1-metatrie.cpp)
 target_compile_definitions(dyn-exp1-metatrie PUBLIC ADAPTIVE=1)
 target_link_libraries(dyn-exp1-metatrie sdsl divsufsort divsufsort64 hybridbv_gn)
 
-add_executable(dyn-exp1-fixed src/dyn-exp1.cpp)
+add_executable(dyn-exp1-fixed src/test/dyn-exp1.cpp)
 target_compile_definitions(dyn-exp1-fixed PUBLIC ADAPTIVE=0)
 target_link_libraries(dyn-exp1-fixed sdsl divsufsort divsufsort64 hybridbv_gn)
 
-add_executable(dyn-exp2 src/dyn-exp2.cpp)
+add_executable(dyn-exp2 src/test/dyn-exp2.cpp)
 target_compile_definitions(dyn-exp2 PUBLIC ADAPTIVE=1)
 target_link_libraries(dyn-exp2 sdsl divsufsort divsufsort64 hybridbv_gn)
 
-add_executable(dyn-exp2-fixed src/dyn-exp2.cpp)
+add_executable(dyn-exp2-fixed src/test/dyn-exp2.cpp)
 target_compile_definitions(dyn-exp2-fixed PUBLIC ADAPTIVE=0)
 target_link_libraries(dyn-exp2-fixed sdsl divsufsort divsufsort64 hybridbv_gn)
 
-add_executable(dyn-exp3 src/dyn-exp3.cpp)
+add_executable(dyn-exp3 src/test/dyn-exp3.cpp)
 target_compile_definitions(dyn-exp3 PUBLIC ADAPTIVE=1)
 target_link_libraries(dyn-exp3 sdsl divsufsort divsufsort64 hybridbv_gn)
 
-add_executable(dyn-exp3-fixed src/dyn-exp3.cpp)
+add_executable(dyn-exp3-fixed src/test/dyn-exp3.cpp)
 target_compile_definitions(dyn-exp3-fixed PUBLIC ADAPTIVE=0)
 target_link_libraries(dyn-exp3-fixed sdsl divsufsort divsufsort64 hybridbv_gn)
 
-add_executable(test-dict src/test-dict.cpp)
+add_executable(test-dict src/test/test-dict.cpp)
 target_link_libraries(test-dict sdsl divsufsort divsufsort64)
 
-add_executable(test-regex src/test-regex.cpp)
+add_executable(test-regex src/test/test-regex.cpp)
 target_link_libraries(test-regex sdsl divsufsort divsufsort64)
 
-add_executable(test-bulk-load src/test-bulk-load.cpp)
+add_executable(test-bulk-load src/test/test-bulk-load.cpp)
 target_link_libraries(test-bulk-load sdsl divsufsort divsufsort64)
 
-add_executable(test-mt-dyn src/test-mt-dyn.cpp)
+add_executable(test-mt-dyn src/test/test-mt-dyn.cpp)
 target_link_libraries(test-mt-dyn sdsl divsufsort divsufsort64 hybridbv_gn)
 
-
-
-
-
-
-add_executable(interactive-metatrie src/interactive-metatrie.cpp)
+add_executable(interactive-metatrie src/test/interactive-metatrie.cpp)
 target_link_libraries(interactive-metatrie sdsl divsufsort divsufsort64 hybridbv_gn)
 
-add_executable(update-index-triples src/update-index-triples.cpp)
+add_executable(update-index-triples src/test/update-index-triples.cpp)
 target_link_libraries(update-index-triples sdsl divsufsort divsufsort64 hybridbv_gn)
 
-
-
-add_executable(prepare-80 src/prepare-80.cpp)
+add_executable(prepare-80 src/test/prepare-80.cpp)
 target_link_libraries(prepare-80 sdsl divsufsort divsufsort64)
 
-add_executable(test-dyn src/test-dyn.cpp)
+add_executable(test-dyn src/test/test-dyn.cpp)
 target_link_libraries(test-dyn sdsl divsufsort divsufsort64 hybridbv_gn)

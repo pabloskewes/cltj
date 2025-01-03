@@ -2,11 +2,14 @@
 // Created by adrian on 12/12/24.
 //
 
-#ifndef CLTJ_DYN_IDS_HPP
-#define CLTJ_DYN_IDS_HPP
+#ifndef CLTJ_IDS_HPP
+#define CLTJ_IDS_HPP
 
-#include <query/ltj_algorithm.hpp>
+#include <index/cltj_index_metatrie.hpp>
+#include <index/cltj_index_metatrie_dyn.hpp>
 #include <index/cltj_index_spo_dyn.hpp>
+#include <index/cltj_index_spo_lite.hpp>
+#include <query/ltj_algorithm.hpp>
 #include <util/rdf_util.hpp>
 
 using namespace std::chrono;
@@ -14,22 +17,29 @@ using timer = std::chrono::high_resolution_clock;
 
 namespace cltj {
 
-    class cltj_dyn_ids {
+    template<class Index    = cltj::compact_dyn_ltj,
+             class Trait    = ltj::util::trait_size,
+             class Iterator = ltj::ltj_iterator_lite<Index, uint8_t, uint64_t>,
+             class Veo      = ltj::veo::veo_adaptive<Iterator, Trait>>
+    class cltj_ids {
 
     public:
         typedef uint64_t size_type;
         typedef uint32_t value_type;
-        typedef cltj::compact_dyn_ltj index_type;
-        typedef ltj::util::trait_size trait_type;
-        typedef ltj::ltj_iterator_lite<index_type, uint8_t, uint64_t> iterator_type;
-        typedef ltj::ltj_algorithm<iterator_type, ltj::veo::veo_adaptive<iterator_type, trait_type> > algorithm_type;
+        typedef Index index_type;
+        typedef Trait trait_type;
+        typedef uint8_t  var_type;
+        typedef uint64_t const_type;
+        typedef Iterator iterator_type;
+        typedef Veo veo_type;
+        typedef ltj::ltj_algorithm<iterator_type,  veo_type> algorithm_type;
         typedef typename algorithm_type::tuple_type tuple_type;
 
     private:
 
         index_type m_index;
 
-        void copy(const cltj_dyn_ids &o){
+        void copy(const cltj_ids &o){
             m_index = o.m_index;
         }
 
@@ -45,7 +55,7 @@ namespace cltj {
             auto start = timer::now();
             do {
                 ifs >> s >> p >> o;
-                if(ifs.eof()) break;
+                if(ifs.bad()) break;
                 spo[0] = s; spo[1] = p; spo[2] = o;
                 D.emplace_back(spo);
 
@@ -78,9 +88,9 @@ namespace cltj {
 
     public:
 
-        cltj_dyn_ids() = default;
+        cltj_ids() = default;
 
-        explicit cltj_dyn_ids(const std::string &dataset){
+        explicit cltj_ids(const std::string &dataset){
             build(dataset);
         }
 
@@ -104,17 +114,17 @@ namespace cltj {
         }
 
         //! Copy constructor
-        cltj_dyn_ids(const cltj_dyn_ids &o) {
+        cltj_ids(const cltj_ids &o) {
             copy(o);
         }
 
         //! Move constructor
-        cltj_dyn_ids(cltj_dyn_ids &&o) {
+        cltj_ids(cltj_ids &&o) {
             *this = std::move(o);
         }
 
         //! Copy Operator=
-        cltj_dyn_ids &operator=(const cltj_dyn_ids &o) {
+        cltj_ids &operator=(const cltj_ids &o) {
             if (this != &o) {
                 copy(o);
             }
@@ -122,14 +132,14 @@ namespace cltj {
         }
 
         //! Move Operator=
-        cltj_dyn_ids &operator=(cltj_dyn_ids &&o) {
+        cltj_ids &operator=(cltj_ids &&o) {
             if (this != &o) {
                 m_index = std::move(o.m_index);
             }
             return *this;
         }
 
-        void swap(cltj_dyn_ids &o) {
+        void swap(cltj_ids &o) {
             std::swap(m_index, o.m_index);
         }
 
@@ -148,5 +158,36 @@ namespace cltj {
 
     };
 
+
+    //Full Tries + Dynamic + VEO adaptive
+    typedef cltj::cltj_ids<> cltj_ids_dyn;
+    //Full Tries + Dynamic + VEO global
+    typedef cltj::cltj_ids<cltj::compact_dyn_ltj, ltj::util::trait_size,
+            ltj::ltj_iterator_lite<cltj::compact_dyn_ltj, uint8_t, uint64_t>,
+            ltj::veo::veo_simple<ltj::ltj_iterator_lite<cltj::compact_dyn_ltj, uint8_t, uint64_t>>> cltj_ids_dyn_global;
+    //Meta Tries + Dynamic + VEO adaptive
+    typedef cltj::cltj_ids<cltj::compact_ltj_metatrie_dyn, ltj::util::trait_size,
+            ltj::ltj_iterator_metatrie<cltj::compact_ltj_metatrie_dyn, uint8_t, uint64_t>> cltj_mt_ids_dyn;
+    //Meta Tries + Dynamic + VEO global
+    typedef cltj::cltj_ids<cltj::compact_ltj_metatrie_dyn, ltj::util::trait_size,
+            ltj::ltj_iterator_metatrie<cltj::compact_ltj_metatrie_dyn, uint8_t, uint64_t>,
+            ltj::veo::veo_simple<ltj::ltj_iterator_metatrie<cltj::compact_ltj_metatrie_dyn, uint8_t, uint64_t>>> cltj_mt_ids_dyn_global;
+
+
+    //Full Tries + Static + VEO adaptive
+    typedef cltj::cltj_ids<cltj::compact_ltj> cltj_ids_static;
+    //Full Tries + Static + VEO global
+    typedef cltj::cltj_ids<cltj::compact_ltj, ltj::util::trait_size,
+            ltj::ltj_iterator_lite<cltj::compact_dyn_ltj, uint8_t, uint64_t>,
+            ltj::veo::veo_simple<ltj::ltj_iterator_lite<cltj::compact_dyn_ltj, uint8_t, uint64_t>>> cltj_ids_static_global;
+    //Meta Tries + Static + VEO adaptive
+    typedef cltj::cltj_ids<cltj::compact_ltj_metatrie, ltj::util::trait_size,
+            ltj::ltj_iterator_metatrie<cltj::compact_ltj_metatrie, uint8_t, uint64_t>> cltj_mt_ids_static;
+    //Meta Tries + Static + VEO global
+    typedef cltj::cltj_ids<cltj::compact_ltj_metatrie, ltj::util::trait_size,
+            ltj::ltj_iterator_metatrie<cltj::compact_ltj_metatrie, uint8_t, uint64_t>,
+            ltj::veo::veo_simple<ltj::ltj_iterator_metatrie<cltj::compact_ltj_metatrie, uint8_t, uint64_t>>> cltj_mt_ids_static_global;
+
+
 }
-#endif //CLTJ_DYN_IDS_HPP
+#endif //CLTJ_IDS_HPP

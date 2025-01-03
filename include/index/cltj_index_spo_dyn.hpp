@@ -277,13 +277,13 @@ namespace cltj {
             if(dec_gaps[0]) {
                 //Check if the node exists as object
                 auto p = m_tries[4].next(0, m_gaps[2], triple[0]);
-                res.to_remove[0] = (p.first != triple[0]);
+                res.rem_in_dict[0] = (p.first != triple[0]);
             }
-            res.to_remove[1] = dec_gaps[1];
+            res.rem_in_dict[1] = dec_gaps[1];
             if(triple[0] != triple[2] && dec_gaps[2]) {
                 //Check if the node exists as subject
                 auto p = m_tries[0].next(0, m_gaps[0], triple[2]);
-                res.to_remove[2] = (p.first != triple[2]);
+                res.rem_in_dict[2] = (p.first != triple[2]);
             }
             --m_n_triples;
             res.removed = true;

@@ -111,7 +111,11 @@ void test(const std::string &index, const std::vector<update_type> &updates) { /
             }*/
 
         }else {
-           // graph.remove(u.triple);
+            graph.remove(u.triple);
+            if(!graph.check()) {
+                std::cout << "Check false after removing D[" << i_up << "]=(" << u.triple[0] << ", " << u.triple[1] << ", " << u.triple[2] << ")" << std::endl;
+                exit(0);
+            }
            /* if(graph.test_exists(u.triple) > 0) {
                 std::cout << "Error removing D[" << i_up << "]=(" << u.triple[0] << ", " << u.triple[1] << ", " << u.triple[2] << ") appears in "
                           << "0 tries." << std::endl;

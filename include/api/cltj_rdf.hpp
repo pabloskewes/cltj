@@ -2,12 +2,13 @@
 // Created by adrian on 12/12/24.
 //
 
-#ifndef CLTJ_DYN_RDF_HPP
-#define CLTJ_DYN_RDF_HPP
+#ifndef CLTJ_RDF_HPP
+#define CLTJ_RDF_HPP
 
+#include <index/cltj_index_metatrie_dyn.hpp>
+#include <index/cltj_index_spo_dyn.hpp>
 #include <query/ltj_algorithm.hpp>
 #include <dict/dict_map.hpp>
-#include <index/cltj_index_spo_dyn.hpp>
 #include <util/rdf_util.hpp>
 
 using namespace std::chrono;
@@ -15,16 +16,21 @@ using timer = std::chrono::high_resolution_clock;
 
 namespace cltj {
 
-    class cltj_dyn_rdf {
+    template<class Index    = cltj::compact_dyn_ltj,
+             class Trait    = ltj::util::trait_size,
+             class Iterator = ltj::ltj_iterator_lite<Index, uint8_t, uint64_t>,
+             class Veo      = ltj::veo::veo_adaptive<Iterator, Trait>>
+    class cltj_rdf {
 
     public:
         typedef uint64_t size_type;
         typedef uint32_t value_type;
         typedef dict::basic_map dict_type;
-        typedef cltj::compact_dyn_ltj index_type;
-        typedef ltj::util::trait_size trait_type;
-        typedef ltj::ltj_iterator_lite<index_type, uint8_t, uint64_t> iterator_type;
-        typedef ltj::ltj_algorithm<iterator_type, ltj::veo::veo_adaptive<iterator_type, trait_type> > algorithm_type;
+        typedef Index index_type;
+        typedef Trait trait_type;
+        typedef Iterator iterator_type;
+        typedef Veo veo_type;
+        typedef ltj::ltj_algorithm<iterator_type, veo_type > algorithm_type;
         typedef typename algorithm_type::tuple_str_type tuple_type;
 
     private:
@@ -33,7 +39,7 @@ namespace cltj {
         dict_type  m_dict_p;
         index_type m_index;
 
-        void copy(const cltj_dyn_rdf &o){
+        void copy(const cltj_rdf &o){
             m_dict_so = o.m_dict_so;
             m_dict_p = o.m_dict_p;
             m_index = o.m_index;
@@ -83,9 +89,9 @@ namespace cltj {
 
             size_type size_data = 3*D.size()*sizeof(::uint32_t);
 
-            for(const auto t : D) {
+            /*for(const auto t : D) {
                 std::cout << t[0] << " " << t[1] << " " << t[2] << std::endl;
-            }
+            }*/
             //std::cout << "Dataset: " << 3*D.size()*sizeof(::uint32_t) << " bytes." << std::endl;
 
             //STEP2: Build dictionaries
@@ -122,9 +128,9 @@ namespace cltj {
 
     public:
 
-        cltj_dyn_rdf() = default;
+        cltj_rdf() = default;
 
-        explicit cltj_dyn_rdf(const std::string &dataset){
+        explicit cltj_rdf(const std::string &dataset){
             build(dataset);
         }
 
@@ -179,17 +185,17 @@ namespace cltj {
         }
 
         //! Copy constructor
-        cltj_dyn_rdf(const cltj_dyn_rdf &o) {
+        cltj_rdf(const cltj_rdf &o) {
             copy(o);
         }
 
         //! Move constructor
-        cltj_dyn_rdf(cltj_dyn_rdf &&o) {
+        cltj_rdf(cltj_rdf &&o) {
             *this = std::move(o);
         }
 
         //! Copy Operator=
-        cltj_dyn_rdf &operator=(const cltj_dyn_rdf &o) {
+        cltj_rdf &operator=(const cltj_rdf &o) {
             if (this != &o) {
                 copy(o);
             }
@@ -197,7 +203,7 @@ namespace cltj {
         }
 
         //! Move Operator=
-        cltj_dyn_rdf &operator=(cltj_dyn_rdf &&o) {
+        cltj_rdf &operator=(cltj_rdf &&o) {
             if (this != &o) {
                 m_dict_so = std::move(o.m_dict_so);
                 m_dict_p = std::move(o.m_dict_p);
@@ -206,7 +212,7 @@ namespace cltj {
             return *this;
         }
 
-        void swap(cltj_dyn_rdf &o) {
+        void swap(cltj_rdf &o) {
             std::swap(m_dict_so, o.m_dict_so);
             std::swap(m_dict_p, o.m_dict_p);
             std::swap(m_index, o.m_index);
@@ -227,9 +233,21 @@ namespace cltj {
             m_dict_p.load(in);
             m_index.load(in);
         }
-
-
     };
 
+        //Full Tries + Dynamic + VEO adaptive
+        typedef cltj::cltj_rdf<> cltj_rdf_dyn;
+        //Full Tries + Dynamic + VEO global
+        typedef cltj::cltj_rdf<cltj::compact_dyn_ltj, ltj::util::trait_size,
+                ltj::ltj_iterator_lite<cltj::compact_dyn_ltj, uint8_t, uint64_t>,
+                ltj::veo::veo_simple<ltj::ltj_iterator_lite<cltj::compact_dyn_ltj, uint8_t, uint64_t>>> cltj_rdf_dyn_global;
+        //Meta Tries + Dynamic + VEO adaptive
+        typedef cltj::cltj_rdf<cltj::compact_ltj_metatrie_dyn, ltj::util::trait_size,
+                ltj::ltj_iterator_metatrie<cltj::compact_ltj_metatrie_dyn, uint8_t, uint64_t>> cltj_mt_rdf_dyn;
+        //Meta Tries + Dynamic + VEO global
+        typedef cltj::cltj_rdf<cltj::compact_ltj_metatrie_dyn, ltj::util::trait_size,
+                ltj::ltj_iterator_metatrie<cltj::compact_ltj_metatrie_dyn, uint8_t, uint64_t>,
+                ltj::veo::veo_simple<ltj::ltj_iterator_metatrie<cltj::compact_ltj_metatrie_dyn, uint8_t, uint64_t>>> cltj_mt_rdf_dyn_global;
+
 }
-#endif //CLTJ_DYN_RDF_HPP
+#endif //CLTJ_RDF_HPP

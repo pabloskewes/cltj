@@ -114,6 +114,11 @@ namespace util {
             return file;
         }
 
+        std::string get_extension(const std::string &file){
+            auto pos_last_point = file.find_last_of('.');
+            return file.substr(pos_last_point);
+        }
+
         std::string index_file(const std::string &index_name, const char* argv[], const size_t length){
             std::string result = index_name;
             if(length > 1){

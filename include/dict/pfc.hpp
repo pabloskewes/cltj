@@ -21,6 +21,10 @@
 #define TREE_PFC_H
 
 #include <vector>
+#include <cstdint>
+#include <string>
+#include <iostream>
+#include <tuple>
 
 namespace dict
 {
