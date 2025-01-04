@@ -142,6 +142,10 @@ add_executable(cmd-cltj src/cmd/cmd-cltj.cpp)
 target_link_libraries(cmd-cltj sdsl divsufsort divsufsort64 hybridbv_gn)
 set_target_properties(cmd-cltj PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/cmd)
 
+add_executable(cmd-cltj-rdf src/cmd/cmd-cltj-rdf.cpp)
+target_link_libraries(cmd-cltj-rdf sdsl divsufsort divsufsort64 hybridbv_gn)
+set_target_properties(cmd-cltj-rdf PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/cmd)
+
 #TEST
 add_executable(test-index-dyn src/test/test-index-dyn.cpp)
 target_link_libraries(test-index-dyn sdsl divsufsort divsufsort64 hybridbv_gn)

@@ -51,7 +51,7 @@ int main(int argc, char **argv) {
         std::cout << "Reading from file" << std::endl;
         sdsl::load_from_file(cltj, "cltj-star.bin");
         std::string query = "?x 8 ?y . ?z 13 ?y";
-        ::util::results_printer<var_type, const_type> res;
+        ::util::results_printer<const_type> res;
         cltj.query(query, res);
         res.clear();
         cltj.insert("5 13 6");

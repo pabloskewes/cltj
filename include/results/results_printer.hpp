@@ -14,11 +14,10 @@
 
 namespace util {
 
-    template<class Var, class Cons>
+    template<class Cons>
     class results_printer {
 
     public:
-        typedef std::vector<std::pair<Var, Cons>> value_type;
         typedef uint64_t size_type;
 
     private:
@@ -33,8 +32,20 @@ namespace util {
 
         results_printer() = default;
 
-        inline void add(const value_type &val){
+        inline void add(const std::vector<Cons> &val) {
+            ++m_cnt;
+            std::cout << "        [" << m_cnt << "] ";
+            for(const auto &v : val){
+                std::cout << v << ";";
+            }
+            std::cout << std::endl;
+        };
+
+        template <class Var>
+        inline void add(const std::vector<std::pair<Var, Cons>> &val) {
+            ++m_cnt;
             std::vector<Cons> values(val.size());
+            std::cout << "        [" << m_cnt << "] ";
             for(const auto &pair : val){
                 values[pair.first] = pair.second;
             }
@@ -42,8 +53,7 @@ namespace util {
                 std::cout << v << ";";
             }
             std::cout << std::endl;
-            ++m_cnt;
-        }
+        };
 
         void clear() {
             m_cnt = 0;

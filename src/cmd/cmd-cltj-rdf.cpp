@@ -3,7 +3,7 @@
 //
 
 #include <string>
-#include <api/cltj_ids.hpp>
+#include <api/cltj_rdf.hpp>
 
 const std::string RESET = "\033[0m";
 const std::string RED = "\033[1;31m";
@@ -99,7 +99,7 @@ void interactive(const std::string &index_name, uint64_t limit, uint64_t timeout
                         to_run.push_back(line);
                     }
                     if(print) {
-                        ::util::results_printer<uint64_t> res;
+                        ::util::results_printer<std::string> res;
                         for(auto i = 0; i < cnt; ++i) {
                             std::cout << "        " << RED <<"[" << i+1 << "/" << cnt << "] begin" << RESET << std::endl;
                             auto start = std::chrono::high_resolution_clock::now();
@@ -141,7 +141,7 @@ struct build_args {
 
 //print build_args
 void print(build_args &ba) {
-    std::cout << BLUE << "CLTJ IDs Version" << std::endl;
+    std::cout << BLUE << "CLTJ RDF Version" << std::endl;
     std::cout << GREEN << "file= " << ba.file << std::endl;
     std::cout << "index= " << ba.index << std::endl;
     std::cout << "tries= " << ba.tries << RESET << std::endl << std::endl;
@@ -156,7 +156,7 @@ struct run_args {
 };
 
 void print(run_args &ra) {
-    std::cout << BLUE << "CLTJ IDs Version" << std::endl;
+    std::cout << BLUE << "CLTJ RDF Version" << std::endl;
     std::cout  << GREEN << "index= " << ra.index << std::endl;
     std::cout << "print=" << ra.print << std::endl;
     std::cout << "limit=" << ra.limit << std::endl;
@@ -228,11 +228,11 @@ int main(int argc, char **argv) {
         if(args.tries == "partial") {
             print_logo();
             print(args);
-            build<cltj::cltj_mt_ids_dyn>(args.file, args.index+ ".xcltj");
+            build<cltj::cltj_mt_rdf_dyn>(args.file, args.index+ ".xcltj");
         }else if(args.tries == "full") {
             print_logo();
             print(args);
-            build<cltj::cltj_ids_dyn>(args.file, args.index + ".cltj");
+            build<cltj::cltj_rdf_dyn>(args.file, args.index + ".cltj");
         }else{
             std::cout << "Tries " << args.tries << " is not supported." << std::endl;
         }
@@ -252,9 +252,9 @@ int main(int argc, char **argv) {
             print_logo();
             print(args);
             if(args.veo == "adaptive") {
-                interactive<cltj::cltj_mt_ids_dyn>(args.index, args.limit, args.timeout, args.print);
+                interactive<cltj::cltj_mt_rdf_dyn>(args.index, args.limit, args.timeout, args.print);
             }else if(args.veo == "global") {
-                interactive<cltj::cltj_mt_ids_dyn_global>(args.index, args.limit, args.timeout, args.print);
+                interactive<cltj::cltj_mt_rdf_dyn_global>(args.index, args.limit, args.timeout, args.print);
             }else {
                 std::cout << "Veo " << args.veo << " is not supported." << std::endl;
             }
@@ -262,9 +262,9 @@ int main(int argc, char **argv) {
             print_logo();
             print(args);
             if(args.veo == "adaptive") {
-                interactive<cltj::cltj_ids_dyn>(args.index, args.limit, args.timeout, args.print);
+                interactive<cltj::cltj_rdf_dyn>(args.index, args.limit, args.timeout, args.print);
             }else if(args.veo == "global") {
-                interactive<cltj::cltj_ids_dyn_global>(args.index, args.limit, args.timeout, args.print);
+                interactive<cltj::cltj_rdf_dyn_global>(args.index, args.limit, args.timeout, args.print);
             }else {
                 std::cout << "Veo " << args.veo << " is not supported." << std::endl;
             }
