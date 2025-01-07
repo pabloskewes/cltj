@@ -105,7 +105,7 @@ In both command line interface we can specify as first parameter two options:
 ## Benchmark
 
 In order to replicate the results obtained on the experimental evaluation, we provide the benchmark code in the `bench` folder. The benchmark code is in `src/bench`. The benchmark code is divided into two parts:
-- **build-**: the binaries prefixed with *build-* are used to builds the index from the dataset. They just need the path of the dataset and they generate the index in the same folder as the dataset. The binaries are:
+- **build-**: the binaries prefixed with *build-* build an index from a dataset. They just need the path of the dataset and they generate the index in the same folder as the dataset. The binaries are:
   - **build-cltj**: builds the static version of *CLTJ* from the dataset with IDs format.
   - **build-xcltj**: builds the static version of *xCLTJ* from the dataset with IDs format.
   - **build-uncltj**: builds the static version of *UnCLTJ* from the dataset with IDs format.
