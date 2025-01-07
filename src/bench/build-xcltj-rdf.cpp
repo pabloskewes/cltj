@@ -12,16 +12,15 @@ using timer = std::chrono::high_resolution_clock;
 int main(int argc, char **argv){
     try{
 
-        if(argc != 3){
-            cout<< argv[0] << " <dataset> <n-triples>" <<endl;
+        if(argc != 2){
+            cout<< argv[0] << " <dataset>" <<endl;
             return 0;
         }
 
         std::string dataset = argv[1];
-        uint64_t n_triples = std::atoll(argv[2]);
-        std::string index_name = dataset + "." + std::to_string(n_triples) + ".xcltj.idx";
-        std::string dict_so_name = dataset + "." + std::to_string(n_triples) + ".xcltj.so";
-        std::string dict_p_name = dataset + "." + std::to_string(n_triples) + ".xcltj.p";
+        std::string index_name = dataset + ".xcltj.idx";
+        std::string dict_so_name = dataset +  ".xcltj.so";
+        std::string dict_p_name = dataset + ".xcltj.p";
 
         std::ifstream ifs(dataset);
         cltj::spo_triple spo;
@@ -55,7 +54,7 @@ int main(int argc, char **argv){
                 spo[2] = it->second;
             }
             D.emplace_back(spo);
-        } while (!ifs.eof() && D.size() < n_triples);
+        } while (!ifs.eof());
         auto stop = timer::now();
         cout << "Mapping: " << duration_cast<seconds>(stop-start).count() << " seconds." << endl;
         D.shrink_to_fit();
