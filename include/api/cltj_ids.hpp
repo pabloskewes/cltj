@@ -167,11 +167,11 @@ namespace cltj {
             ltj::veo::veo_simple<ltj::ltj_iterator_lite<cltj::compact_dyn_ltj, uint8_t, uint64_t>>> cltj_ids_dyn_global;
     //Meta Tries + Dynamic + VEO adaptive
     typedef cltj::cltj_ids<cltj::compact_ltj_metatrie_dyn, ltj::util::trait_size,
-            ltj::ltj_iterator_metatrie<cltj::compact_ltj_metatrie_dyn, uint8_t, uint64_t>> cltj_mt_ids_dyn;
+            ltj::ltj_iterator_metatrie<cltj::compact_ltj_metatrie_dyn, uint8_t, uint64_t>> xcltj_ids_dyn;
     //Meta Tries + Dynamic + VEO global
     typedef cltj::cltj_ids<cltj::compact_ltj_metatrie_dyn, ltj::util::trait_size,
             ltj::ltj_iterator_metatrie<cltj::compact_ltj_metatrie_dyn, uint8_t, uint64_t>,
-            ltj::veo::veo_simple<ltj::ltj_iterator_metatrie<cltj::compact_ltj_metatrie_dyn, uint8_t, uint64_t>>> cltj_mt_ids_dyn_global;
+            ltj::veo::veo_simple<ltj::ltj_iterator_metatrie<cltj::compact_ltj_metatrie_dyn, uint8_t, uint64_t>>> xcltj_ids_dyn_global;
 
 
     //Full Tries + Static + VEO adaptive
@@ -182,11 +182,11 @@ namespace cltj {
             ltj::veo::veo_simple<ltj::ltj_iterator_lite<cltj::compact_dyn_ltj, uint8_t, uint64_t>>> cltj_ids_static_global;
     //Meta Tries + Static + VEO adaptive
     typedef cltj::cltj_ids<cltj::compact_ltj_metatrie, ltj::util::trait_size,
-            ltj::ltj_iterator_metatrie<cltj::compact_ltj_metatrie, uint8_t, uint64_t>> cltj_mt_ids_static;
+            ltj::ltj_iterator_metatrie<cltj::compact_ltj_metatrie, uint8_t, uint64_t>> xcltj_ids_static;
     //Meta Tries + Static + VEO global
     typedef cltj::cltj_ids<cltj::compact_ltj_metatrie, ltj::util::trait_size,
             ltj::ltj_iterator_metatrie<cltj::compact_ltj_metatrie, uint8_t, uint64_t>,
-            ltj::veo::veo_simple<ltj::ltj_iterator_metatrie<cltj::compact_ltj_metatrie, uint8_t, uint64_t>>> cltj_mt_ids_static_global;
+            ltj::veo::veo_simple<ltj::ltj_iterator_metatrie<cltj::compact_ltj_metatrie, uint8_t, uint64_t>>> xcltj_ids_static_global;
 
 
 }

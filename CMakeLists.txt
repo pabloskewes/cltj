@@ -51,77 +51,78 @@ link_directories(~/lib)
 add_subdirectory(lib/hybridBV)
 
 #BENCH EXECUTABLES
-add_executable(build-index src/bench/build-index.cpp)
-target_link_libraries(build-index sdsl divsufsort divsufsort64)
-set_target_properties(build-index PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
+add_executable(build-cltj src/bench/build-cltj.cpp)
+target_link_libraries(build-cltj sdsl divsufsort divsufsort64)
+set_target_properties(build-cltj PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
 
-add_executable(build-index-dyn src/bench/build-index-dyn.cpp)
-target_link_libraries(build-index-dyn sdsl divsufsort divsufsort64 hybridbv_gn)
-set_target_properties(build-index-dyn PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
+add_executable(build-cltj-dyn src/bench/build-cltj-dyn.cpp)
+target_link_libraries(build-cltj-dyn sdsl divsufsort divsufsort64 hybridbv_gn)
+set_target_properties(build-cltj-dyn PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
 
-add_executable(build-metatrie-index src/bench/build-metatrie-index.cpp)
-target_link_libraries(build-metatrie-index sdsl divsufsort divsufsort64 hybridbv_gn)
-set_target_properties(build-metatrie-index PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
+add_executable(build-xcltj src/bench/build-xcltj.cpp)
+target_link_libraries(build-xcltj sdsl divsufsort divsufsort64 hybridbv_gn)
+set_target_properties(build-xcltj PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
 
-add_executable(build-metatrie-index-dyn src/bench/build-metatrie-index-dyn.cpp)
-target_link_libraries(build-metatrie-index-dyn sdsl divsufsort divsufsort64 hybridbv_gn)
-set_target_properties(build-metatrie-index-dyn PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
+add_executable(build-xcltj-dyn src/bench/build-xcltj-dyn.cpp)
+target_link_libraries(build-xcltj-dyn sdsl divsufsort divsufsort64 hybridbv_gn)
+set_target_properties(build-xcltj-dyn PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
 
-add_executable(build-uncltj-index src/bench/build-uncltj-index.cpp)
-target_link_libraries(build-uncltj-index sdsl divsufsort divsufsort64)
-set_target_properties(build-uncltj-index PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
+add_executable(build-uncltj src/bench/build-uncltj.cpp)
+target_link_libraries(build-uncltj sdsl divsufsort divsufsort64)
+set_target_properties(build-uncltj PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
 
-add_executable(build-index-triples src/bench/build-index-triples.cpp)
-target_link_libraries(build-index-triples sdsl divsufsort divsufsort64 hybridbv_gn)
-set_target_properties(build-index-triples PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
+add_executable(build-cltj-rdf src/bench/build-cltj-rdf.cpp)
+target_link_libraries(build-cltj-rdf sdsl divsufsort divsufsort64 hybridbv_gn)
+set_target_properties(build-cltj-rdf PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
 
-add_executable(build-index-bulk-triples src/bench/build-index-bulk-triples.cpp)
-target_link_libraries(build-index-bulk-triples sdsl divsufsort divsufsort64 hybridbv_gn)
-set_target_properties(build-index-bulk-triples PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
+add_executable(build-xcltj-rdf src/bench/build-xcltj-rdf.cpp)
+target_link_libraries(build-xcltj-rdf sdsl divsufsort divsufsort64 hybridbv_gn)
+set_target_properties(build-xcltj-rdf PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
 
-add_executable(bench-query-index src/bench/bench-query-index.cpp)
-target_compile_definitions(bench-query-index PUBLIC ADAPTIVE=1)
-target_link_libraries(bench-query-index sdsl divsufsort divsufsort64)
-set_target_properties(bench-query-index PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
+add_executable(bench-query-cltj src/bench/bench-query-cltj.cpp)
+target_compile_definitions(bench-query-cltj PUBLIC ADAPTIVE=1)
+target_link_libraries(bench-query-cltj sdsl divsufsort divsufsort64)
+set_target_properties(bench-query-cltj PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
 
-add_executable(bench-query-index-global src/bench/bench-query-index.cpp)
-target_compile_definitions(bench-query-index-global PUBLIC ADAPTIVE=0)
-target_link_libraries(bench-query-index-global sdsl divsufsort divsufsort64)
-set_target_properties(bench-query-index-global PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
+add_executable(bench-query-cltj-global src/bench/bench-query-cltj.cpp)
+target_compile_definitions(bench-query-cltj-global PUBLIC ADAPTIVE=0)
+target_link_libraries(bench-query-cltj-global sdsl divsufsort divsufsort64)
+set_target_properties(bench-query-cltj-global PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
 
-add_executable(bench-query-uncltj-index src/bench/bench-query-uncltj-index.cpp)
-target_compile_definitions(bench-query-uncltj-index PUBLIC ADAPTIVE=1)
-target_link_libraries(bench-query-uncltj-index sdsl divsufsort divsufsort64)
-set_target_properties(bench-query-uncltj-index PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
+add_executable(bench-query-uncltj src/bench/bench-query-uncltj.cpp)
+target_compile_definitions(bench-query-uncltj PUBLIC ADAPTIVE=1)
+target_link_libraries(bench-query-uncltj sdsl divsufsort divsufsort64)
+set_target_properties(bench-query-uncltj PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
 
-add_executable(bench-query-uncltj-index-global src/bench/bench-query-uncltj-index.cpp)
-target_compile_definitions(bench-query-uncltj-index-global PUBLIC ADAPTIVE=0)
-target_link_libraries(bench-query-uncltj-index-global sdsl divsufsort divsufsort64)
-set_target_properties(bench-query-uncltj-index-global PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
+add_executable(bench-query-uncltj-global src/bench/bench-query-uncltj.cpp)
+target_compile_definitions(bench-query-uncltj-global PUBLIC ADAPTIVE=0)
+target_link_libraries(bench-query-uncltj-global sdsl divsufsort divsufsort64)
+set_target_properties(bench-query-uncltj-global PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
 
-add_executable(bench-query-metatrie-index src/bench/bench-query-metatrie-index.cpp)
-target_compile_definitions(bench-query-metatrie-index PUBLIC ADAPTIVE=1)
-target_link_libraries(bench-query-metatrie-index sdsl divsufsort divsufsort64)
-set_target_properties(bench-query-metatrie-index PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
+add_executable(bench-query-xcltj src/bench/bench-query-xcltj.cpp)
+target_compile_definitions(bench-query-xcltj PUBLIC ADAPTIVE=1)
+target_link_libraries(bench-query-xcltj sdsl divsufsort divsufsort64)
+set_target_properties(bench-query-xcltj PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
 
-add_executable(bench-query-metatrie-index-global src/bench/bench-query-metatrie-index.cpp)
-target_compile_definitions(bench-query-metatrie-index-global PUBLIC ADAPTIVE=0)
-target_link_libraries(bench-query-metatrie-index-global sdsl divsufsort divsufsort64)
-set_target_properties(bench-query-metatrie-index-global PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
+add_executable(bench-query-xcltj-global src/bench/bench-query-xcltj.cpp)
+target_compile_definitions(bench-query-xcltj-global PUBLIC ADAPTIVE=0)
+target_link_libraries(bench-query-xcltj-global sdsl divsufsort divsufsort64)
+set_target_properties(bench-query-xcltj-global PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
 
-add_executable(bench-query-index-triples src/bench/bench-query-index-triples.cpp)
-target_link_libraries(bench-query-index-triples sdsl divsufsort divsufsort64 hybridbv_gn)
-set_target_properties(bench-query-index-triples PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
+add_executable(bench-query-cltj-rdf src/bench/bench-query-cltj-rdf.cpp)
+target_compile_definitions(bench-query-cltj-rdf PUBLIC ADAPTIVE=1)
+target_link_libraries(bench-query-cltj-rdf sdsl divsufsort divsufsort64 hybridbv_gn)
+set_target_properties(bench-query-cltj-rdf PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
 
-add_executable(bench-update-ratio src/bench/bench-update-ratio.cpp)
-target_compile_definitions(bench-update-ratio PUBLIC ADAPTIVE=1)
-target_link_libraries(bench-update-ratio sdsl divsufsort divsufsort64 hybridbv_gn)
-set_target_properties(bench-update-ratio PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
+add_executable(bench-update-cltj src/bench/bench-update-cltj.cpp)
+target_compile_definitions(bench-update-cltj PUBLIC ADAPTIVE=1)
+target_link_libraries(bench-update-cltj sdsl divsufsort divsufsort64 hybridbv_gn)
+set_target_properties(bench-update-cltj PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
 
-add_executable(bench-update-metatrie-ratio src/bench/bench-update-metatrie-ratio.cpp)
-target_compile_definitions(bench-update-metatrie-ratio PUBLIC ADAPTIVE=1)
-target_link_libraries(bench-update-metatrie-ratio sdsl divsufsort divsufsort64 hybridbv_gn)
-set_target_properties(bench-update-metatrie-ratio PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
+add_executable(bench-update-xcltj src/bench/bench-update-xcltj.cpp)
+target_compile_definitions(bench-update-xcltj PUBLIC ADAPTIVE=1)
+target_link_libraries(bench-update-xcltj sdsl divsufsort divsufsort64 hybridbv_gn)
+set_target_properties(bench-update-xcltj PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
 
 
 #EXAMPLE
@@ -149,73 +150,81 @@ set_target_properties(cmd-cltj-rdf PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_B
 #TEST
 add_executable(test-index-dyn src/test/test-index-dyn.cpp)
 target_link_libraries(test-index-dyn sdsl divsufsort divsufsort64 hybridbv_gn)
+set_target_properties(test-index-dyn PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
 
 add_executable(test-index-static src/test/test-index-static.cpp)
 target_link_libraries(test-index-static sdsl divsufsort divsufsort64)
+set_target_properties(test-index-static PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
 
 add_executable(main src/test/main.cpp)
 target_link_libraries(main sdsl divsufsort divsufsort64 hybridbv_gn)
+set_target_properties(main PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
 
-
-
-
-
-
-
-
-
-
-#TODO: activar ADAPTIVE
 
 
 add_executable(dyn-exp1 src/test/dyn-exp1.cpp)
 target_compile_definitions(dyn-exp1 PUBLIC ADAPTIVE=1)
 target_link_libraries(dyn-exp1 sdsl divsufsort divsufsort64 hybridbv_gn)
+set_target_properties(dyn-exp1 PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
 
 add_executable(dyn-exp1-metatrie src/test/dyn-exp1-metatrie.cpp)
 target_compile_definitions(dyn-exp1-metatrie PUBLIC ADAPTIVE=1)
 target_link_libraries(dyn-exp1-metatrie sdsl divsufsort divsufsort64 hybridbv_gn)
+set_target_properties(dyn-exp1-metatrie PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
 
 add_executable(dyn-exp1-fixed src/test/dyn-exp1.cpp)
 target_compile_definitions(dyn-exp1-fixed PUBLIC ADAPTIVE=0)
 target_link_libraries(dyn-exp1-fixed sdsl divsufsort divsufsort64 hybridbv_gn)
+set_target_properties(dyn-exp1-fixed PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
 
 add_executable(dyn-exp2 src/test/dyn-exp2.cpp)
 target_compile_definitions(dyn-exp2 PUBLIC ADAPTIVE=1)
 target_link_libraries(dyn-exp2 sdsl divsufsort divsufsort64 hybridbv_gn)
+set_target_properties(dyn-exp2 PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
 
 add_executable(dyn-exp2-fixed src/test/dyn-exp2.cpp)
 target_compile_definitions(dyn-exp2-fixed PUBLIC ADAPTIVE=0)
 target_link_libraries(dyn-exp2-fixed sdsl divsufsort divsufsort64 hybridbv_gn)
+set_target_properties(dyn-exp2-fixed PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
 
 add_executable(dyn-exp3 src/test/dyn-exp3.cpp)
 target_compile_definitions(dyn-exp3 PUBLIC ADAPTIVE=1)
 target_link_libraries(dyn-exp3 sdsl divsufsort divsufsort64 hybridbv_gn)
+set_target_properties(dyn-exp3 PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
 
 add_executable(dyn-exp3-fixed src/test/dyn-exp3.cpp)
 target_compile_definitions(dyn-exp3-fixed PUBLIC ADAPTIVE=0)
 target_link_libraries(dyn-exp3-fixed sdsl divsufsort divsufsort64 hybridbv_gn)
+set_target_properties(dyn-exp3-fixed PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
 
 add_executable(test-dict src/test/test-dict.cpp)
 target_link_libraries(test-dict sdsl divsufsort divsufsort64)
+set_target_properties(test-dict PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
 
 add_executable(test-regex src/test/test-regex.cpp)
 target_link_libraries(test-regex sdsl divsufsort divsufsort64)
+set_target_properties(test-regex PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
 
 add_executable(test-bulk-load src/test/test-bulk-load.cpp)
 target_link_libraries(test-bulk-load sdsl divsufsort divsufsort64)
+set_target_properties(test-bulk-load PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
 
 add_executable(test-mt-dyn src/test/test-mt-dyn.cpp)
 target_link_libraries(test-mt-dyn sdsl divsufsort divsufsort64 hybridbv_gn)
+set_target_properties(test-mt-dyn PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
 
 add_executable(interactive-metatrie src/test/interactive-metatrie.cpp)
 target_link_libraries(interactive-metatrie sdsl divsufsort divsufsort64 hybridbv_gn)
+set_target_properties(interactive-metatrie PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
 
 add_executable(update-index-triples src/test/update-index-triples.cpp)
 target_link_libraries(update-index-triples sdsl divsufsort divsufsort64 hybridbv_gn)
+set_target_properties(update-index-triples PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
 
 add_executable(prepare-80 src/test/prepare-80.cpp)
 target_link_libraries(prepare-80 sdsl divsufsort divsufsort64)
+set_target_properties(prepare-80 PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
 
 add_executable(test-dyn src/test/test-dyn.cpp)
 target_link_libraries(test-dyn sdsl divsufsort divsufsort64 hybridbv_gn)
+set_target_properties(test-dyn PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)

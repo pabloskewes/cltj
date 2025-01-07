@@ -5,9 +5,9 @@
 #include <api/cltj_rdf.hpp>
 
 int main(int argc, char **argv) {
-    typedef cltj::cltj_mt_rdf_dyn::tuple_type tuple_type;
+    typedef cltj::xcltj_rdf_dyn::tuple_type tuple_type;
     {
-        cltj::cltj_mt_rdf_dyn  cltj(argv[1]);
+        cltj::xcltj_rdf_dyn  cltj(argv[1]);
         std::string query = "?x <http://www.wikidata.org/prop/direct/P8> ?y . ?z <http://www.wikidata.org/prop/direct/P13> ?y";
         ::util::results_collector<tuple_type> res;
         cltj.query(query, res);
@@ -44,7 +44,7 @@ int main(int argc, char **argv) {
     }
     std::cout << std::endl;
     {
-        cltj::cltj_mt_rdf_dyn  cltj;
+        cltj::xcltj_rdf_dyn  cltj;
         std::cout << "Reading from file" << std::endl;
         sdsl::load_from_file(cltj, "cltj-star.bin");
         std::string query = "?x <http://www.wikidata.org/prop/direct/P8> ?y . ?z <http://www.wikidata.org/prop/direct/P13> ?y";

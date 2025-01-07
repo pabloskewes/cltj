@@ -186,7 +186,7 @@ run_args parse_run_args(int argc, char **argv) {
     run_args args;
     args.index = argv[2];
     if(argc > 3) {
-        args.print = std::string(argv[3]) == "results";
+        args.print = std::string(argv[3]) == "print";
     }
     if(argc > 4) {
         args.limit = std::stoull(argv[4]);
@@ -203,13 +203,13 @@ run_args parse_run_args(int argc, char **argv) {
 int main(int argc, char **argv) {
     if(argc < 2) {
         std::cout << "Usage: " << argv[0] << " <exec> [args]" << std::endl;
-        std::cout << "Exec: build <file> <index> [tries]" << std::endl;
+        std::cout << "Exec: build <file> <index> [version]" << std::endl;
         std::cout << "  <file>: the dataset file." << std::endl;
         std::cout << "  <index>: the index file." << std::endl;
-        std::cout << "  <tries>: the kind of tries to use: partial or full. Default is partial." << std::endl;
+        std::cout << "  <version>: the kind of version to use: xcltj or cltj. Default is xcltj." << std::endl;
         std::cout << "Exec: run <index> [veo] [print] [limit] [timeout]" << std::endl;
         std::cout << "  <index>: the index file." << std::endl;
-        std::cout << "  <print>: the kind of print to use: none or results. Default is none." << std::endl;
+        std::cout << "  <print>: the kind of print to use: none or print. Default is none." << std::endl;
         std::cout << "  <limit>: the limit of results. Default is 1000. Setting to 0 means no limit." << std::endl;
         std::cout << "  <timeout>: the timeout of the query in seconds. Default is 600." << std::endl;
         std::cout << "  <veo>: the kind of veo to use: adaptive or global. Default is adaptive." << std::endl;
@@ -218,17 +218,17 @@ int main(int argc, char **argv) {
     std::string exec = argv[1];
     if(exec == "build") {
         if(argc < 4) {
-            std::cout << "Usage: " << argv[0] << " build <file> <index> [tries]" << std::endl;
+            std::cout << "Usage: " << argv[0] << " build <file> <index> [version]" << std::endl;
             std::cout << "  <file>: the dataset file." << std::endl;
             std::cout << "  <index>: the index file." << std::endl;
-            std::cout << "  <tries>: the kind of tries to use: partial or full. Default is partial." << std::endl;
+            std::cout << "  <version>: the kind of version to use: xcltj or cltj. Default is xcltj." << std::endl;
             return 0;
         }
         auto args = parse_build_args(argc, argv);
         if(args.tries == "partial") {
             print_logo();
             print(args);
-            build<cltj::cltj_mt_ids_dyn>(args.file, args.index+ ".xcltj");
+            build<cltj::xcltj_ids_dyn>(args.file, args.index+ ".xcltj");
         }else if(args.tries == "full") {
             print_logo();
             print(args);
@@ -240,7 +240,7 @@ int main(int argc, char **argv) {
         if(argc < 3) {
             std::cout << "Usage: " << argv[0] << " run <index> [print] [limit] [timeout] [veo]" << std::endl;
             std::cout << "  <index>: the index file." << std::endl;
-            std::cout << "  <print>: the kind of print to use: none or results. Default is none." << std::endl;
+            std::cout << "  <print>: the kind of print to use: none or print. Default is none." << std::endl;
             std::cout << "  <limit>: the limit of results. Default is 1000. Setting to 0 means no limit." << std::endl;
             std::cout << "  <timeout>: the timeout of the query in seconds. Default is 600." << std::endl;
             std::cout << "  <veo>: the kind of veo to use: adaptive or global. Default is adaptive." << std::endl;
@@ -252,9 +252,9 @@ int main(int argc, char **argv) {
             print_logo();
             print(args);
             if(args.veo == "adaptive") {
-                interactive<cltj::cltj_mt_ids_dyn>(args.index, args.limit, args.timeout, args.print);
+                interactive<cltj::xcltj_ids_dyn>(args.index, args.limit, args.timeout, args.print);
             }else if(args.veo == "global") {
-                interactive<cltj::cltj_mt_ids_dyn_global>(args.index, args.limit, args.timeout, args.print);
+                interactive<cltj::xcltj_ids_dyn_global>(args.index, args.limit, args.timeout, args.print);
             }else {
                 std::cout << "Veo " << args.veo << " is not supported." << std::endl;
             }

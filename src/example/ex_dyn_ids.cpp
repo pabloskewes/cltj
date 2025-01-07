@@ -6,11 +6,11 @@
 #include <api/cltj_ids.hpp>
 
 int main(int argc, char **argv) {
-    typedef cltj::cltj_mt_ids_dyn::tuple_type tuple_type;
-    typedef cltj::cltj_mt_ids_dyn::var_type var_type;
-    typedef cltj::cltj_mt_ids_dyn::const_type const_type;
+    typedef cltj::xcltj_ids_dyn::tuple_type tuple_type;
+    typedef cltj::xcltj_ids_dyn::var_type var_type;
+    typedef cltj::xcltj_ids_dyn::const_type const_type;
     {
-        cltj::cltj_mt_ids_dyn  cltj(argv[1]);
+        cltj::xcltj_ids_dyn  cltj(argv[1]);
         std::string query = "?x 8 ?y . ?z 13 ?y";
         ::util::results_collector<tuple_type> res;
         cltj.query(query, res);
@@ -47,7 +47,7 @@ int main(int argc, char **argv) {
     }
     std::cout << std::endl;
     {
-        cltj::cltj_mt_ids_dyn  cltj;
+        cltj::xcltj_ids_dyn  cltj;
         std::cout << "Reading from file" << std::endl;
         sdsl::load_from_file(cltj, "cltj-star.bin");
         std::string query = "?x 8 ?y . ?z 13 ?y";

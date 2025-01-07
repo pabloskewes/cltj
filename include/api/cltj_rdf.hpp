@@ -243,11 +243,11 @@ namespace cltj {
                 ltj::veo::veo_simple<ltj::ltj_iterator_lite<cltj::compact_dyn_ltj, uint8_t, uint64_t>>> cltj_rdf_dyn_global;
         //Meta Tries + Dynamic + VEO adaptive
         typedef cltj::cltj_rdf<cltj::compact_ltj_metatrie_dyn, ltj::util::trait_size,
-                ltj::ltj_iterator_metatrie<cltj::compact_ltj_metatrie_dyn, uint8_t, uint64_t>> cltj_mt_rdf_dyn;
+                ltj::ltj_iterator_metatrie<cltj::compact_ltj_metatrie_dyn, uint8_t, uint64_t>> xcltj_rdf_dyn;
         //Meta Tries + Dynamic + VEO global
         typedef cltj::cltj_rdf<cltj::compact_ltj_metatrie_dyn, ltj::util::trait_size,
                 ltj::ltj_iterator_metatrie<cltj::compact_ltj_metatrie_dyn, uint8_t, uint64_t>,
-                ltj::veo::veo_simple<ltj::ltj_iterator_metatrie<cltj::compact_ltj_metatrie_dyn, uint8_t, uint64_t>>> cltj_mt_rdf_dyn_global;
+                ltj::veo::veo_simple<ltj::ltj_iterator_metatrie<cltj::compact_ltj_metatrie_dyn, uint8_t, uint64_t>>> xcltj_rdf_dyn_global;
 
 }
 #endif //CLTJ_RDF_HPP

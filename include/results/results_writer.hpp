@@ -13,40 +13,42 @@
 
 namespace util {
 
-    template<class Var, class Cons>
+    template<class Cons>
     class results_writer {
 
     public:
-        typedef std::vector<std::pair<Var, Cons>> value_type;
         typedef uint64_t size_type;
 
     private:
 
         std::ofstream m_stream;
-        size_type m_elements = 0;
         size_type m_cnt = 0;
 
         void copy(const results_writer &o) {
             m_stream = o.m_stream;
             m_cnt = o.m_cnt;
-            m_elements = o.m_elements;
         }
 
     public:
 
-        results_writer(std::string &file, size_type elements) {
+        results_writer(std::string &file) {
             m_stream.open(file, std::ios::binary);
-            m_elements = elements;
         }
 
-        inline void add(const value_type &val){
-            std::vector<Cons> values(m_elements);
+        inline void add(const std::vector<Cons> &val) {
+            m_stream.write((char*)val.data(), sizeof(Cons)*val.size());
+            ++m_cnt;
+        };
+
+        template <class Var>
+        inline void add(const std::vector<std::pair<Var, Cons>> &val) {
+            std::vector<Cons> values(val.size());
             for(const auto &pair : val){
                 values[pair.first] = pair.second;
             }
-            m_stream.write((char*)values.data(), sizeof(Cons)*m_elements);
+            m_stream.write((char*)values.data(), sizeof(Cons)*values.size());
             ++m_cnt;
-        }
+        };
 
 
         inline size_type size(){
@@ -79,7 +81,6 @@ namespace util {
         results_writer &operator=(results_writer &&o) {
             if (this != &o) {
                 m_stream = std::move(o.m_stream);
-                m_elements = std::move(o.m_elements);
                 m_cnt = std::move(o.m_cnt);
             }
             return *this;
@@ -87,7 +88,6 @@ namespace util {
 
         void swap(results_writer &o) {
             std::swap(m_stream, o.m_stream);
-            std::swap(m_elements, o.m_elements);
             std::swap(m_cnt, o.m_cnt);
         }
 
