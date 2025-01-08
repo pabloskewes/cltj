@@ -92,36 +92,31 @@ namespace cltj {
 
 
         /*
-            Receives index in bit vector
-            Returns index of next 0
-        */
-        /*inline uint32_t succ0(uint32_t it) const{
-            return m_select0(rank0(it) + 1);
-        }*/
-
-        /*
-            Receives index of current node and the child that is required
-            Returns index of the nth child of current node
+            Receives index of node in ptr vector
+            Returns index of child in ptr vector
         */
         inline size_type child(uint32_t it, uint32_t n, uint32_t gap=1) const {
-            return m_ptr[it-1+gap] + n -1;
+            return it + gap + n - 1; //positon of the i-th 0 in ptr
         }
 
 
         /*
-            Receives index of node whos children we want to count
-            Returns how many children said node has
+            Receives index of node in ptr vector
+            Returns the number of children
         */
         inline size_type children(size_type i) const {
             return m_ptr[i+1] - m_ptr[i];
         }
 
+        /* Receives index of node in ptr vector
+           Returns the first child in seq vector
+        */
         inline size_type first_child(size_type i) const {
             return m_ptr[i];
+            //return i;
         }
 
-        inline size_type nodeselect(size_type i) const {
-            //std::cout << "i: " << i << "nodeselect: " << m_ptr[i] << std::endl;
+        inline size_type nodeselect(size_type i, uint64_t gap) const {
             return i;
             //return i;
         }

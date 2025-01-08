@@ -53,9 +53,6 @@ namespace ltj {
     private:
         const triple_pattern *m_ptr_triple_pattern;
         index_scheme_type *m_ptr_index; //TODO: should be const
-        //std::vector<std::string> m_orders = {"0 1 2", "0 2 1", "1 2 0", "1 0 2", "2 0 1", "2 1 0"};
-        //                                     SPO      SOP      POS      PSO     OSP      OPS
-        //Penso que con esto debería ser suficiente (mais parte do de Diego)
         bool m_is_empty = false;
         //std::array<cltj::compact_trie*, 6> m_tries;
         size_type m_nfixed = 0;
@@ -264,7 +261,7 @@ namespace ltj {
         }
 
 
-        void down(state_type state){
+       /* void down(state_type state){
             ++m_nfixed;
             m_fixed[m_nfixed-1] = state;
 
@@ -279,6 +276,27 @@ namespace ltj {
                 auto pos = m_status[m_nfixed].beg;
                 //root -> gap = 1; level -> gap = nodes in first level
                 m_status[m_nfixed].it[m_status_i] = trie->child(pos , 1, m_status_i ? m_ptr_index->gaps[m_trie_i/2] : 1);
+            }
+            print_status();
+            //m_redo[m_nfixed] = true;
+            //print_redo();                             
+        }*/
+
+        void down(state_type state){
+            ++m_nfixed;
+            m_fixed[m_nfixed-1] = state;
+
+            if(m_nfixed == 1){
+                const auto* trie = m_ptr_index->get_trie(m_trie_i);
+                auto pos = m_status[m_nfixed].beg;
+                m_status[m_nfixed].it[0] =  trie->nodeselect(pos, 1); //root -> gap = 1
+                trie = m_ptr_index->get_trie(m_trie_i+1);
+                m_status[m_nfixed].it[1] = trie->nodeselect(pos, 0); //no root -> gap = 0
+            }else if (m_nfixed == 2){
+                const auto* trie = m_ptr_index->get_trie(m_trie_i);
+                auto pos = m_status[m_nfixed].beg;
+                //root -> gap = 1; level -> gap = nodes in first level
+                m_status[m_nfixed].it[m_status_i] = trie->nodeselect(pos, m_status_i ? m_ptr_index->gaps[m_trie_i/2] : 1);
             }
             //print_status();
             //m_redo[m_nfixed] = true;
