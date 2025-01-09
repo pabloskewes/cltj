@@ -98,7 +98,7 @@ namespace cltj {
         inline size_type child(uint32_t it, uint32_t n, uint32_t gap=1) const {
             if(gap == 1) return m_ptr[it] + n - 1; //there is a root
             if(gap == 0) return n-1; //there is no root but we are in the first level
-            return m_ptr[it] + gap + n - 1; //there is no root and we are in the second level
+            return m_ptr[it] -1 + gap + n - 1; //there is no root and we are in the second level
         }
 
 
