@@ -96,7 +96,9 @@ namespace cltj {
             Returns index of child in ptr vector
         */
         inline size_type child(uint32_t it, uint32_t n, uint32_t gap=1) const {
-            return it + gap + n - 1; //positon of the i-th 0 in ptr
+            if(gap == 1) return m_ptr[it] + n - 1; //there is a root
+            if(gap == 0) return n-1; //there is no root but we are in the first level
+            return m_ptr[it] + gap + n - 1; //there is no root and we are in the second level
         }
 
 
