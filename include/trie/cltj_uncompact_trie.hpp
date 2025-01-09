@@ -119,6 +119,7 @@ namespace cltj {
         }
 
         inline size_type nodeselect(size_type i, uint64_t gap) const {
+            if(gap == 0) return i -1;
             return i;
             //return i;
         }
