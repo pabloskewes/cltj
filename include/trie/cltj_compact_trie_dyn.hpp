@@ -130,6 +130,10 @@ namespace cltj {
             return m_seq.select(it + gap + n);
         }
 
+        inline size_type nodeselect(uint32_t it, uint32_t gap = 1) const {
+            return child(it, 1, gap);
+        }
+
         /*
             Receives index of node whos children we want to count
             Returns how many children said node has
