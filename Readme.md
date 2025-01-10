@@ -1,6 +1,6 @@
 # CompactLTJ
 
-CompactLTJ is a C++ library that provides an implementation of the Compact Leapfrog Triejoin (CLTJ) algorithm. This algorithm uses a compact representation of the tries to support the Leapfrog Triejoin algorithm, which is a well-known algorithm for evaluating SPARQL queries. The CompactLTJ library is based on the Succinct Data Structure Library (SDSL) and provides a fast and memory-efficient way to evaluate SPARQL queries on RDF datasets.
+CompactLTJ is a C++ library that provides an implementation of the Compact Leapfrog Triejoin (CLTJ) algorithm. This algorithm uses a compact representation of the tries to support the Leapfrog Triejoin algorithm, which is a well-known algorithm for evaluating Basic Graph Pattern queries (BGPs). The CompactLTJ library is based on the Succinct Data Structure Library (SDSL) and provides a fast and memory-efficient way to evaluate BGPs queries on RDF datasets.
 
 # Table of contents
 - [Building the code](#building-the-code)
