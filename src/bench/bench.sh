@@ -20,24 +20,36 @@ if [ $RUN_STATIC -eq 1 ]; then
    echo "1.1 Running CLTJ..."
    $BIN_FOLDER/bench-query-cltj $DATASET.cltj $QUERIES 1000 star > $OUTPUT_FOLDER/cltj-star-1000.txt
    $BIN_FOLDER/bench-query-cltj $DATASET.cltj $QUERIES 1000 normal > $OUTPUT_FOLDER/cltj-normal-1000.txt
+   $BIN_FOLDER/bench-query-cltj-global $DATASET.cltj $QUERIES 1000 star > $OUTPUT_FOLDER/cltj-global-star-1000.txt
+   $BIN_FOLDER/bench-query-cltj-global $DATASET.cltj $QUERIES 1000 normal > $OUTPUT_FOLDER/cltj-global-normal-1000.txt
    echo "1.2 Running xCLTJ..."
    $BIN_FOLDER/bench-query-xcltj $DATASET.xcltj $QUERIES 1000 star > $OUTPUT_FOLDER/xcltj-star-1000.txt
    $BIN_FOLDER/bench-query-xcltj $DATASET.xcltj $QUERIES 1000 normal > $OUTPUT_FOLDER/xcltj-normal-1000.txt
+   $BIN_FOLDER/bench-query-xcltj-global $DATASET.xcltj $QUERIES 1000 star > $OUTPUT_FOLDER/xcltj-global-star-1000.txt
+   $BIN_FOLDER/bench-query-xcltj-global $DATASET.xcltj $QUERIES 1000 normal > $OUTPUT_FOLDER/xcltj-global-normal-1000.txt
    echo "1.3 Running UNCLTJ..."
    $BIN_FOLDER/bench-query-uncltj $DATASET.uncltj $QUERIES 1000 star > $OUTPUT_FOLDER/uncltj-star-1000.txt
    $BIN_FOLDER/bench-query-uncltj $DATASET.uncltj $QUERIES 1000 normal > $OUTPUT_FOLDER/uncltj-normal-1000.txt
+   $BIN_FOLDER/bench-query-uncltj-global $DATASET.uncltj $QUERIES 1000 star > $OUTPUT_FOLDER/uncltj-global-star-1000.txt
+   $BIN_FOLDER/bench-query-uncltj-global $DATASET.uncltj $QUERIES 1000 normal > $OUTPUT_FOLDER/uncltj-global-normal-1000.txt
    echo "Done running static benchmarks with limit=1000."
 
    echo "2. Running static benchmarks with limit=0..."
    echo "2.1 Running CLTJ..."
    $BIN_FOLDER/bench-query-cltj $DATASET.cltj $QUERIES 0 star > $OUTPUT_FOLDER/cltj-star-0.txt
    $BIN_FOLDER/bench-query-cltj $DATASET.cltj $QUERIES 0 normal > $OUTPUT_FOLDER/cltj-normal-0.txt
+   $BIN_FOLDER/bench-query-cltj-global $DATASET.cltj $QUERIES 0 star > $OUTPUT_FOLDER/cltj-global-star-0.txt
+   $BIN_FOLDER/bench-query-cltj-global $DATASET.cltj $QUERIES 0 normal > $OUTPUT_FOLDER/cltj-global-normal-0.txt
    echo "2.2 Running xCLTJ..."
    $BIN_FOLDER/bench-query-xcltj $DATASET.xcltj $QUERIES 0 star > $OUTPUT_FOLDER/xcltj-star-0.txt
    $BIN_FOLDER/bench-query-xcltj $DATASET.xcltj $QUERIES 0 normal > $OUTPUT_FOLDER/xcltj-normal-0.txt
+   $BIN_FOLDER/bench-query-xcltj-global $DATASET.xcltj $QUERIES 0 star > $OUTPUT_FOLDER/xcltj-global-star-0.txt
+   $BIN_FOLDER/bench-query-xcltj-global $DATASET.xcltj $QUERIES 0 normal > $OUTPUT_FOLDER/xcltj-global-normal-0.txt
    echo "2.3 Running UNCLTJ..."
    $BIN_FOLDER/bench-query-uncltj $DATASET.uncltj $QUERIES 0 star > $OUTPUT_FOLDER/uncltj-star-0.txt
    $BIN_FOLDER/bench-query-uncltj $DATASET.uncltj $QUERIES 0 normal > $OUTPUT_FOLDER/uncltj-normal-0.txt
+   $BIN_FOLDER/bench-query-uncltj-global $DATASET.uncltj $QUERIES 0 star > $OUTPUT_FOLDER/uncltj-global-star-0.txt
+   $BIN_FOLDER/bench-query-uncltj-global $DATASET.uncltj $QUERIES 0 normal > $OUTPUT_FOLDER/uncltj-global-normal-0.txt
    echo "Done running static benchmarks with limit=0."
 else
     echo "Skipping static benchmarks..."

@@ -105,17 +105,22 @@ In both command line interface we can specify as first parameter two options:
 ## Benchmark
 
 In order to replicate the results obtained on the experimental evaluation, we provide the benchmark code in the `bench` folder. The benchmark code is in `src/bench`. The benchmark code is divided into two parts:
-- **build-**: the binaries prefixed with *build-* build an index from a dataset. They just need the path of the dataset and they generate the index in the same folder as the dataset. The binaries are:
-  - **build-cltj**: builds the static version of *CLTJ* from the dataset with IDs format.
-  - **build-xcltj**: builds the static version of *xCLTJ* from the dataset with IDs format.
-  - **build-uncltj**: builds the static version of *UnCLTJ* from the dataset with IDs format.
-  - **build-cltj-dyn**: builds the dynamic version of *CLTJ* from the dataset with IDs format.
-  - **build-xcltj-dyn**: builds the dynamic version of *xCLTJ* from the dataset with IDs format.
-  - **build-cltj-rdf**: builds the dynamic version of *CLTJ* from the dataset with RDF format.
-  - **build-xcltj-rdf**: builds the dynamic version of *xCLTJ* from the dataset with RDF format.
+- **build-**: the binaries prefixed with *build-* build an index from a dataset. They just need the path of the dataset and they generate the index in the same folder as the dataset.
 - **bench-query-\<index>**: those binaries are used to solve the queries in the static indices built from the dataset with IDs format. They need the path of the index, the path of the queries file, the limit of their results and 
 the type of index *star* or *normal* version. Similar to the build phase there is a binary for each kind of index in the experimental evaluation. Note that some of them are suffixed with *-global*, those are the binaries that use de global VEO, the remaining ones use the adaptive VEO. The output of each binary follows the format `<query number>;<number of results>;<elapsed time>`, where the elapsed time is in nanoseconds.
 - **bench-query-\<index>-rdf**: those binaries are used to solve the queries in the dynamic indices built from the dataset with RDF format. The input parameters are the same as before, but the output changes to `<query number>;<number of results>;<string to id time>;<query elapsed time>; <id to string time>`, where the times are measured in nanoseconds. The new fields are the time required to convert the strings of the query to the IDs and the time required to convert the results from IDs to strings, in that order.
 - **bench-update-\<index>**: those binaries are used to solve the queries in the dynamic indices built from the dataset with IDs format. They need the path of the index, the path of the queries file, the path of the updates file, the ratio of updates per query, the limit of their results and the type of index *star* or *normal* version. The output of each binary follows the format `<query number>;<number of results>;<elapsed time>`, where the elapsed time is in nanoseconds.
 
-The dataset used on our benchmark can be found at [TODO] [here]() and the script `bench.sh` to replicate our experiments can be found wihtin the folder `src\bench`.
+The dataset used on our benchmark can be found at [TODO] [here]() and the script `bench.sh` to replicate our experiments can be found within the folder `src\bench`. In order to configure it, you need to set the following variables:
+- `BIN_FOLDER`: the path to the binaries.
+- `DATASET`: the path to the dataset file, that contains all the triples. It is used to build the static indices.
+- `DATASET_80`: the path to the dataset file, that contains 80% of the triples. It is used to build the dynamic indices.
+- `DATASET_RDF`: the path to the dataset file, that contains all the triples in RDF format.
+- `QUERIES`: the path to the queries file.
+- `UPDATES`: the path to the updates file.
+- `OUTPUT_FOLDER`: the path to the folder where the results are stored.
+
+The script `bench.sh` runs three experiments that can be activated setting the corresponding variable to 1:
+1. `RUN_STATIC`: evaluates the performance of the static indices. It builds the indices from the dataset and solves the queries.
+2. `RUN_DYNAMIC`: evaluates the performance of the dynamic indices. It builds the indices from the dataset with 80% of the triples and solves the queries. Before each query we run a block of updates and then the query. The ratio of updates per query is in {0.001, 0.01, 0.1, 1, 10, 100, 1000}.
+3. `RUN_RDF`: evaluates the performance in the complete system (dynamic indices and dynamic dictionary). It builds the indices from the dataset in RDF format and solves the queries.
