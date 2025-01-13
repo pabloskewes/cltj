@@ -66,11 +66,13 @@ if [ $RUN_DYNAMIC -eq 1 ]; then
   do
       $BIN_FOLDER/bench-update-cltj $DATASET_80.cltj-dyn $QUERIES $UPDATES $ratio 0 star > $OUTPUT_FOLDER/cltj-dyn-star-$ratio-0.txt
   done
+  $BIN_FOLDER/bench-indels-cltj $DATASET_80.cltj-dyn $INDELS > $OUTPUT_FOLDER/cltj-dyn-indels.txt
   echo "3.2 Running xCLTJ..."
   for ratio in 0.001 0.01 0.1 1 10 100 1000
   do
       $BIN_FOLDER/bench-update-xcltj $DATASET_80.xcltj-dyn $QUERIES $UPDATES $ratio 0 star > $OUTPUT_FOLDER/xcltj-dyn-star-$ratio-0.txt
   done
+  $BIN_FOLDER/bench-indels-xcltj $DATASET_80.xcltj-dyn $INDELS > $OUTPUT_FOLDER/xcltj-dyn-indels.txt
   echo "Done running dynamic benchmarks with limit=0."
 else
     echo "Skipping dynamic benchmarks..."
