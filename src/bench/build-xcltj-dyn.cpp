@@ -23,10 +23,9 @@ int main(int argc, char **argv){
         cltj::spo_triple spo;
         do {
             ifs >> s >> p >> o;
-            if(ifs.bad()) break;
+            if(ifs.fail()) break;
             spo[0] = s; spo[1] = p; spo[2] = o;
             D.emplace_back(spo);
-
         } while (!ifs.eof());
 
         D.shrink_to_fit();

@@ -4,6 +4,7 @@ DATASET_80=/mnt/data/dataset/wikidata-enumerated-80.dat
 DATASET_RDF=/mnt/data/dataset/wikidata-enumerated.dat
 QUERIES=/mnt/data/dataset/wikidata-enumerated-queries.dat
 UPDATES=/mnt/data/dataset/wikidata-enumerated-updates.dat
+INDELS=/mnt/data/dataset/wikidata-enumerated-indels.dat
 OUTPUT_FOLDER=/mnt/data/cltj/build/bench
 
 RUN_STATIC=1
