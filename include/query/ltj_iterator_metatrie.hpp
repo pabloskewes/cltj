@@ -494,18 +494,18 @@ namespace ltj {
                 cnt = trie->children(it);
                 rightmost_leaf = trie->first_child(it) + cnt - 1;
             } else {
-	        const auto* trie_aux =  m_ptr_index->get_trie(t_i-1);
-		auto it = m_status[m_nfixed].it[0];
-                //Count children
-		auto cnt = trie_aux->children(it);
-                //Leftmost
-		auto first = trie_aux->child(it, 1);
-		leftmost_leaf = trie_aux->first_child(first);
-                //Rightmost
-		it = trie_aux->child(it, cnt);
-		cnt = trie_aux->children(it);
-		rightmost_leaf = trie_aux->first_child(it) + cnt - 1;
-	    }
+	            const auto* trie_aux =  m_ptr_index->get_trie(t_i-1);
+		        auto it = m_status[m_nfixed].it[0];
+                        //Count children
+		        auto cnt = trie_aux->children(it);
+                        //Leftmost
+		        auto first = trie_aux->child(it, 1);
+		        leftmost_leaf = trie_aux->first_child(first);
+                        //Rightmost
+		        it = trie_aux->child(it, cnt);
+		        cnt = trie_aux->children(it);
+		        rightmost_leaf = trie_aux->first_child(it) + cnt - 1;
+	        }
             return rightmost_leaf - leftmost_leaf + 1;
         }
 

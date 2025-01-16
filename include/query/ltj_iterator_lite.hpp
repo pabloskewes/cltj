@@ -432,18 +432,19 @@ namespace ltj {
                 s_i = (m_fixed[m_nfixed - 1] == p) ? 0 : 1;
             }
 
-            const auto* trie =  m_ptr_index->get_trie(t_i);
-            auto it = m_status[m_nfixed].it[s_i];
-
+            //we always use the full trie
+            //if s_i = 1 then we move to the full trie
+            const auto* trie =  m_ptr_index->get_trie(t_i - s_i);
+            auto it = m_status[m_nfixed].it[0];
             size_type leftmost_leaf, rightmost_leaf;
 
             //Count children
             auto cnt = trie->children(it);
             //Leftmost
-            auto first = trie->child(it, 1, !s_i); //root -> gap = 1; no root -> gap = 0
+            auto first = trie->child(it, 1);
             leftmost_leaf = trie->first_child(first);
             //Rightmost
-            it = trie->child(it, cnt, s_i ? m_ptr_index->gaps[t_i/2] : 1); //jump the root or the whole first level
+            it = trie->child(it, cnt);
             cnt = trie->children(it);
             rightmost_leaf = trie->first_child(it) + cnt - 1;
             return rightmost_leaf - leftmost_leaf + 1;
