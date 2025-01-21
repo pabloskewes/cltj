@@ -4,7 +4,7 @@ Repository for the source code of the engine presented in the paper New Techniqu
 
 ## Instructions
 
-To run our code, **we have to install an extended version of the library SDSL**. Go to [this repository](https://github.com/darroyue/sdsl-lite) and follow the instructions.
+To run our code, **we have to install an extended version of the library SDSL**. Go to [this repository](https://github.com/adriangbrandon/sdsl-lite) and follow the instructions.
 
 After the extended version of SDSL is installed, we have to clone this repository and follow these steps:
 
@@ -36,8 +36,13 @@ This will generate the index in the folder where the `.dat` file is located.
 4. Querying the index. In `build` folder, you should find another executable file called `query-index`. To solve the queries you should run:
 
 ```Bash
-./query-index <absoulute-path-to-the-index-file> <absolute-path-to-the-query-file>
+./query-index <index> <queries> <limit> <type>
 ```
+- index: path to the index.
+- queries: path to the query file.
+- limit: the limit of results to report. If limit=0, there is no limit.
+- type: the type of heuritic used to choose the VEO. The values are *normal* or *star*, we recomend using *star*.
+
 
 Note that the second argument is the path to a file that contains all the queries. The queries of our benchmark are in `Queries`:
 
