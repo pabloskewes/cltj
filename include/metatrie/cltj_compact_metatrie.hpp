@@ -55,6 +55,7 @@ namespace cltj {
         compact_metatrie(sdsl::bit_vector &_bv, sdsl::int_vector<> &_seq) {
              m_bv = _bv; 
              m_seq = _seq;
+             sdsl::util::bit_compress(m_seq);
              sdsl::util::init_support(m_succ0, &m_bv);
              sdsl::util::init_support(m_select0, &m_bv);
              m_root_degree = m_succ0(1);
