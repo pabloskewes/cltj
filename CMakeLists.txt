@@ -232,6 +232,10 @@ add_executable(prepare-80 src/test/prepare-80.cpp)
 target_link_libraries(prepare-80 sdsl divsufsort divsufsort64)
 set_target_properties(prepare-80 PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
 
+add_executable(prepare-20 src/test/prepare-20.cpp)
+target_link_libraries(prepare-20 sdsl divsufsort divsufsort64)
+set_target_properties(prepare-20 PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
+
 add_executable(test-dyn src/test/test-dyn.cpp)
 target_link_libraries(test-dyn sdsl divsufsort divsufsort64 hybridbv_gn)
 set_target_properties(test-dyn PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
