@@ -45,10 +45,9 @@ int main(int argc, char **argv){
         std::getline(ifs, query_string);
         if(query_string.empty()) break;
         std::vector<ltj::triple_pattern> query = ::util::rdf::ids::get_query(query_string);
-        results_type res;
-        algorithm_type ltj(&query, &cltj);
-        ltj.join(res, 1, 600);
-        if(res.size() == 0) {
+        iterator_type it(&query[0], &cltj);
+        if(k % 1000 == 0) std::cout << "k: " << k << ", " << it.is_empty() << std::endl;
+        if (it.is_empty()) {
             of_dataset << query_string << std::endl;
         }
         ++k;
