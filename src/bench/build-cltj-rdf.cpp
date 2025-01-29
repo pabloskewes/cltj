@@ -28,19 +28,37 @@ int main(int argc, char **argv){
 
         vector<cltj::spo_triple> D;
         {
-            dict::basic_map dict_so;
-            dict::basic_map dict_p;
             auto start = timer::now();
+            std::map<std::string, uint64_t> map_so, map_p;
+            std::map<std::string, uint64_t>::iterator it;
+            uint id_so = 0, id_p = 0;
             do {
                 std::getline(ifs, line);
                 if(line.empty()) break;
                 auto spo_str = ::util::rdf::str::get_triple(line);
-                spo[0] = dict_so.get_or_insert(spo_str[0]);
-                spo[1] = dict_p.get_or_insert(spo_str[1]);
-                spo[2] = dict_so.get_or_insert(spo_str[2]);
+                if((it = map_so.find(spo_str[0])) == map_so.end()) {
+                    map_so.insert({spo_str[0], ++id_so});
+                    spo[0] = id_so;
+                }else{
+                    spo[0] = it->second;
+                }
+                if((it = map_p.find(spo_str[1])) == map_p.end()) {
+                    map_p.insert({spo_str[1], ++id_p});
+                    spo[1] = id_p;
+                }else{
+                    spo[1] = it->second;
+                }
+                if((it=map_so.find(spo_str[2])) == map_so.end()) {
+                    map_so.insert({spo_str[2], ++id_so});
+                    spo[2] = id_so;
+                }else{
+                    spo[2] = it->second;
+                }
                 D.emplace_back(spo);
 
             } while (!ifs.eof());
+            dict::basic_map dict_so(map_so);
+            dict::basic_map dict_p(map_p);
             auto stop = timer::now();
             cout << "Mapping: " << duration_cast<seconds>(stop-start).count() << " seconds." << endl;
             D.shrink_to_fit();
