@@ -45,7 +45,6 @@ void insert(cltj::compact_ltj_metatrie_dyn &cltj, const std::vector<cltj::spo_tr
 
     std::cout << "Insertion time: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count() << " ns" << std::endl;
 
-    sdsl::store_to_file(cltj, index + ".insertions");
 }
 
 int main(int argc, char *argv[]) {
