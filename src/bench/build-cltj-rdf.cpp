@@ -31,7 +31,7 @@ int main(int argc, char **argv){
             auto start = timer::now();
             std::map<std::string, uint64_t> map_so, map_p;
             std::map<std::string, uint64_t>::iterator it;
-            uint id_so = 1, id_p = 1;
+            uint id_so = 0, id_p = 0;
             do {
                 std::getline(ifs, line);
                 if(line.empty()) break;
@@ -77,7 +77,7 @@ int main(int argc, char **argv){
         //sdsl::memory_monitor::stop();
 
         sdsl::store_to_file(index, index_name);
-        std::cout << "Size index : " << sdsl::size_in_bytes(index) << " (bytes)" << std::endl;
+        //std::cout << "Size index : " << sdsl::size_in_bytes(index) << " (bytes)" << std::endl;
 
         cout << "Index saved" << endl;
         cout << duration_cast<seconds>(stop-start).count() << " seconds." << endl;
