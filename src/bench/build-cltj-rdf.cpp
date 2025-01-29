@@ -31,7 +31,7 @@ int main(int argc, char **argv){
             auto start = timer::now();
             std::map<std::string, uint64_t> map_so, map_p;
             std::map<std::string, uint64_t>::iterator it;
-            uint id_so = 0, id_p = 0;
+            uint id_so = 1, id_p = 1;
             do {
                 std::getline(ifs, line);
                 if(line.empty()) break;
