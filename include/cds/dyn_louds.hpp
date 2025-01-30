@@ -132,6 +132,7 @@ namespace dyn_cds {
             ::util::file::begin_c_file(f);
             ::util::file::c_file_to_ostream(f, out);
             ::util::file::close_c_file(f);
+            ::util::file::remove_c_file();
             sdsl::structure_tree::add_size(child, written_bytes);
             return written_bytes;
         }
@@ -145,6 +146,7 @@ namespace dyn_cds {
             int64_t offset = ftell(f);
             in.seekg(pos + offset, std::istream::beg);
             ::util::file::close_c_file(f);
+            ::util::file::remove_c_file();
         }
 
         bool check() {

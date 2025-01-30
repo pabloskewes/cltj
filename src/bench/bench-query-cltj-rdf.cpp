@@ -25,6 +25,7 @@
 #include <query/ltj_algorithm.hpp>
 #include <dict/dict_map.hpp>
 #include <util/time_util.hpp>
+#include <results/results_collector.hpp>
 
 using namespace std;
 
@@ -43,9 +44,12 @@ void query(const std::string &file, const std::string &queries, const uint64_t l
     dict::basic_map dict_so;
     dict::basic_map dict_p;
 
-    sdsl::load_from_file(graph, file + ".cltj.idx");
-    sdsl::load_from_file(dict_so, file + ".cltj.so");
-    sdsl::load_from_file(dict_p, file + ".cltj.p");
+    std::string index_name = file + ".cltj.idx";
+    std::string dict_so_name = file + ".cltj.so";
+    std::string dict_p_name = file + ".cltj.p";
+    sdsl::load_from_file(graph, index_name);
+    sdsl::load_from_file(dict_so, dict_so_name);
+    sdsl::load_from_file(dict_p, dict_p_name);
 
     std::cout << "Index loaded : " << sdsl::size_in_bytes(graph) << " bytes." << std::endl;
     std::cout << "DictSO loaded: " << sdsl::size_in_bytes(dict_so) << " bytes." << std::endl;
@@ -91,8 +95,9 @@ void query(const std::string &file, const std::string &queries, const uint64_t l
             ltj.join(res, limit, 600);
             auto t2 = std::chrono::high_resolution_clock::now();
             std::vector<string> tmp_str(hash_table_vars.size());
-            auto l = std::min(res.buckets, res.size());
-            res_str.reserve(res.buckets);
+            uint64_t a = results_type::buckets;
+            auto l = std::min(a, res.size());
+            res_str.reserve(l);
             for(uint64_t i = 0; i < l; ++i) {
                 const auto &tuple = res[i];
                 for(uint64_t j = 0; j < tuple.size(); ++j) {

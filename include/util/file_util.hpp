@@ -147,8 +147,8 @@ namespace util {
         }
 
         inline FILE* create_c_file(){
-           // FILE* tmp_file = fopen("temp.txt", "wb");
-            FILE* tmp_file = std::tmpfile();
+            FILE* tmp_file = fopen("temp.txt", "wb");
+           // FILE* tmp_file = std::tmpfile();
             if (!tmp_file) {
                 std::cerr << "Error creating temporary file" << std::endl;
             }
@@ -162,6 +162,10 @@ namespace util {
 
         inline void close_c_file(FILE* tmp_file) {
             fclose(tmp_file);
+        }
+
+        inline void remove_c_file() {
+            remove_file("temp.txt");
         }
 
         inline void istream_to_c_file(FILE* tmp_file, std::istream &in) {
