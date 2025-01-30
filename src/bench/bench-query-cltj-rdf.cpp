@@ -48,11 +48,10 @@ void query(const std::string &file, const std::string &queries, const uint64_t l
     std::string dict_so_name = file + ".cltj.so";
     std::string dict_p_name = file + ".cltj.p";
     sdsl::load_from_file(graph, index_name);
-    sdsl::load_from_file(dict_so, dict_so_name);
-    sdsl::load_from_file(dict_p, dict_p_name);
-
     std::cout << "Index loaded : " << sdsl::size_in_bytes(graph) << " bytes." << std::endl;
+    sdsl::load_from_file(dict_so, dict_so_name);
     std::cout << "DictSO loaded: " << sdsl::size_in_bytes(dict_so) << " bytes." << std::endl;
+    sdsl::load_from_file(dict_p, dict_p_name);
     std::cout << "DictP loaded : " << sdsl::size_in_bytes(dict_p) << " bytes." << std::endl;
 
     std::ifstream ifs;
