@@ -147,7 +147,7 @@ namespace util {
         }
 
         inline FILE* create_c_file(){
-            FILE* tmp_file = fopen("temp.txt", "wb");
+            FILE* tmp_file = fopen("temp.txt", "wb+");
            // FILE* tmp_file = std::tmpfile();
             if (!tmp_file) {
                 std::cerr << "Error creating temporary file" << std::endl;
