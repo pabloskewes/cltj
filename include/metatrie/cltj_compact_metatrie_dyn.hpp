@@ -157,6 +157,10 @@ namespace cltj {
             return m_seq.check();
         }
 
+        void split() {
+            m_seq.split();
+        }
+
 
         //! Serializes the data structure into the given ostream
         size_type serialize(std::ostream &out, sdsl::structure_tree_node *v = nullptr, std::string name = "") const {

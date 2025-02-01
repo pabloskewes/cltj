@@ -38,27 +38,28 @@ std::vector<cltj::spo_triple> get_triples(const std::string &updates, const uint
 
 }
 
-void remove(cltj::compact_ltj_metatrie_dyn &cltj, const std::vector<cltj::spo_triple> &triples) {
+uint64_t remove(cltj::compact_ltj_metatrie_dyn &cltj, const std::vector<cltj::spo_triple> &triples) {
     std::cout << "Removing triples" << std::endl;
+    uint64_t i = 0;
     auto start = std::chrono::high_resolution_clock::now();
     for(const auto &triple : triples){
-        cltj.remove(triple);
+        i += cltj.remove(triple);
     }
     auto end = std::chrono::high_resolution_clock::now();
-
     std::cout << "Removal time: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count() << " ns" << std::endl;
+    return i;
 }
 
-void insert(cltj::compact_ltj_metatrie_dyn &cltj, const std::vector<cltj::spo_triple> &triples) {
+uint64_t insert(cltj::compact_ltj_metatrie_dyn &cltj, const std::vector<cltj::spo_triple> &triples) {
     std::cout << "Inserting triples" << std::endl;
+    uint64_t i = 0;
     auto start = std::chrono::high_resolution_clock::now();
     for(const auto &triple : triples){
-        cltj.insert(triple);
+        i += cltj.insert(triple);
     }
     auto end = std::chrono::high_resolution_clock::now();
-
     std::cout << "Insertion time: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count() << " ns" << std::endl;
-
+    return i;
 }
 
 void insert_out(cltj::compact_ltj_metatrie_dyn &cltj, const std::vector<cltj::spo_triple> &triples) {
@@ -83,27 +84,28 @@ void insert_out(cltj::compact_ltj_metatrie_dyn &cltj, const std::vector<cltj::sp
 
 int main(int argc, char *argv[]) {
 
-    if (argc != 5) {
-        std::cout << "Usage: " << argv[0] << " <index> <insertions> <updates> <ntriples>" << std::endl;
+    if (argc != 4) {
+        std::cout << "Usage: " << argv[0] << " <index> <updates> <split>" << std::endl;
         return 0;
     }
 
     std::string index = argv[1];
     std::string insertions = argv[2];
-    std::string updates = argv[3];
-    uint64_t ntriples = std::atoll(argv[4]);
-    std::string aux_index = index + "." + std::to_string(ntriples);
+    bool split = std::stoi(argv[3]);
+    std::string aux = index + ".aux";
 
-    std::vector<cltj::spo_triple> triples = get_triples(insertions, ntriples);
+    std::vector<cltj::spo_triple> triples = get_triples(insertions);
+    std::cout << "Triples: " << triples.size() << std::endl;
     cltj::compact_ltj_metatrie_dyn cltj;
     sdsl::load_from_file(cltj, index);
-    remove(cltj, triples);
-    sdsl::store_to_file(cltj, index + "." + std::to_string(ntriples));
+    if(split) cltj.split();
+    auto r = remove(cltj, triples);
+    std::cout << "removed: " << r << std::endl;
+    sdsl::store_to_file(cltj, aux);
     sdsl::util::clear(cltj);
-    sdsl::load_from_file(cltj, aux_index);
-    insert_out(cltj, triples);
-    triples = get_triples(updates);
-    insert(cltj, triples);
-    remove(cltj, triples);
+    sdsl::load_from_file(cltj, aux);
+    if(split) cltj.split();
+    auto i = insert(cltj, triples);
+    std::cout << "inserted: " << i << std::endl;
 
 }

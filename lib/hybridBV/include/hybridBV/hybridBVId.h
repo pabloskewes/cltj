@@ -97,6 +97,8 @@ uint checkLastPrint(hybridBVId B);
 
 int64_t hybridBVIdNext1 (hybridBVId B, uint64_t i);
 
+void hybridBVIdSplitMax(hybridBVId B);
+
 // finds first value >= c in [i..j], which must be increasing
 // returns j+1 if not found
 

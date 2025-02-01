@@ -554,6 +554,28 @@ int hybridBVIdWriteBV(hybridBVId B, uint64_t i, uint64_t v) {
     return dif;
 }
 
+void hybridBVIdSplit(hybridBVId B, uint64_t i) {
+    uint64_t lsize;
+    if (B->type == tStatic) {
+        B->type = tDynamic;
+        B->bv.dyn = split(B->bv.stat, i);
+    }
+    if (B->type == tLeaf) {
+        return;
+    }
+    lsize = hybridBVIdLength(B->bv.dyn->left);
+    if (i < lsize) hybridBVIdSplit(B->bv.dyn->left, i);
+    else hybridBVIdSplit(B->bv.dyn->right, i - lsize);
+}
+
+void hybridBVIdSplitMax(hybridBVId B) {
+    uint64_t length = hybridBVIdLength(B);
+    uint64_t b = leafBVIdMaxSize(hybridBVIdWidth(B));
+    for(uint64_t i = b; i < length; i += b) {
+        hybridBVIdSplit(B, i);
+    }
+}
+
 // changing leaves is uncommon and only then we need to recompute
 // leaves. we do our best to avoid this overhead in typical operations
 

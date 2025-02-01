@@ -62,6 +62,10 @@ namespace dyn_cds {
             return hybridBVIdAccessId(m_B, i);
         }
 
+        void split() {
+            hybridBVIdSplitMax(m_B);
+        }
+
         void insert(size_type i, value_type bit, value_type v, bool first) {
             hybridBVIdInsert(m_B, i, bit , v, first);
         }

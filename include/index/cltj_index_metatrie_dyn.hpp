@@ -505,6 +505,12 @@ namespace cltj {
             return ok;
         }
 
+        void split() {
+            for(uint64_t i = 0; i < 6; ++i) {
+                m_tries[i].split();
+            }
+        }
+
     };
 
     typedef cltj::cltj_index_metatrie_dyn<cltj::compact_metatrie_dyn<>> compact_ltj_metatrie_dyn;
