@@ -8,7 +8,6 @@
 #include <index/cltj_index_metatrie_dyn.hpp>
 #include <util/rdf_util.hpp>
 
-
 std::vector<cltj::spo_triple> get_triples(const std::string &updates) {
 
     std::ifstream ifn(updates);
@@ -16,6 +15,21 @@ std::vector<cltj::spo_triple> get_triples(const std::string &updates) {
     cltj::spo_triple triple;
     std::vector<cltj::spo_triple> triples;
     while (std::getline(ifn, line)) {
+        triple = util::rdf::ids::get_triple(line);
+        triples.push_back(triple);
+    }
+    ifn.close();
+    return triples;
+
+}
+
+std::vector<cltj::spo_triple> get_triples(const std::string &updates, const uint64_t ntriples) {
+
+    std::ifstream ifn(updates);
+    std::string line;
+    cltj::spo_triple triple;
+    std::vector<cltj::spo_triple> triples;
+    while (std::getline(ifn, line) && triples.size() < ntriples) {
         triple = util::rdf::ids::get_triple(line);
         triples.push_back(triple);
     }
@@ -69,18 +83,24 @@ void insert_out(cltj::compact_ltj_metatrie_dyn &cltj, const std::vector<cltj::sp
 
 int main(int argc, char *argv[]) {
 
-    if (argc != 4) {
-        std::cout << "Usage: " << argv[0] << " <index> <insertions> <updates>" << std::endl;
+    if (argc != 5) {
+        std::cout << "Usage: " << argv[0] << " <index> <insertions> <updates> <ntriples>" << std::endl;
         return 0;
     }
 
     std::string index = argv[1];
     std::string insertions = argv[2];
     std::string updates = argv[3];
+    uint64_t ntriples = std::atoll(argv[4]);
+    std::string aux_index = index + "." + std::to_string(ntriples);
 
-    std::vector<cltj::spo_triple> triples = get_triples(insertions);
+    std::vector<cltj::spo_triple> triples = get_triples(insertions, ntriples);
     cltj::compact_ltj_metatrie_dyn cltj;
     sdsl::load_from_file(cltj, index);
+    remove(cltj, triples);
+    sdsl::store_to_file(cltj, index + "." + std::to_string(ntriples));
+    sdsl::util::clear(cltj);
+    sdsl::load_from_file(cltj, aux_index);
     insert_out(cltj, triples);
     triples = get_triples(updates);
     insert(cltj, triples);
