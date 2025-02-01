@@ -570,8 +570,8 @@ void hybridBVIdSplit(hybridBVId B, uint64_t i) {
 
 void hybridBVIdSplitMax(hybridBVId B) {
     uint64_t length = hybridBVIdLength(B);
-    uint64_t b = leafBVIdMaxSize(hybridBVIdWidth(B));
-    for(uint64_t i = b; i < length; i += b) {
+    uint64_t b = leafBVIdMaxSize(hybridBVIdWidth(B))/2;
+    for(uint64_t i = 0; i < length; i += b) {
         hybridBVIdSplit(B, i);
     }
 }
