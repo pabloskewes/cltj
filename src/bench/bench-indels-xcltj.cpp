@@ -47,6 +47,26 @@ void insert(cltj::compact_ltj_metatrie_dyn &cltj, const std::vector<cltj::spo_tr
 
 }
 
+void insert_out(cltj::compact_ltj_metatrie_dyn &cltj, const std::vector<cltj::spo_triple> &triples) {
+    std::cout << "Inserting triples" << std::endl;
+    uint64_t i = 0;
+    auto start = std::chrono::high_resolution_clock::now();
+    for(const auto &triple : triples){
+        cltj.insert(triple);
+        ++i;
+        if(i % 100000 == 0){
+            std::cout << "Inserted " << i << " triples" << std::endl;
+            auto end = std::chrono::high_resolution_clock::now();
+            std::cout << "Insertion time: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count()/(i+1) << " ns/query" << std::endl;
+
+        }
+    }
+    auto end = std::chrono::high_resolution_clock::now();
+
+    std::cout << "Insertion time: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count() << " ns" << std::endl;
+
+}
+
 int main(int argc, char *argv[]) {
 
     if (argc != 4) {
@@ -61,7 +81,7 @@ int main(int argc, char *argv[]) {
     std::vector<cltj::spo_triple> triples = get_triples(insertions);
     cltj::compact_ltj_metatrie_dyn cltj;
     sdsl::load_from_file(cltj, index);
-    insert(cltj, triples);
+    insert_out(cltj, triples);
     triples = get_triples(updates);
     insert(cltj, triples);
     remove(cltj, triples);
