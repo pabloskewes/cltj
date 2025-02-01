@@ -206,6 +206,10 @@ namespace cltj {
             m_seq.split();
         }
 
+        void flatten() {
+            m_seq.flatten();
+        }
+
         //! Serializes the data structure into the given ostream
         size_type serialize(std::ostream &out, sdsl::structure_tree_node *v = nullptr, std::string name = "") const {
             sdsl::structure_tree_node *child = sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));

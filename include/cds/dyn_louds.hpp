@@ -66,6 +66,10 @@ namespace dyn_cds {
             hybridBVIdSplitMax(m_B);
         }
 
+        void flatten() {
+            hybridBVIdFlatten(m_B);
+        }
+
         void insert(size_type i, value_type bit, value_type v, bool first) {
             hybridBVIdInsert(m_B, i, bit , v, first);
         }

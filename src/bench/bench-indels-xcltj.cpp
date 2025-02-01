@@ -92,7 +92,6 @@ int main(int argc, char *argv[]) {
     std::string index = argv[1];
     std::string insertions = argv[2];
     bool split = std::stoi(argv[3]);
-    std::string aux = index + ".aux";
 
     std::vector<cltj::spo_triple> triples = get_triples(insertions);
     std::cout << "Triples: " << triples.size() << std::endl;
@@ -102,9 +101,7 @@ int main(int argc, char *argv[]) {
     cltj.check_leaves();
     auto r = remove(cltj, triples);
     std::cout << "removed: " << r << std::endl;
-    sdsl::store_to_file(cltj, aux);
-    sdsl::util::clear(cltj);
-    sdsl::load_from_file(cltj, aux);
+    cltj.flatten();
     if(split) cltj.split();
     auto i = insert(cltj, triples);
     std::cout << "inserted: " << i << std::endl;

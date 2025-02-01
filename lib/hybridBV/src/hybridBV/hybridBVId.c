@@ -173,7 +173,7 @@ static inline uint64_t hybridBVIdLeaves(hybridBVId B) {
 // delta gives the difference in leaves (new - old)
 
 static void flatten(hybridBVId B, int64_t *delta) {
-   // printf("flatten\n");
+    printf("flatten\n");
     uint64_t len;
     uint64_t *bv_D, *id_D;
     uint width;
@@ -301,6 +301,7 @@ static dynamicBVId splitFrom(uint64_t *data, uint64_t *id_data, uint64_t n, uint
 }
 
 static dynamicBVId split(staticBVId B, uint64_t i) {
+    printf("split\n");
     dynamicBVId DB;
     DB = splitFrom(B->data, B->id_data, staticBVIdLength(B), staticBVIdOnes(B), B->width, i);
     staticBVIdDestroy(B);
@@ -580,6 +581,11 @@ void hybridBVIdSplitMax(hybridBVId B) {
     for(uint64_t i = b-1; i < length; i += b) {
         hybridBVIdSplit(B, i);
     }
+}
+
+void hybridBVIdFlatten(hybridBVId B) {
+    int64_t delta = 0;
+    flatten(B, &delta);
 }
 
 // changing leaves is uncommon and only then we need to recompute

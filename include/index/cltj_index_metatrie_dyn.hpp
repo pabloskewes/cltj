@@ -511,6 +511,12 @@ namespace cltj {
             }
         }
 
+        void flatten() {
+            for(uint64_t i = 0; i < 6; ++i) {
+                m_tries[i].flatten();
+            }
+        }
+
         bool check_leaves() {
             bool ok = true;
             for(uint64_t i = 0; i < 6; ++i) {

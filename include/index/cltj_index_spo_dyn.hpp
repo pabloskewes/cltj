@@ -345,6 +345,18 @@ namespace cltj {
             sdsl::read_member(m_n_triples, in);
         }
 
+        void split() {
+            for(uint64_t i = 0; i < 6; ++i) {
+                m_tries[i].split();
+            }
+        }
+
+        void flatten() {
+            for(uint64_t i = 0; i < 6; ++i) {
+                m_tries[i].flatten();
+            }
+        }
+
         void print() {
             for(uint64_t i = 0; i < 6; ++i) {
                 m_tries[i].print();
