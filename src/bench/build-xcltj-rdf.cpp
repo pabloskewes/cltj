@@ -2,6 +2,7 @@
 #include <index/cltj_index_spo_dyn.hpp>
 #include <dict/dict_map.hpp>
 #include <regex>
+#include <index/cltj_index_metatrie_dyn.hpp>
 #include <util/rdf_util.hpp>
 
 using namespace std;
@@ -67,7 +68,7 @@ int main(int argc, char **argv){
         cout << "Dictionaries: " << duration_cast<seconds>(stop-start).count() << " seconds." << endl;
 
         start = timer::now();
-        cltj::compact_dyn_ltj index(D);
+        cltj::compact_ltj_metatrie_dyn index(D);
         stop = timer::now();
 
         //sdsl::memory_monitor::stop();

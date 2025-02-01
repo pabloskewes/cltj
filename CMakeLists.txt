@@ -114,6 +114,11 @@ target_compile_definitions(bench-query-cltj-rdf PUBLIC ADAPTIVE=1)
 target_link_libraries(bench-query-cltj-rdf sdsl divsufsort divsufsort64 hybridbv_gn)
 set_target_properties(bench-query-cltj-rdf PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
 
+add_executable(bench-query-xcltj-rdf src/bench/bench-query-xcltj-rdf.cpp)
+target_compile_definitions(bench-query-xcltj-rdf PUBLIC ADAPTIVE=1)
+target_link_libraries(bench-query-xcltj-rdf sdsl divsufsort divsufsort64 hybridbv_gn)
+set_target_properties(bench-query-xcltj-rdf PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
+
 add_executable(bench-update-cltj src/bench/bench-update-cltj.cpp)
 target_compile_definitions(bench-update-cltj PUBLIC ADAPTIVE=1)
 target_link_libraries(bench-update-cltj sdsl divsufsort divsufsort64 hybridbv_gn)
