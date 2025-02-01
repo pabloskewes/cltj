@@ -95,6 +95,8 @@ uint checkOnesPrint(hybridBVId B);
 
 uint checkLastPrint(hybridBVId B);
 
+uint checkLeaves(hybridBVId B);
+
 int64_t hybridBVIdNext1 (hybridBVId B, uint64_t i);
 
 void hybridBVIdSplitMax(hybridBVId B);

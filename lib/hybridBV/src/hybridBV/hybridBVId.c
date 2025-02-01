@@ -559,8 +559,14 @@ void hybridBVIdSplit(hybridBVId B, uint64_t i) {
     if (B->type == tStatic) {
         B->type = tDynamic;
         B->bv.dyn = split(B->bv.stat, i);
+        return;
     }
     if (B->type == tLeaf) {
+        if (leafBVIdLength(B->bv.leaf) == leafBVIdMaxSize(B->bv.leaf->width)) //split
+        {
+            B->type = tDynamic;
+            B->bv.dyn = splitLeaf(B->bv.leaf);
+        }
         return;
     }
     lsize = hybridBVIdLength(B->bv.dyn->left);
@@ -570,8 +576,8 @@ void hybridBVIdSplit(hybridBVId B, uint64_t i) {
 
 void hybridBVIdSplitMax(hybridBVId B) {
     uint64_t length = hybridBVIdLength(B);
-    uint64_t b = leafBVIdMaxSize(hybridBVIdWidth(B))/2;
-    for(uint64_t i = 0; i < length; i += b) {
+    uint64_t b = leafBVIdNewSize(hybridBVIdWidth(B));
+    for(uint64_t i = b-1; i < length; i += b) {
         hybridBVIdSplit(B, i);
     }
 }
@@ -1013,6 +1019,16 @@ uint checkOnes(hybridBVId B) {
         return staticBVIdCheckOnes(B->bv.stat);
     }
     return 1;
+}
+
+uint checkLeaves(hybridBVId B) {
+    if (B->type == tDynamic) {
+        return checkLeaves(B->bv.dyn->left) && checkLeaves(B->bv.dyn->right);
+    }
+    if(B->type == tLeaf) {
+        return 1;
+    }
+    return 0;
 }
 
 

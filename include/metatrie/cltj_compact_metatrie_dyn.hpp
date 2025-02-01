@@ -157,6 +157,10 @@ namespace cltj {
             return m_seq.check();
         }
 
+        bool check_leaves() {
+            return m_seq.check_leaves();
+        }
+
         void split() {
             m_seq.split();
         }

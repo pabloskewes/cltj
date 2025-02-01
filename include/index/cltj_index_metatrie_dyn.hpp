@@ -511,6 +511,18 @@ namespace cltj {
             }
         }
 
+        bool check_leaves() {
+            bool ok = true;
+            for(uint64_t i = 0; i < 6; ++i) {
+                ok &= m_tries[i].check_leaves();
+                if(!ok) {
+                    std::cout << "Error in trie: " << i << std::endl;
+                    break;
+                }
+            }
+            return ok;
+        }
+
     };
 
     typedef cltj::cltj_index_metatrie_dyn<cltj::compact_metatrie_dyn<>> compact_ltj_metatrie_dyn;

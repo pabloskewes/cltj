@@ -99,6 +99,7 @@ int main(int argc, char *argv[]) {
     cltj::compact_ltj_metatrie_dyn cltj;
     sdsl::load_from_file(cltj, index);
     if(split) cltj.split();
+    cltj.check_leaves();
     auto r = remove(cltj, triples);
     std::cout << "removed: " << r << std::endl;
     sdsl::store_to_file(cltj, aux);

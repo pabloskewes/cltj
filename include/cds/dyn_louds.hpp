@@ -161,6 +161,9 @@ namespace dyn_cds {
             return checkLast(m_B);
         }
 
+        bool check_leaves() {
+            return checkLeaves(m_B);
+        }
         void check_print() {
             checkOnesPrint(m_B);
         }
