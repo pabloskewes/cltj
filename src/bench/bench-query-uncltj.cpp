@@ -36,7 +36,7 @@ using namespace ::util::time;
 
 
 template<class index_scheme_type, class trait_type>
-void query(const std::string &file, const std::string &queries, const uint64_t limit) {
+void query(const std::string &file, const std::string &queries, const uint64_t limit, const uint64_t timeout) {
     vector<string> dummy_queries;
     bool result = ::util::file::get_file_content(queries, dummy_queries);
 
@@ -70,7 +70,7 @@ void query(const std::string &file, const std::string &queries, const uint64_t l
 
             auto start = std::chrono::high_resolution_clock::now();
             algorithm_type ltj(&query, &graph);
-            ltj.join(res, limit, 600);
+            ltj.join(res, limit, timeout);
             auto stop = std::chrono::high_resolution_clock::now();
             auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(stop - start).count();
             cout << nQ << ";" << res.size() << ";" << time << endl;
@@ -87,8 +87,8 @@ void query(const std::string &file, const std::string &queries, const uint64_t l
 
 int main(int argc, char *argv[]) {
     //typedef ring::c_ring ring_type;
-    if (argc != 5) {
-        std::cout << "Usage: " << argv[0] << " <index> <queries> <limit> <type>" << std::endl;
+    if (argc < 5) {
+        std::cout << "Usage: " << argv[0] << " <index> <queries> <limit> <type> [timeout]" << std::endl;
         return 0;
     }
 
@@ -96,11 +96,15 @@ int main(int argc, char *argv[]) {
     std::string queries = argv[2];
     uint64_t limit = std::atoll(argv[3]);
     std::string type = argv[4];
+    uint64_t timeout = 600; //in serconds
+    if(argc > 5) {
+        timeout = std::atoll(argv[5]);
+    }
 
     if (type == "normal") {
-        query<cltj::uncompact_ltj, ltj::util::trait_distinct>(index, queries, limit);
+        query<cltj::uncompact_ltj, ltj::util::trait_distinct>(index, queries, limit, timeout);
     } else if (type == "star") {
-        query<cltj::uncompact_ltj, ltj::util::trait_size>(index, queries, limit);
+        query<cltj::uncompact_ltj, ltj::util::trait_size>(index, queries, limit, timeout);
     } else {
         std::cout << "Type of index: " << type << " is not supported." << std::endl;
     }
