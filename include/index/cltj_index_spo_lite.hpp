@@ -7,6 +7,7 @@
 
 
 #include <trie/cltj_compact_trie.hpp>
+#include <trie/cltj_compact_trie_stats.hpp>
 #include <cltj_helper.hpp>
 #include <trie/cltj_uncompact_trie.hpp>
 #include <cltj_config.hpp>
@@ -106,6 +107,11 @@ namespace cltj {
             for(const auto & gap : m_gaps) {
                 written_bytes += sdsl::write_member(gap, out, child, "gaps");
             }
+            /*auto pos = sdsl::size_in_bytes(m_tries[2]);
+            auto pso = sdsl::size_in_bytes(m_tries[3]);
+            std::cout << "POS: " << pos << std::endl;
+            std::cout << "PSO: " << pso << std::endl;
+            std::cout << "POS + PSO: " << pos + pso << " bytes." << std::endl;*/
             sdsl::structure_tree::add_size(child, written_bytes);
             return written_bytes;
         }
@@ -123,7 +129,8 @@ namespace cltj {
 
     typedef cltj::cltj_index_spo_lite<cltj::compact_trie> compact_ltj;
     typedef cltj::cltj_index_spo_lite<cltj::uncompact_trie> uncompact_ltj;
+    typedef cltj::cltj_index_spo_lite<cltj::compact_trie_stats> compact_ltj_stats;
 
 }
 
-#endif //CLTJ_CLTJ_INDEX_ADRIAN_HPP
+#endif //CLTJ_INDEX_SPO_V2_HPP

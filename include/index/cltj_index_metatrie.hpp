@@ -249,6 +249,11 @@ namespace cltj {
             for(const auto & trie : m_tries){
                 written_bytes += trie.serialize(out, child, "tries");
             }
+            /*auto pos = sdsl::size_in_bytes(m_tries[2]);
+            auto pso = sdsl::size_in_bytes(m_tries[3]);
+            std::cout << "POS: " << pos << std::endl;
+            std::cout << "PSO: " << pso << std::endl;
+            std::cout << "POS + PSO: " << pos + pso << " bytes." << std::endl;*/
             sdsl::structure_tree::add_size(child, written_bytes);
             return written_bytes;
         }

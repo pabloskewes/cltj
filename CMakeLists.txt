@@ -137,6 +137,10 @@ add_executable(bench-indels-xcltj src/bench/bench-indels-xcltj.cpp)
 target_link_libraries(bench-indels-xcltj sdsl divsufsort divsufsort64 hybridbv_gn)
 set_target_properties(bench-indels-xcltj PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
 
+add_executable(stats-query-cltj src/bench/stats-query-cltj.cpp)
+target_link_libraries(stats-query-cltj sdsl divsufsort divsufsort64 hybridbv_gn)
+set_target_properties(stats-query-cltj PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
+
 #EXAMPLE
 add_executable(ex_dyn_rdf src/example/ex_dyn_rdf.cpp)
 target_link_libraries(ex_dyn_rdf sdsl divsufsort divsufsort64 hybridbv_gn)
