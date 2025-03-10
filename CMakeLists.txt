@@ -248,3 +248,7 @@ set_target_properties(prepare-20 PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BIN
 add_executable(test-dyn src/test/test-dyn.cpp)
 target_link_libraries(test-dyn sdsl divsufsort divsufsort64 hybridbv_gn)
 set_target_properties(test-dyn PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
+
+add_executable(cltj-louds src/test/cltj_louds.cpp)
+target_link_libraries(cltj-louds sdsl divsufsort divsufsort64 hybridbv_gn)
+set_target_properties(cltj-louds PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)

@@ -45,6 +45,7 @@ namespace cltj {
     public:
 
         const sdsl::int_vector<> &seq = m_seq;
+        const sdsl::bit_vector &bv = m_bv;
 
         compact_trie() = default;
 
