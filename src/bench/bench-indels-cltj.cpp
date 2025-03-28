@@ -102,7 +102,7 @@ void add_updates(const std::string &from, std::vector<update_type> &updates) {
 
 int main(int argc, char **argv) {
     if(argc != 5){
-        std::cout<< argv[0] << " <index> <queries> <updates> <limit> <type>" << std::endl;
+        std::cout<< argv[0] << " <index> <queries> <updates> <limit>" << std::endl;
         return 0;
     }
 
