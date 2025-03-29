@@ -49,9 +49,17 @@ void query_upq(const std::string &index, const std::vector<query_type> &queries,
         for(uint64_t i = 0; i < upq; ++i) {
             const auto &u = updates[i_up];
             if(u.insert) {
+                auto start = std::chrono::high_resolution_clock::now();
                 graph.insert(u.triple);
+                auto stop = std::chrono::high_resolution_clock::now();
+                auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(stop - start).count();
+                cout << "I;" << i_up << ";" << 0 << ";" << time << endl;
             }else {
+                auto start = std::chrono::high_resolution_clock::now();
                 graph.remove(u.triple);
+                auto stop = std::chrono::high_resolution_clock::now();
+                auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(stop - start).count();
+                cout << "D;" << i_up << ";" << 0 << ";" << time << endl;
             }
             ++i_up;
         }
@@ -64,7 +72,7 @@ void query_upq(const std::string &index, const std::vector<query_type> &queries,
         auto stop = std::chrono::high_resolution_clock::now();
 
         auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(stop - start).count();
-        cout << nQ << ";" << res.size() << ";" << time << endl;
+        cout << "Q;" << nQ << ";" << res.size() << ";" << time << endl;
         nQ++;
     }
 }
@@ -104,15 +112,23 @@ void query_qpu(const std::string &index, const std::vector<query_type> &queries,
         auto stop = std::chrono::high_resolution_clock::now();
 
         auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(stop - start).count();
-        cout << nQ << ";" << res.size() << ";" << time << endl;
+        cout << "Q;" << nQ << ";" << res.size() << ";" << time << endl;
         nQ++;
         //After upq queries we run an update
         if(nQ % qpu == 0) {
             const auto &u = updates[i_up];
             if(u.insert) {
+                start = std::chrono::high_resolution_clock::now();
                 graph.insert(u.triple);
+                stop = std::chrono::high_resolution_clock::now();
+                time = std::chrono::duration_cast<std::chrono::nanoseconds>(stop - start).count();
+                cout << "I;" << i_up << ";" << 0 << ";" << time << endl;
             }else {
+                start = std::chrono::high_resolution_clock::now();
                 graph.remove(u.triple);
+                stop = std::chrono::high_resolution_clock::now();
+                time = std::chrono::duration_cast<std::chrono::nanoseconds>(stop - start).count();
+                cout << "D;" << i_up << ";" << 0 << ";" << time << endl;
             }
             ++i_up;
         }
