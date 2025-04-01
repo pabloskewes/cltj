@@ -24,13 +24,16 @@
 
 
 #include <unordered_map>
+#include <string>
+#include <cstdint>
+#include <iostream>
 
 namespace ltj {
 
 
 
     struct term_pattern {
-        uint64_t value; //TODO: transform char of variable to uint64_t
+        uint64_t value;
         bool is_variable;
     };
 
