@@ -8,10 +8,10 @@ data/
 .DS_Store
 .AppleDouble
 .LSOverride
+.cursor/
 
 # Icon must end with two \r
 Icon
-
 
 # Thumbnails
 ._*
