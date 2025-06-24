@@ -5,95 +5,90 @@
 #ifndef CLTJ_RESULTS_PRINTER_HPP
 #define CLTJ_RESULTS_PRINTER_HPP
 
-
 #include <array>
-#include <fstream>
-#include <vector>
 #include <cstdint>
+#include <fstream>
 #include <iostream>
+#include <vector>
 
 namespace util {
 
-    template<class Cons>
-    class results_printer {
+template <class Cons> class results_printer {
 
-    public:
-        typedef uint64_t size_type;
+public:
+  typedef uint64_t size_type;
 
-    private:
+private:
+  size_type m_cnt = 0;
 
-        size_type m_cnt = 0;
+  void copy(const results_printer &o) {
+    m_cnt = o.m_cnt;
+  }
 
-        void copy(const results_printer &o) {
-            m_cnt = o.m_cnt;
-        }
+public:
+  results_printer() = default;
 
-    public:
+  inline void add(const std::vector<Cons> &val) {
+    ++m_cnt;
+    std::cout << "        [" << m_cnt << "] ";
+    for (const auto &v : val) {
+      std::cout << v << ";";
+    }
+    std::cout << std::endl;
+  };
 
-        results_printer() = default;
+  template <class Var>
+  inline void add(const std::vector<std::pair<Var, Cons>> &val) {
+    ++m_cnt;
+    std::vector<Cons> values(val.size());
+    std::cout << "        [" << m_cnt << "] ";
+    for (const auto &pair : val) {
+      values[pair.first] = pair.second;
+    }
+    for (const auto &v : values) {
+      std::cout << v << ";";
+    }
+    std::cout << std::endl;
+  };
 
-        inline void add(const std::vector<Cons> &val) {
-            ++m_cnt;
-            std::cout << "        [" << m_cnt << "] ";
-            for(const auto &v : val){
-                std::cout << v << ";";
-            }
-            std::cout << std::endl;
-        };
+  void clear() {
+    m_cnt = 0;
+  }
 
-        template <class Var>
-        inline void add(const std::vector<std::pair<Var, Cons>> &val) {
-            ++m_cnt;
-            std::vector<Cons> values(val.size());
-            std::cout << "        [" << m_cnt << "] ";
-            for(const auto &pair : val){
-                values[pair.first] = pair.second;
-            }
-            for(const auto &v : values){
-                std::cout << v << ";";
-            }
-            std::cout << std::endl;
-        };
+  inline size_type size() {
+    return m_cnt;
+  }
 
-        void clear() {
-            m_cnt = 0;
-        }
+  //! Copy constructor
+  results_printer(const results_printer &o) {
+    copy(o);
+  }
 
-        inline size_type size(){
-            return m_cnt;
-        }
+  //! Move constructor
+  results_printer(results_printer &&o) {
+    *this = std::move(o);
+  }
 
-        //! Copy constructor
-        results_printer(const results_printer &o) {
-            copy(o);
-        }
+  //! Copy Operator=
+  results_printer &operator=(const results_printer &o) {
+    if (this != &o) {
+      copy(o);
+    }
+    return *this;
+  }
 
-        //! Move constructor
-        results_printer(results_printer &&o) {
-            *this = std::move(o);
-        }
+  //! Move Operator=
+  results_printer &operator=(results_printer &&o) {
+    if (this != &o) {
+      m_cnt = std::move(o.m_cnt);
+    }
+    return *this;
+  }
 
-        //! Copy Operator=
-        results_printer &operator=(const results_printer &o) {
-            if (this != &o) {
-                copy(o);
-            }
-            return *this;
-        }
+  void swap(results_printer &o) {
+    std::swap(m_cnt, o.m_cnt);
+  }
+};
 
-        //! Move Operator=
-        results_printer &operator=(results_printer &&o) {
-            if (this != &o) {
-                m_cnt = std::move(o.m_cnt);
-            }
-            return *this;
-        }
-
-        void swap(results_printer &o) {
-            std::swap(m_cnt, o.m_cnt);
-        }
-
-    };
-
-}
-#endif //CLTJ_RESULTS_PRINTER_HPP
+} // namespace util
+#endif // CLTJ_RESULTS_PRINTER_HPP
