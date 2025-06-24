@@ -26,7 +26,6 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **/
 
-
 //
 // Created by Adrián on 27/11/2018.
 //
@@ -39,82 +38,77 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace util {
 
-    namespace time {
+namespace time {
 
-        const static uint64_t nanoseconds     = 1;
-        const static uint64_t microseconds    = 1000;
-        const static uint64_t milliseconds    = 1000000;
-        const static uint64_t seconds         = 1000000000;
-        const static uint64_t minutes         = 60000000000;
+const static uint64_t nanoseconds = 1;
+const static uint64_t microseconds = 1000;
+const static uint64_t milliseconds = 1000000;
+const static uint64_t seconds = 1000000000;
+const static uint64_t minutes = 60000000000;
 
-        template<uint64_t ratio = 1>
-        static double duration_cast(uint64_t value){
-            return value / (double) ratio;
-        }
-
-        class user {
-
-        public:
-
-            /***
-             * User time in microseconds
-             * @return the user time in microseconds
-             */
-            static uint64_t now(){
-
-                struct rusage r_usage;
-                getrusage(RUSAGE_SELF, &r_usage);
-                return (r_usage.ru_utime.tv_sec *1000000 + r_usage.ru_utime.tv_usec)*1000;
-            }
-
-        };
-
-        class system {
-
-        public:
-
-            /***
-             * Sys time in microseconds
-             * @return the system time in microseconds
-             */
-            static uint64_t now(){
-
-                struct rusage r_usage;
-                getrusage(RUSAGE_SELF, &r_usage);
-                return (r_usage.ru_stime.tv_sec * 1000000 + r_usage.ru_stime.tv_usec)*1000;
-            }
-
-        };
-
-        class usage {
-
-
-        public:
-
-            typedef struct {
-                uint64_t user;
-                uint64_t system;
-                uint64_t elapsed;
-            } usage_type;
-            /***
-             * Sys time in microseconds
-             * @return the system time in microseconds
-             */
-            static usage_type now(){
-
-                struct rusage r_usage;
-                getrusage(RUSAGE_SELF, &r_usage);
-                usage_type res;
-                res.user = (r_usage.ru_utime.tv_sec * 1000000 + r_usage.ru_utime.tv_usec)*1000;
-                res.system = (r_usage.ru_stime.tv_sec * 1000000 + r_usage.ru_stime.tv_usec)*1000;
-                res.elapsed = res.user + res.system;
-                return res;
-            }
-
-        };
-
-
-    };
+template <uint64_t ratio = 1> static double duration_cast(uint64_t value) {
+  return value / (double)ratio;
 }
+
+class user {
+
+public:
+  /***
+   * User time in microseconds
+   * @return the user time in microseconds
+   */
+  static uint64_t now() {
+
+    struct rusage r_usage;
+    getrusage(RUSAGE_SELF, &r_usage);
+    return (r_usage.ru_utime.tv_sec * 1000000 + r_usage.ru_utime.tv_usec) *
+           1000;
+  }
+};
+
+class system {
+
+public:
+  /***
+   * Sys time in microseconds
+   * @return the system time in microseconds
+   */
+  static uint64_t now() {
+
+    struct rusage r_usage;
+    getrusage(RUSAGE_SELF, &r_usage);
+    return (r_usage.ru_stime.tv_sec * 1000000 + r_usage.ru_stime.tv_usec) *
+           1000;
+  }
+};
+
+class usage {
+
+public:
+  typedef struct {
+    uint64_t user;
+    uint64_t system;
+    uint64_t elapsed;
+  } usage_type;
+  /***
+   * Sys time in microseconds
+   * @return the system time in microseconds
+   */
+  static usage_type now() {
+
+    struct rusage r_usage;
+    getrusage(RUSAGE_SELF, &r_usage);
+    usage_type res;
+    res.user =
+        (r_usage.ru_utime.tv_sec * 1000000 + r_usage.ru_utime.tv_usec) * 1000;
+    res.system =
+        (r_usage.ru_stime.tv_sec * 1000000 + r_usage.ru_stime.tv_usec) * 1000;
+    res.elapsed = res.user + res.system;
+    return res;
+  }
+};
+
+}; // namespace time
+} // namespace util
 
 #endif
