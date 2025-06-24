@@ -17,81 +17,89 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+
 #ifndef CLTJ_UTILS_H
 #define CLTJ_UTILS_H
 
 #include <iostream>
 namespace ltj {
 
-namespace util {
+    namespace util {
 
-struct trait_size_old {
 
-  template <class Iterator, class Ring>
-  static uint64_t subject(Ring *ptr_ring, Iterator &iter) {
-    return iter.i_s.size();
-  }
+        struct trait_size_old {
 
-  template <class Iterator, class Ring>
-  static uint64_t predicate(Ring *ptr_ring, Iterator &iter) {
-    return iter.i_p.size();
-  }
+            template<class Iterator, class Ring>
+            static uint64_t subject(Ring *ptr_ring, Iterator &iter) {
+                return iter.i_s.size();
+            }
 
-  template <class Iterator, class Ring>
-  static uint64_t object(Ring *ptr_ring, Iterator &iter) {
-    return iter.i_o.size();
-  }
-};
+            template<class Iterator, class Ring>
+            static uint64_t predicate(Ring *ptr_ring, Iterator &iter) {
+                return iter.i_p.size();
+            }
 
-struct trait_size {
+            template<class Iterator, class Ring>
+            static uint64_t object(Ring *ptr_ring, Iterator &iter) {
+                return iter.i_o.size();
+            }
 
-  template <class Iterator> static uint64_t subject(Iterator &iter) {
-    if (iter.nfixed == 0)
-      return -1ULL - 1;
-    if (iter.nfixed == 1) {
-      return iter.subtree_size_fixed1(s);
-    } else {
-      return iter.subtree_size_fixed2();
+        };
+
+        struct trait_size {
+
+            template<class Iterator>
+            static uint64_t subject(Iterator &iter) {
+                if(iter.nfixed==0) return -1ULL -1;
+                if(iter.nfixed==1){
+                    return iter.subtree_size_fixed1(s);
+                }else{
+                    return iter.subtree_size_fixed2();
+                }
+            }
+
+            template<class Iterator>
+            static uint64_t predicate(Iterator &iter) {
+                if(iter.nfixed==0) return -1ULL -1;
+                if(iter.nfixed==1){
+                    return iter.subtree_size_fixed1(p);
+                }else{
+                    return iter.subtree_size_fixed2();
+                }
+            }
+
+            template<class Iterator>
+            static uint64_t object(Iterator &iter) {
+                if(iter.nfixed==0) return -1ULL -1;
+                if(iter.nfixed==1){
+                    return iter.subtree_size_fixed1(o);
+                }else{
+                    return iter.subtree_size_fixed2();
+                }
+            }
+        };
+
+        struct trait_distinct {
+
+            template<class Iterator>
+            static uint64_t subject(Iterator &iter) {
+                return iter.children(s);
+            }
+
+            template<class Iterator>
+            static uint64_t predicate(Iterator &iter) {
+                return iter.children(p);
+            }
+
+            template<class Iterator>
+            static uint64_t object(Iterator &iter) {
+                return iter.children(o);
+            }
+        };
     }
-  }
 
-  template <class Iterator> static uint64_t predicate(Iterator &iter) {
-    if (iter.nfixed == 0)
-      return -1ULL - 1;
-    if (iter.nfixed == 1) {
-      return iter.subtree_size_fixed1(p);
-    } else {
-      return iter.subtree_size_fixed2();
-    }
-  }
+}
 
-  template <class Iterator> static uint64_t object(Iterator &iter) {
-    if (iter.nfixed == 0)
-      return -1ULL - 1;
-    if (iter.nfixed == 1) {
-      return iter.subtree_size_fixed1(o);
-    } else {
-      return iter.subtree_size_fixed2();
-    }
-  }
-};
 
-struct trait_distinct {
-
-  template <class Iterator> static uint64_t subject(Iterator &iter) {
-    return iter.children(s);
-  }
-
-  template <class Iterator> static uint64_t predicate(Iterator &iter) {
-    return iter.children(p);
-  }
-
-  template <class Iterator> static uint64_t object(Iterator &iter) {
-    return iter.children(o);
-  }
-};
-} // namespace util
-
-} // namespace ltj
 
 #endif

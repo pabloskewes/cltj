@@ -26,6 +26,7 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **/
 
+
 //
 // Created by Adrián on 10/12/2018.
 //
@@ -35,13 +36,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace util {
 
-namespace math {
+    namespace math {
 
-template <class T, class D> inline D ceil_div(T x, D d) {
-  return (x + d - 1) / d;
+        template <class T, class D>
+        inline D ceil_div(T x, D d){
+            return (x + d - 1) / d;
+        }
+
+
+    }
 }
 
-} // namespace math
-} // namespace util
-
-#endif // RCT_MATH_UTIL_HPP
+#endif //RCT_MATH_UTIL_HPP

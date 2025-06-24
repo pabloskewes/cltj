@@ -17,88 +17,95 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+
+
 #ifndef RING_TRIPLE_PATTERN_HPP
 #define RING_TRIPLE_PATTERN_HPP
 
+
+#include <unordered_map>
+#include <string>
 #include <cstdint>
 #include <iostream>
-#include <string>
-#include <unordered_map>
 
 namespace ltj {
 
-struct term_pattern {
-  uint64_t value;
-  bool is_variable;
-};
 
-struct triple_pattern {
-  term_pattern term_s;
-  term_pattern term_p;
-  term_pattern term_o;
 
-  void const_s(uint64_t s) {
-    term_s.is_variable = false;
-    term_s.value = s;
-  }
+    struct term_pattern {
+        uint64_t value;
+        bool is_variable;
+    };
 
-  void const_o(uint64_t o) {
-    term_o.is_variable = false;
-    term_o.value = o;
-  }
+    struct triple_pattern {
+        term_pattern term_s;
+        term_pattern term_p;
+        term_pattern term_o;
 
-  void const_p(uint64_t p) {
-    term_p.is_variable = false;
-    term_p.value = p;
-  }
+        void const_s(uint64_t s){
+            term_s.is_variable = false;
+            term_s.value = s;
+        }
 
-  void var_s(uint64_t s) {
-    term_s.is_variable = true;
-    term_s.value = s;
-  }
+        void const_o(uint64_t o){
+            term_o.is_variable = false;
+            term_o.value = o;
+        }
 
-  void var_o(uint64_t o) {
-    term_o.is_variable = true;
-    term_o.value = o;
-  }
+        void const_p(uint64_t p){
+            term_p.is_variable = false;
+            term_p.value = p;
+        }
 
-  void var_p(uint64_t p) {
-    term_p.is_variable = true;
-    term_p.value = p;
-  }
+        void var_s(uint64_t s){
+            term_s.is_variable = true;
+            term_s.value = s;
+        }
 
-  bool s_is_variable() const {
-    return term_s.is_variable;
-  }
+        void var_o(uint64_t o){
+            term_o.is_variable = true;
+            term_o.value = o;
+        }
 
-  bool p_is_variable() const {
-    return term_p.is_variable;
-  }
+        void var_p(uint64_t p){
+            term_p.is_variable = true;
+            term_p.value = p;
+        }
 
-  bool o_is_variable() const {
-    return term_o.is_variable;
-  }
+        bool s_is_variable() const {
+            return term_s.is_variable;
+        }
 
-  void print(std::unordered_map<uint8_t, std::string> &ht) const {
-    if (s_is_variable()) {
-      std::cout << "?" << ht[term_s.value] << " ";
-    } else {
-      std::cout << term_s.value << " ";
-    }
+        bool p_is_variable() const {
+            return term_p.is_variable;
+        }
 
-    if (p_is_variable()) {
-      std::cout << "?" << ht[term_p.value] << " ";
-    } else {
-      std::cout << term_p.value << " ";
-    }
+        bool o_is_variable() const {
+            return term_o.is_variable;
+        }
 
-    if (o_is_variable()) {
-      std::cout << "?" << ht[term_o.value];
-    } else {
-      std::cout << term_o.value;
-    }
-  }
-};
-} // namespace ltj
 
-#endif // RING_TRIPLE_PATTERN_HPP
+        void print(std::unordered_map<uint8_t, std::string> &ht) const {
+            if(s_is_variable()){
+                std::cout << "?" << ht[term_s.value] << " ";
+            }else{
+                std::cout << term_s.value << " ";
+            }
+
+            if(p_is_variable()){
+                std::cout << "?" << ht[term_p.value] << " ";
+            }else{
+                std::cout << term_p.value << " ";
+            }
+
+            if(o_is_variable()){
+                std::cout << "?" << ht[term_o.value];
+            }else{
+                std::cout << term_o.value;
+            }
+        }
+    };
+}
+
+
+#endif //RING_TRIPLE_PATTERN_HPP

@@ -5,87 +5,93 @@
 #ifndef CLTJ_RESULTS_WRITER_HPP
 #define CLTJ_RESULTS_WRITER_HPP
 
+
 #include <array>
-#include <cstdint>
 #include <fstream>
 #include <vector>
+#include <cstdint>
 
 namespace util {
 
-template <class Cons> class results_writer {
+    template<class Cons>
+    class results_writer {
 
-public:
-  typedef uint64_t size_type;
+    public:
+        typedef uint64_t size_type;
 
-private:
-  std::ofstream m_stream;
-  size_type m_cnt = 0;
+    private:
 
-  void copy(const results_writer &o) {
-    m_stream = o.m_stream;
-    m_cnt = o.m_cnt;
-  }
+        std::ofstream m_stream;
+        size_type m_cnt = 0;
 
-public:
-  results_writer(std::string &file) {
-    m_stream.open(file, std::ios::binary);
-  }
+        void copy(const results_writer &o) {
+            m_stream = o.m_stream;
+            m_cnt = o.m_cnt;
+        }
 
-  inline void add(const std::vector<Cons> &val) {
-    m_stream.write((char *)val.data(), sizeof(Cons) * val.size());
-    ++m_cnt;
-  };
+    public:
 
-  template <class Var>
-  inline void add(const std::vector<std::pair<Var, Cons>> &val) {
-    std::vector<Cons> values(val.size());
-    for (const auto &pair : val) {
-      values[pair.first] = pair.second;
-    }
-    m_stream.write((char *)values.data(), sizeof(Cons) * values.size());
-    ++m_cnt;
-  };
+        results_writer(std::string &file) {
+            m_stream.open(file, std::ios::binary);
+        }
 
-  inline size_type size() {
-    return m_cnt;
-  }
+        inline void add(const std::vector<Cons> &val) {
+            m_stream.write((char*)val.data(), sizeof(Cons)*val.size());
+            ++m_cnt;
+        };
 
-  inline void close() {
-    m_stream.close();
-  }
+        template <class Var>
+        inline void add(const std::vector<std::pair<Var, Cons>> &val) {
+            std::vector<Cons> values(val.size());
+            for(const auto &pair : val){
+                values[pair.first] = pair.second;
+            }
+            m_stream.write((char*)values.data(), sizeof(Cons)*values.size());
+            ++m_cnt;
+        };
 
-  //! Copy constructor
-  results_writer(const results_writer &o) {
-    copy(o);
-  }
 
-  //! Move constructor
-  results_writer(results_writer &&o) {
-    *this = std::move(o);
-  }
+        inline size_type size(){
+            return m_cnt;
+        }
 
-  //! Copy Operator=
-  results_writer &operator=(const results_writer &o) {
-    if (this != &o) {
-      copy(o);
-    }
-    return *this;
-  }
+        inline void close() {
+            m_stream.close();
+        }
 
-  //! Move Operator=
-  results_writer &operator=(results_writer &&o) {
-    if (this != &o) {
-      m_stream = std::move(o.m_stream);
-      m_cnt = std::move(o.m_cnt);
-    }
-    return *this;
-  }
+        //! Copy constructor
+        results_writer(const results_writer &o) {
+            copy(o);
+        }
 
-  void swap(results_writer &o) {
-    std::swap(m_stream, o.m_stream);
-    std::swap(m_cnt, o.m_cnt);
-  }
-};
+        //! Move constructor
+        results_writer(results_writer &&o) {
+            *this = std::move(o);
+        }
 
-} // namespace util
-#endif // CLTJ_RESULTS_WRITER_HPP
+        //! Copy Operator=
+        results_writer &operator=(const results_writer &o) {
+            if (this != &o) {
+                copy(o);
+            }
+            return *this;
+        }
+
+        //! Move Operator=
+        results_writer &operator=(results_writer &&o) {
+            if (this != &o) {
+                m_stream = std::move(o.m_stream);
+                m_cnt = std::move(o.m_cnt);
+            }
+            return *this;
+        }
+
+        void swap(results_writer &o) {
+            std::swap(m_stream, o.m_stream);
+            std::swap(m_cnt, o.m_cnt);
+        }
+
+    };
+
+}
+#endif //CLTJ_RESULTS_WRITER_HPP
