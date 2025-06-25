@@ -48,7 +48,7 @@ int main(int argc, char **argv) {
   // sdsl::memory_monitor::stop();
   uint64_t beg = 0;
   for (uint64_t k = 0; k < steps; ++k) {
-    uint64_t last = std::min(beg + block_size, D.size() - 1);
+    uint64_t last = std::min(beg + block_size, (uint64_t)D.size() - 1);
     std::cout << "=======================================" << std::endl;
     std::cout << "Working with range [" << 0 << ", " << last - 1 << "]"
               << std::endl;

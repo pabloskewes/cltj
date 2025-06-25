@@ -24,7 +24,7 @@ private:
   // sdsl::rank_support_v<1> m_rank1;
   cds::succ_support_v<0> m_succ0;
   sdsl::select_support_mcl<0> m_select0;
-  size_type m_count_select = 0;
+  mutable size_type m_count_select = 0;
 
   void copy(const compact_trie_stats &o) {
     m_bv = o.m_bv;
@@ -133,12 +133,12 @@ public:
       Receives index of current node and the child that is required
       Returns index of the nth child of current node
   */
-  inline size_type child(uint32_t it, uint32_t n, uint32_t gap = 1) {
+  inline size_type child(uint32_t it, uint32_t n, uint32_t gap = 1) const {
     ++m_count_select;
     return m_select0(it + gap + n);
   }
 
-  inline size_type nodeselect(uint32_t it, uint32_t gap = 1) {
+  inline size_type nodeselect(uint32_t it, uint32_t gap = 1) const {
     return child(it, 1, gap);
   }
 
@@ -146,7 +146,7 @@ public:
       Receives index of node whos children we want to count
       Returns how many children said node has
   */
-  size_type children(size_type i) {
+  size_type children(size_type i) const {
     ++m_count_select;
     return m_succ0(i + 1) - i;
   }
