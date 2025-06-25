@@ -1,11 +1,10 @@
-
 // supports hybrid arrays of size up to 2^64-1
 
 #include "hybridBV/hybridId.h"
 
-extern float FactorId = 1.0; // Factor * length reads => rebuild as static
+float FactorId = 1.0; // Factor * length reads => rebuild as static
 
-static inline mustFlatten(hybridId B) {
+static inline int mustFlatten(hybridId B) {
   return (B->bv.dyn->accesses >= FactorId * B->bv.dyn->size);
 }
 
