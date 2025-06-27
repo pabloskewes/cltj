@@ -106,7 +106,7 @@ public:
       Degree of the trie root
   */
 
-  size_type root_degree() {
+  size_type root_degree() const {
     return m_root_degree;
   }
 

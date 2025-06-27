@@ -322,7 +322,7 @@ public:
     } else {
       state = o;
     }
-    down(state);
+    this->down(state);
   };
 
   // Reverses the intervals and variable weights. Also resets the current value.

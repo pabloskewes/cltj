@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-set(CMAKE_OSX_ARCHITECTURES x86_64)
+#set(CMAKE_OSX_ARCHITECTURES x86_64)
 project(HybridBV)
 set(CMAKE_PROJECT_NAME "HybridBV")
 #set(CMAKE_COMPILER_IS_GNUCXX)
