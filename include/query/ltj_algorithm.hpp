@@ -23,6 +23,7 @@
 #include <triple_pattern.hpp>
 // #include <ltj_iterator.hpp>
 #include <dict/dict_map.hpp>
+#include <query/intersection_stats.hpp>
 #include <query/ltj_iterator_basic.hpp>
 #include <query/ltj_iterator_lite.hpp>
 #include <query/ltj_iterator_metatrie.hpp>
@@ -62,6 +63,7 @@ private:
   vector<ltj_iter_type> m_iterators;
   var_to_iterators_type m_var_to_iterators;
   bool m_is_empty = false;
+  std::vector<IntersectionStats> m_stats;
 
   void copy(const ltj_algorithm &o) {
     m_ptr_triple_patterns = o.m_ptr_triple_patterns;
@@ -70,6 +72,7 @@ private:
     m_iterators = o.m_iterators;
     m_var_to_iterators = o.m_var_to_iterators;
     m_is_empty = o.m_is_empty;
+    m_stats = o.m_stats;
   }
 
   inline void
@@ -100,6 +103,10 @@ private:
   }
 
 public:
+  const std::vector<IntersectionStats> &get_stats() const {
+    return m_stats;
+  }
+
   ltj_algorithm() = default;
 
   ltj_algorithm(
@@ -165,6 +172,7 @@ public:
       m_iterators = move(o.m_iterators);
       m_var_to_iterators = move(o.m_var_to_iterators);
       m_is_empty = o.m_is_empty;
+      m_stats = move(o.m_stats);
     }
     return *this;
   }
@@ -176,6 +184,7 @@ public:
     std::swap(m_iterators, o.m_iterators);
     std::swap(m_var_to_iterators, o.m_var_to_iterators);
     std::swap(m_is_empty, o.m_is_empty);
+    std::swap(m_stats, o.m_stats);
   }
 
   /**
