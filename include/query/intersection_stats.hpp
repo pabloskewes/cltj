@@ -18,6 +18,14 @@ namespace ltj {
  */
 struct IntersectionStats {
 
+  // --- Contextual Data ---
+  /// @brief The ID of the variable being processed in this intersection.
+  uint8_t variable_id = 0;
+
+  /// @brief The depth in the query execution plan (0 for the first variable, 1
+  /// for the second, etc.).
+  int depth = 0;
+
   // --- Primary Data (Stored) ---
 
   /// @brief A vector containing the size of each of the k lists being
