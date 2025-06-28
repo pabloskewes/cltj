@@ -414,10 +414,29 @@ public:
           m_veo.up();
         }
       } else {
+        IntersectionStats stats;
+        stats.variable_id = x_j;
+        stats.depth = j;
+
+        // Collect list sizes from each iterator
+        for (ltj_iter_type *iter : itrs) {
+          // Determine which state/variable this iterator represents
+          state_type state = o; // default
+          if (iter->is_variable_subject(x_j)) {
+            state = s;
+          } else if (iter->is_variable_predicate(x_j)) {
+            state = p;
+          }
+          stats.list_sizes.push_back(iter->children(state));
+        }
+
         value_type c = seek(x_j);
         // cout << "Seek (init): (" << (uint64_t) x_j << ": " << c << ")"
         // <<endl;
         while (c != 0) { // If empty c=0
+          // Count each result found
+          stats.result_size++;
+
           // 1. Adding result to tuple
           tuple[j] = {x_j, c};
           // 2. Going down in the tries by setting x_j = c (\mu(t_i) in paper)
@@ -439,6 +458,10 @@ public:
           // cout << "Seek (bucle): (" << (uint64_t) x_j << ": " << c << ")"
           // <<endl;
         }
+
+        // TODO: compute alternation_complexity
+        // TODO: compute leapfrog_seeks (needs to be done in seek)
+        m_stats.push_back(stats);
       }
       m_veo.done();
     }
