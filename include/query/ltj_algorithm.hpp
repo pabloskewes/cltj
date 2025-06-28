@@ -457,18 +457,7 @@ public:
     vector<ltj_iter_type *> &itrs = m_var_to_iterators[x_j];
     value_type c_i, c_prev = 0, i = 0, n_ok = 0;
 
-    IntersectionStats stats;
-    stats.variable_id = x_j;
-    // NOTE: We can get the depth from the search method, but for now we will
-    // put a dummy value.
-    stats.depth = -1;
-
-    for (auto it : itrs) {
-      stats.list_sizes.push_back(it->children(m_veo.get_state(x_j)));
-    }
-
     while (true) {
-      stats.leapfrog_seeks++;
       // Compute leap for each triple that contains x_j
       // std::cout << "Leap of " << (::uint64_t) x_j << " in iterator: " << i <<
       // std::endl;
@@ -482,16 +471,10 @@ public:
         for (auto &itr : itrs) {
           itr->leap_done();
         }
-        stats.alternation_complexity = -1; // Dummy value
-        // stats.result_size will be filled later
-        m_stats.push_back(stats);
         return 0; // Empty intersection
       }
       n_ok = (c_i == c_prev) ? n_ok + 1 : 1;
       if (n_ok == itrs.size()) {
-        stats.alternation_complexity = -1; // Dummy value
-        // stats.result_size will be filled later
-        m_stats.push_back(stats);
         return c_i;
       }
       c = c_prev = c_i;
