@@ -87,6 +87,29 @@ void query(
           std::chrono::duration_cast<std::chrono::nanoseconds>(stop - start)
               .count();
       cout << nQ << ";" << res.size() << ";" << time << endl;
+
+      // Print intersection statistics
+      const auto &stats = ltj.get_stats();
+      cout << "=== Query " << nQ << " Intersection Statistics ===" << endl;
+      cout << "Total intersections: " << stats.size() << endl;
+      for (size_t i = 0; i < stats.size(); ++i) {
+        const auto &stat = stats[i];
+        cout << "Intersection " << i << ": ";
+        cout << "var_id=" << stat.variable_id << ", ";
+        cout << "depth=" << stat.depth << ", ";
+        cout << "result_size=" << stat.result_size << ", ";
+        cout << "min_list_size=" << stat.min_list_size() << ", ";
+        cout << "alternation_complexity=" << stat.alternation_complexity
+             << ", ";
+        cout << "list_sizes=[";
+        for (size_t j = 0; j < stat.list_sizes.size(); ++j) {
+          cout << stat.list_sizes[j];
+          if (j < stat.list_sizes.size() - 1)
+            cout << ",";
+        }
+        cout << "]" << endl;
+      }
+      cout << "=============================================" << endl;
       nQ++;
 
       count += 1;
