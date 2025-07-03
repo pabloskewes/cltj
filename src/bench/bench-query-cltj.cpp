@@ -35,9 +35,14 @@ using namespace ::util::time;
 
 // Function to print intersection statistics for debugging/experimentation
 template <class algorithm_type>
-void print_intersection_stats(const algorithm_type &ltj, uint64_t query_id) {
+void print_intersection_stats(
+    const algorithm_type &ltj,
+    uint64_t query_id,
+    const string &query_text
+) {
   const auto &stats = ltj.get_stats();
   cout << "=== Query " << query_id << " Intersection Statistics ===" << endl;
+  cout << "Query text: " << query_text << endl;
   cout << "Total intersections: " << stats.size() << endl;
   for (size_t i = 0; i < stats.size(); ++i) {
     const auto &stat = stats[i];
@@ -114,7 +119,7 @@ void query(
       cout << nQ << ";" << res.size() << ";" << time << endl;
 
       // Print intersection statistics (comment out this line to disable)
-      print_intersection_stats(ltj, nQ);
+      print_intersection_stats(ltj, nQ, query_string);
       nQ++;
 
       count += 1;
