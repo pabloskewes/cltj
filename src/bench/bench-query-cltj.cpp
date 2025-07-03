@@ -47,7 +47,7 @@ void print_intersection_stats(
   for (size_t i = 0; i < stats.size(); ++i) {
     const auto &stat = stats[i];
     cout << "Intersection " << i << ": ";
-    cout << "var_id=" << stat.variable_id << ", ";
+    cout << "var_id=" << (int)stat.variable_id << ", ";
     cout << "depth=" << stat.depth << ", ";
     cout << "result_size=" << stat.result_size << ", ";
     cout << "min_list_size=" << stat.min_list_size() << ", ";
