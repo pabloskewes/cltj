@@ -33,6 +33,31 @@ using namespace std;
 
 using namespace ::util::time;
 
+// Function to print intersection statistics for debugging/experimentation
+template <class algorithm_type>
+void print_intersection_stats(const algorithm_type &ltj, uint64_t query_id) {
+  const auto &stats = ltj.get_stats();
+  cout << "=== Query " << query_id << " Intersection Statistics ===" << endl;
+  cout << "Total intersections: " << stats.size() << endl;
+  for (size_t i = 0; i < stats.size(); ++i) {
+    const auto &stat = stats[i];
+    cout << "Intersection " << i << ": ";
+    cout << "var_id=" << stat.variable_id << ", ";
+    cout << "depth=" << stat.depth << ", ";
+    cout << "result_size=" << stat.result_size << ", ";
+    cout << "min_list_size=" << stat.min_list_size() << ", ";
+    cout << "alternation_complexity=" << stat.alternation_complexity << ", ";
+    cout << "list_sizes=[";
+    for (size_t j = 0; j < stat.list_sizes.size(); ++j) {
+      cout << stat.list_sizes[j];
+      if (j < stat.list_sizes.size() - 1)
+        cout << ",";
+    }
+    cout << "]" << endl;
+  }
+  cout << "=============================================" << endl;
+}
+
 template <class index_scheme_type, class trait_type>
 void query(
     const std::string &file,
@@ -88,28 +113,8 @@ void query(
               .count();
       cout << nQ << ";" << res.size() << ";" << time << endl;
 
-      // Print intersection statistics
-      const auto &stats = ltj.get_stats();
-      cout << "=== Query " << nQ << " Intersection Statistics ===" << endl;
-      cout << "Total intersections: " << stats.size() << endl;
-      for (size_t i = 0; i < stats.size(); ++i) {
-        const auto &stat = stats[i];
-        cout << "Intersection " << i << ": ";
-        cout << "var_id=" << stat.variable_id << ", ";
-        cout << "depth=" << stat.depth << ", ";
-        cout << "result_size=" << stat.result_size << ", ";
-        cout << "min_list_size=" << stat.min_list_size() << ", ";
-        cout << "alternation_complexity=" << stat.alternation_complexity
-             << ", ";
-        cout << "list_sizes=[";
-        for (size_t j = 0; j < stat.list_sizes.size(); ++j) {
-          cout << stat.list_sizes[j];
-          if (j < stat.list_sizes.size() - 1)
-            cout << ",";
-        }
-        cout << "]" << endl;
-      }
-      cout << "=============================================" << endl;
+      // Print intersection statistics (comment out this line to disable)
+      print_intersection_stats(ltj, nQ);
       nQ++;
 
       count += 1;
