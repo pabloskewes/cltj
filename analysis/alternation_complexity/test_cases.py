@@ -9,39 +9,52 @@ test_cases = {
             [5, 6, 7, 10],
             [8, 10, 19, 20],
         ],
-        "output": [4, 5, 1],
-        "description": "El caso de prueba principal extraído de la imagen del paper de Barbay.",
+        "output": [4] * 8 + [5] + [1] * 11,
+        "description": "Ejemplo del paper de Barbay. Intersección vacía, δ=3.",
     },
-    "high_alternation": {
+    "perfectly_interleaved": {
         "input": [
             [1, 4, 7, 10, 13, 16],
             [2, 5, 8, 11, 14, 17],
             [3, 6, 9, 12, 15, 18],
         ],
-        "description": "Listas perfectamente intercaladas, diseñadas para maximizar la alternancia.",
+        "output": [3, 3, 2, 2, 1, 1] * 3,
+        "description": "Listas perfectamente intercaladas. Intersección vacía, máxima alternancia posible.",
     },
-    "zero_alternation": {
-        "input": [[100, 200, 300], [1, 5, 10, 50], [2, 6, 12, 60]],
-        "description": "Una lista siempre está por delante, lo que debería resultar en cero alternancias.",
+    "single_responsible": {
+        "input": [[1, 2, 3], [5, 6, 7], [9, 10, 11]],
+        "output": [3] * 8 + [2] * 3,
+        "description": "Listas completamente separadas. Intersección vacía, δ=2.",
     },
     "all_identical": {
-        "input": [[5, 10, 15], [5, 10, 15], [5, 10, 15]],
-        "description": "Todas las listas son idénticas. El líder (con desempate) nunca debería cambiar.",
+        "input": [[3, 5, 7], [3, 5, 7], [3, 5, 7]],
+        "output": [0, 1, 0, 1, 0],
+        "description": "Todas las listas idénticas. Intersección completa: {3, 5, 7}, δ=5.",
     },
-    "high_density": {
+    "simple_intersection": {
         "input": [
-            [1, 2, 3, 4, 8, 9, 10],
-            [1, 3, 4, 5, 6, 8, 10],
-            [1, 2, 4, 6, 7, 9, 10],
+            [1, 3, 5, 7],
+            [2, 3, 6, 7],
+            [3, 4, 7, 8],
         ],
-        "description": "Listas muy similares con alta densidad y múltiples puntos de intersección pequeños (1, 4, 10).",
+        "output": [3, 3, 0, 2, 2, 1, 0, 1],
+        "description": "Intersección pequeña: {3, 7}. Mezcla de singletons e intervalos. δ=6.",
     },
-    "complex_intersection": {
+    "two_lists_only": {
         "input": [
-            [3, 5, 10, 12, 18, 25, 30],
-            [5, 11, 12, 15, 20, 25, 30],
-            [1, 2, 5, 12, 21, 25, 30],
+            [1, 3, 5, 7, 9],
+            [2, 4, 6, 8, 10],
         ],
-        "description": "Un caso más realista con múltiples elementos en la intersección (5, 12, 25, 30).",
+        "output": [2, 1] * 5,
+        "description": "Solo dos listas intercaladas. Intersección vacía, δ=10.",
+    },
+    "dense_overlap": {
+        "input": [
+            [1, 2, 4, 5, 6],
+            [1, 3, 4, 6, 7],
+            [2, 4, 5, 6, 8],
+        ],
+        "output": [3, 2, 1, 0, 2, 0, 1, 1],
+        "description": "Listas con mucho solapamiento. Intersección: {4, 6}. δ=7.",
     },
 }
