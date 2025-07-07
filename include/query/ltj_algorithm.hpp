@@ -414,6 +414,7 @@ public:
           m_veo.up();
         }
       } else {
+        // TODO: Make stats optional
         IntersectionStats stats;
         stats.variable_id = x_j;
         stats.depth = j;
@@ -457,6 +458,12 @@ public:
           c = seek(x_j, c + 1);
           // cout << "Seek (bucle): (" << (uint64_t) x_j << ": " << c << ")"
           // <<endl;
+        }
+
+        // TODO: Make stats optional
+        std::vector<std::vector<uint64_t>> sorted_lists;
+        for (ltj_iter_type *iter : itrs) {
+          sorted_lists.push_back(iter->seek_all(x_j));
         }
 
         // TODO: compute alternation_complexity
