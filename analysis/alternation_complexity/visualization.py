@@ -1,4 +1,4 @@
-def plot_lists_visual(lists, list_names=None, header=True):
+def plot_lists_visual(lists, list_names=None, header=True, show_dots=False):
     """
     Visualize the lists in a grid format where each value is placed in its
     corresponding column to facilitate viewing intersections.
@@ -7,6 +7,7 @@ def plot_lists_visual(lists, list_names=None, header=True):
         lists: List of sorted lists
         list_names: Optional names for the lists (e.g., ['A', 'B', 'C'])
         header: Whether to display the header with the values as columns
+        show_dots: Whether to show small dots (·) in empty spaces
     """
     if not lists:
         print("No lists to show")
@@ -44,7 +45,10 @@ def plot_lists_visual(lists, list_names=None, header=True):
             if val in lst:
                 print(f"{val:>4}", end="")
             else:
-                print("    ", end="")
+                if show_dots:
+                    print("   ·", end="")  # 3 spaces + dot
+                else:
+                    print("    ", end="")  # 4 spaces
         print()
 
     print()
