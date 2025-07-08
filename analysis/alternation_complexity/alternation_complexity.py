@@ -77,11 +77,9 @@ def preprocess_lists(lists: list[list[int]]) -> list[list[Interval]]:
     if not all_values:
         return []
 
-    min_val = min(all_values)
-    max_val = max(all_values)
+    min_val, max_val = min(all_values), max(all_values)
 
-    result = []
-
+    result: list[list[Interval]] = []
     for lst in lists:
         if not lst:
             # Empty list: the whole universe is a gap
