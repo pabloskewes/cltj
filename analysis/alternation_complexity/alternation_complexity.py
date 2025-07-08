@@ -69,38 +69,44 @@ def calculate_alternation_complexity(
         lists: List of lists of sorted integers.
 
     Returns:
-        List of integers representing the partition certificate:
-        - 0: element in the intersection (singleton)
-        - i (i≥1): interval certified by the list i-1 (in position i)
+        List of intervals (start, end) representing the partition certificate.
+        Each interval can be:
+        - Singleton: (x, x) where x is in the intersection ⋂Aᵢ
+        - Non-singleton: (a, b) where a < b, certified by some list that
+          has empty intersection with the interval
 
         Example from Barbay's paper:
-        - Result: [4] * 8 + [5] + [1] * 3
-        - Compressed: [4, 5, 1] (using groupby)
-        - δ = len([4, 5, 1]) = 3
+        - Result: [(-∞, 9), (9, 10), (10, +∞)]
+        - δ = len(result) = 3
 
-        Note: We return the complete sequence instead of δ directly
-        because it allows for more detailed analysis of the certificate and
-        facilitates debugging.
-        To calculate alternation complexity: len(list(groupby(resultado)))
+
+        To calculate alternation complexity: len(result)
     """
 
     intervals: list[Interval] = []
     left_bound, right_bound = NEG_INF, NEG_INF
+    previous_value_in_intersection = False
     while right_bound < POS_INF:
         # Advance all iterators
-        values = [seek_next(its, left_bound) for its in iterators]
+        value_to_seek = left_bound
+        if previous_value_in_intersection:
+            value_to_seek += 1
+        values = [seek_next(its, value_to_seek) for its in iterators]
         current_value = max(values)  # Greedy choice
 
         # Check if element it's in the intersection
         values = [seek_next(its, current_value) for its in iterators]
         if all(val == current_value for val in values) and current_value != POS_INF:
-            # Add singleton interval
+            # Add gap before singleton and singleton itself
+            intervals.append(Interval(left_bound, current_value))
             intervals.append(Interval(current_value, current_value))
-            left_bound, right_bound = current_value + 1, current_value + 1
+            left_bound = current_value
+            previous_value_in_intersection = True
         else:
             # Add interval
             right_bound = current_value
             intervals.append(Interval(left_bound, right_bound))
             left_bound = right_bound
+            previous_value_in_intersection = False
 
     return intervals
