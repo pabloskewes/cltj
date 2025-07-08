@@ -31,7 +31,8 @@ class Interval:
 
 def preprocess_lists(lists: list[list[int]]) -> list[list[Interval]]:
     """
-    Compress lists of sorted integers into a compressed interval representation.
+    Compress lists of sorted integers into a compressed interval
+    representation.
 
     This function takes k lists of sorted integers and converts them into a
     compressed representation where each list is represented as a sequence of
@@ -144,3 +145,49 @@ def preprocess_lists(lists: list[list[int]]) -> list[list[Interval]]:
         result.append(intervals)
 
     return result
+
+
+def calculate_alternation_complexity(lists: list[list[int]]) -> list[int]:
+    """
+    Calculate the minimum partition certificate of a set of sorted lists.
+
+    The alternation complexity δ of an instance (A₁, ..., Aₖ) is the minimum
+    number of intervals that form a partition certificate. A partition
+    certificate is a partition (Iⱼ)ⱼ≤δ ⊆ U such that:
+
+    1. ∀I ∈ (Iⱼ), I = {x} ⟹ x ∈ ⋂Aᵢ  (singletons are in the intersection)
+    2. ∀I ∈ (Iⱼ), |I| > 1 ⟹ ∃A ∈ (Aᵢ) : I ∩ A = ∅  (intervals certified by
+    some list)
+
+    Example from Barbay's paper (simplified):
+    - Lists:
+        A_1:   ·   ·   ·   ·   ·   ·   ·   ·   9   ·   ·   ·
+        A_2:   1   2   ·   ·   ·   ·   ·   ·   9   ·  11   ·
+        A_3:   ·   ·   3   ·   ·   ·   ·   ·   9   ·   ·  12
+        A_4:   ·   ·   ·   ·   ·   ·   ·   ·   9   ·   ·   ·
+        A_5:   ·   ·   ·   4   ·   ·   ·   ·   ·  10   ·   ·
+        A_6:   ·   ·   ·   ·   5   6   7   ·   ·  10   ·   ·
+        A_7:   ·   ·   ·   ·   ·   ·   ·   8   ·  10   ·   ·
+    - Intersection: ∅ (empty)
+    - Possible certificate (minimum): (-∞,9), [9,10), [10,+∞) → δ = 3
+
+    Args:
+        lists: List of lists of sorted integers.
+
+    Returns:
+        List of integers representing the partition certificate:
+        - 0: element in the intersection (singleton)
+        - i (i≥1): interval certified by the list i-1 (in position i)
+
+        Example from Barbay's paper:
+        - Result: [4] * 8 + [5] + [1] * 3
+        - Compressed: [4, 5, 1] (using groupby)
+        - δ = len([4, 5, 1]) = 3
+
+        Note: We return the complete sequence instead of δ directly
+        because it allows for more detailed analysis of the certificate and
+        facilitates debugging.
+        To calculate alternation complexity: len(list(groupby(resultado)))
+    """
+    compressed_lists = preprocess_lists(lists)
+    return []
