@@ -44,11 +44,8 @@ constexpr uint64_t NEG_INF = 0; // In RDF context, 0 is never a valid ID
  * @return The found value, or POS_INF if not found
  */
 template <class ltj_iter_type, class var_type>
-uint64_t seek_next_iterator(
-    ltj_iter_type *iterator,
-    var_type variable,
-    uint64_t target
-) {
+uint64_t
+seek_next(ltj_iter_type *iterator, var_type variable, uint64_t target) {
   auto result = iterator->leap(variable, target);
   return result == 0 ? POS_INF : result;
 }
@@ -89,7 +86,7 @@ int calculate_alternation_complexity(
     // Find the maximum value among all iterators (greedy choice)
     uint64_t current_value = NEG_INF;
     for (auto *iter : iterators) {
-      uint64_t val = seek_next_iterator(iter, variable, value_to_seek);
+      uint64_t val = seek_next(iter, variable, value_to_seek);
       if (val > current_value) {
         current_value = val;
       }
@@ -103,7 +100,7 @@ int calculate_alternation_complexity(
     // Check if element is in the intersection
     bool in_intersection = true;
     for (auto *iter : iterators) {
-      uint64_t val = seek_next_iterator(iter, variable, current_value);
+      uint64_t val = seek_next(iter, variable, current_value);
       if (val != current_value) {
         in_intersection = false;
         break;
