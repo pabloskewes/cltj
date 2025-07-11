@@ -23,6 +23,7 @@
 #include <triple_pattern.hpp>
 // #include <ltj_iterator.hpp>
 #include <dict/dict_map.hpp>
+#include <query/alternation_complexity.hpp>
 #include <query/intersection_stats.hpp>
 #include <query/ltj_iterator_basic.hpp>
 #include <query/ltj_iterator_lite.hpp>
@@ -461,12 +462,9 @@ public:
         }
 
         // TODO: Make stats optional
-        std::vector<std::vector<uint64_t>> sorted_lists;
-        for (ltj_iter_type *iter : itrs) {
-          sorted_lists.push_back(iter->seek_all(x_j));
-        }
+        stats.alternation_complexity =
+            calculate_alternation_complexity(itrs, x_j);
 
-        // TODO: compute alternation_complexity
         // TODO: compute leapfrog_seeks (needs to be done in seek)
         m_stats.push_back(stats);
       }
