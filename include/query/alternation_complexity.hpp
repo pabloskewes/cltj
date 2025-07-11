@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <iostream>
+#include <limits>
 #include <vector>
 
 namespace ltj {
@@ -13,21 +14,44 @@ namespace ltj {
 struct Interval {
   uint64_t left;
   uint64_t right;
-  bool is_singleton;
 
-  Interval(uint64_t l, uint64_t r, bool singleton = false)
-      : left(l), right(r), is_singleton(singleton) {
+  Interval(uint64_t l, uint64_t r) : left(l), right(r) {
   }
 
-  // For debugging
+  bool is_singleton() const {
+    return left == right;
+  }
+
   void print() const {
-    if (is_singleton) {
+    if (is_singleton()) {
       std::cout << "{" << left << "}";
     } else {
       std::cout << "[" << left << ", " << right << ")";
     }
   }
 };
+
+// Constants for boundary values
+constexpr uint64_t POS_INF = std::numeric_limits<uint64_t>::max();
+constexpr uint64_t NEG_INF = 0; // In RDF context, 0 is never a valid ID
+
+/**
+ * @brief Seek next value >= target in an iterator
+ *
+ * @param iterator The iterator to search in
+ * @param variable The variable to search for
+ * @param target The minimum value to find
+ * @return The found value, or POS_INF if not found
+ */
+template <class ltj_iter_type, class var_type>
+uint64_t seek_next_iterator(
+    ltj_iter_type *iterator,
+    var_type variable,
+    uint64_t target
+) {
+  auto result = iterator->leap(variable, target);
+  return result == 0 ? POS_INF : result;
+}
 
 /**
  * @brief Calculate alternation complexity using iterators directly
@@ -46,31 +70,78 @@ int calculate_alternation_complexity(
             << iterators.size() << " iterators for variable " << (int)variable
             << std::endl;
 
-  // TODO: Implement real logic
-  // For now, just return a dummy value
-  return 819;
-}
+  if (iterators.empty()) {
+    return 0;
+  }
 
-/**
- * @brief Seek next value >= target in an iterator
- *
- * @param iterator The iterator to search in
- * @param variable The variable to search for
- * @param target The minimum value to find
- * @return The found value, or 0 if not found
- */
-template <class ltj_iter_type, class var_type>
-uint64_t seek_next_iterator(
-    ltj_iter_type *iterator,
-    var_type variable,
-    uint64_t target
-) {
-  std::cout << "[DEBUG] seek_next_iterator called with target=" << target
-            << " for variable " << (int)variable << std::endl;
+  std::vector<Interval> intervals;
+  uint64_t left_bound = NEG_INF;
+  uint64_t right_bound = NEG_INF;
+  bool previous_value_in_intersection = false;
 
-  // TODO: Implement real logic using iterator->leap()
-  // For now, just return a dummy value
-  return target + 1;
+  while (right_bound < POS_INF) {
+    // Advance all iterators
+    uint64_t value_to_seek = left_bound;
+    if (previous_value_in_intersection) {
+      value_to_seek += 1;
+    }
+
+    // Find the maximum value among all iterators (greedy choice)
+    uint64_t current_value = NEG_INF;
+    for (auto *iter : iterators) {
+      uint64_t val = seek_next_iterator(iter, variable, value_to_seek);
+      if (val > current_value) {
+        current_value = val;
+      }
+    }
+
+    // If all iterators returned POS_INF, we're done
+    if (current_value == POS_INF) {
+      break;
+    }
+
+    // Check if element is in the intersection
+    bool in_intersection = true;
+    for (auto *iter : iterators) {
+      uint64_t val = seek_next_iterator(iter, variable, current_value);
+      if (val != current_value) {
+        in_intersection = false;
+        break;
+      }
+    }
+
+    if (in_intersection) {
+      // Add gap before singleton (if needed) and singleton itself
+      if (left_bound < current_value) {
+        intervals.emplace_back(left_bound, current_value);
+      }
+      intervals.emplace_back(current_value, current_value);
+      left_bound = current_value;
+      previous_value_in_intersection = true;
+    } else {
+      // Add interval
+      right_bound = current_value;
+      intervals.emplace_back(left_bound, right_bound);
+      left_bound = right_bound;
+      previous_value_in_intersection = false;
+    }
+
+    // Reset iterators for next iteration
+    for (auto *iter : iterators) {
+      iter->leap_done();
+    }
+  }
+
+  // Add final interval if needed
+  if (left_bound < POS_INF) {
+    intervals.emplace_back(left_bound, POS_INF);
+  }
+
+  int result = static_cast<int>(intervals.size());
+  std::cout << "[DEBUG] Alternation complexity calculated: " << result
+            << std::endl;
+
+  return result;
 }
 
 } // namespace ltj
