@@ -97,21 +97,20 @@ int calculate_alternation_complexity(
       break;
     }
 
-    // Check if element is in the intersection
-    bool in_intersection = true;
+    // Check if element is in the intersection (optimized)
+    uint64_t min_value = POS_INF;
     for (auto *iter : iterators) {
       uint64_t val = seek_next(iter, variable, current_value);
-      if (val != current_value) {
-        in_intersection = false;
-        break;
+      if (val < min_value) {
+        min_value = val;
       }
     }
+    bool in_intersection =
+        (min_value == current_value) && (current_value != POS_INF);
 
     if (in_intersection) {
-      // Add gap before singleton (if needed) and singleton itself
-      if (left_bound < current_value) {
-        intervals.emplace_back(left_bound, current_value);
-      }
+      // Add gap before singleton and singleton itself (always, like Python)
+      intervals.emplace_back(left_bound, current_value);
       intervals.emplace_back(current_value, current_value);
       left_bound = current_value;
       previous_value_in_intersection = true;
