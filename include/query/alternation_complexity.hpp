@@ -79,8 +79,8 @@ int calculate_alternation_complexity(
   while (right_bound < POS_INF) {
     // Advance all iterators
     uint64_t value_to_seek = left_bound;
-    if (previous_value_in_intersection) {
-      value_to_seek += 1;
+    if (previous_value_in_intersection && left_bound < POS_INF) {
+      value_to_seek = left_bound + 1;
     }
 
     // Find the maximum value among all iterators (greedy choice)
@@ -136,6 +136,15 @@ int calculate_alternation_complexity(
   int result = static_cast<int>(intervals.size());
   std::cout << "[DEBUG] Alternation complexity calculated: " << result
             << std::endl;
+
+  std::cout << "[DEBUG] Intervals: ";
+  for (size_t i = 0; i < intervals.size(); ++i) {
+    intervals[i].print();
+    if (i < intervals.size() - 1) {
+      std::cout << ", ";
+    }
+  }
+  std::cout << std::endl;
 
   return result;
 }
