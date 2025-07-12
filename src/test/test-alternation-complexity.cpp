@@ -194,8 +194,7 @@ IteratorSetup create_iterators_from_simple_lists(
 }
 
 void test_transformation_only() {
-  std::cout << "\n=== Testing ONLY the Transformation (No Algorithm) ==="
-            << std::endl;
+  std::cout << "\n=== Testing Classic Paper Example ===" << std::endl;
 
   // Classic example from the paper
   std::vector<std::vector<uint64_t>> simple_lists = {
@@ -230,13 +229,51 @@ void test_transformation_only() {
   // Transform to real iterators
   auto setup = create_iterators_from_simple_lists(simple_lists);
 
-  if (setup.is_valid) {
-    std::cout << "Transformation successful" << std::endl;
-  } else {
-    std::cout << "Transformation failed" << std::endl;
+  if (!setup.is_valid) {
+    std::cout << "❌ Transformation failed!" << std::endl;
+    return;
   }
 
-  std::cout << "Transformation validation completed" << std::endl;
+  std::cout << "✓ Transformation successful, now running algorithm..."
+            << std::endl;
+
+  // Run the actual alternation complexity algorithm
+  auto actual_intervals = calculate_minimal_certificate(
+      setup.iterator_ptrs, static_cast<uint8_t>(0)
+  );
+
+  std::cout << "Actual result: ";
+  print_intervals(actual_intervals);
+  std::cout << std::endl;
+
+  // Compare results
+  if (intervals_equal(actual_intervals, expected)) {
+    std::cout << "✅ Algorithm result matches expected!" << std::endl;
+  } else {
+    std::cout << "❌ Algorithm result does NOT match expected!" << std::endl;
+    std::cout << "  Expected " << expected.size() << " intervals, got "
+              << actual_intervals.size() << std::endl;
+
+    // Print detailed comparison
+    for (size_t i = 0; i < std::max(expected.size(), actual_intervals.size());
+         ++i) {
+      std::cout << "  Interval " << i << ": ";
+      if (i < expected.size()) {
+        std::cout << "Expected ";
+        expected[i].print();
+      } else {
+        std::cout << "Expected <none>";
+      }
+      std::cout << " vs ";
+      if (i < actual_intervals.size()) {
+        std::cout << "Actual ";
+        actual_intervals[i].print();
+      } else {
+        std::cout << "Actual <none>";
+      }
+      std::cout << std::endl;
+    }
+  }
 }
 
 // Generic test function to eliminate code duplication
@@ -263,20 +300,61 @@ void test_case_generic(
   print_intervals(expected);
   std::cout << std::endl;
 
+  // Transform to real iterators
   auto setup = create_iterators_from_simple_lists(simple_lists);
-  if (setup.is_valid) {
-    std::cout << "Transformation successful" << std::endl;
+  if (!setup.is_valid) {
+    std::cout << "❌ Transformation failed!" << std::endl;
+    return;
+  }
+
+  std::cout << "✓ Transformation successful, now running algorithm..."
+            << std::endl;
+
+  // Run the actual alternation complexity algorithm
+  auto actual_intervals = calculate_minimal_certificate(
+      setup.iterator_ptrs, static_cast<uint8_t>(0)
+  );
+
+  std::cout << "Actual result: ";
+  print_intervals(actual_intervals);
+  std::cout << std::endl;
+
+  // Compare results
+  if (intervals_equal(actual_intervals, expected)) {
+    std::cout << "✅ Algorithm result matches expected!" << std::endl;
   } else {
-    std::cout << "Transformation failed" << std::endl;
+    std::cout << "❌ Algorithm result does NOT match expected!" << std::endl;
+    std::cout << "  Expected " << expected.size() << " intervals, got "
+              << actual_intervals.size() << std::endl;
+
+    // Print detailed comparison
+    for (size_t i = 0; i < std::max(expected.size(), actual_intervals.size());
+         ++i) {
+      std::cout << "  Interval " << i << ": ";
+      if (i < expected.size()) {
+        std::cout << "Expected ";
+        expected[i].print();
+      } else {
+        std::cout << "Expected <none>";
+      }
+      std::cout << " vs ";
+      if (i < actual_intervals.size()) {
+        std::cout << "Actual ";
+        actual_intervals[i].print();
+      } else {
+        std::cout << "Actual <none>";
+      }
+      std::cout << std::endl;
+    }
   }
 }
 
 int main() {
   try {
-    // Test various transformation cases
+    // Test the classic paper example
     test_transformation_only(); // Classic paper example
 
-    // Test with different intersection patterns
+    // Test with different intersection patterns from the paper
     test_case_generic(
         "Common Intersection", {{2, 6, 10}, {3, 7, 10}, {4, 8, 10}},
         {{NEG_INF, 4}, {4, 7}, {7, 10}, {10, 10}, {10, POS_INF}}
@@ -297,7 +375,7 @@ int main() {
         {{NEG_INF, 2}, {2, 2}, {2, 4}, {4, 4}, {4, 6}, {6, 6}, {6, POS_INF}}
     );
 
-    std::cout << "\nAll transformation tests completed!" << std::endl;
+    std::cout << "\nAll alternation complexity tests completed!" << std::endl;
 
   } catch (const std::exception &e) {
     std::cerr << "Test failed: " << e.what() << std::endl;
