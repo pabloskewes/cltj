@@ -41,13 +41,31 @@ bool intervals_equal(
   return true;
 }
 
-// Helper function to print intervals
+// Helper function to print intervals with infinity symbols
 void print_intervals(const std::vector<Interval> &intervals) {
   std::cout << "[";
   for (size_t i = 0; i < intervals.size(); ++i) {
     if (i > 0)
       std::cout << ", ";
-    intervals[i].print();
+
+    // Custom print with infinity symbols
+    if (intervals[i].is_singleton()) {
+      std::cout << "{" << intervals[i].left << "}";
+    } else {
+      std::cout << "[";
+      if (intervals[i].left == NEG_INF) {
+        std::cout << "-∞";
+      } else {
+        std::cout << intervals[i].left;
+      }
+      std::cout << ", ";
+      if (intervals[i].right == POS_INF) {
+        std::cout << "+∞";
+      } else {
+        std::cout << intervals[i].right;
+      }
+      std::cout << ")";
+    }
   }
   std::cout << "]";
 }
