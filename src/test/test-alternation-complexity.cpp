@@ -9,6 +9,49 @@
 #include <query/ltj_iterator_lite.hpp>
 #include <triple_pattern.hpp>
 
+using namespace ltj;
+
+// Helper function to create expected intervals
+std::vector<Interval> create_expected_intervals(
+    const std::vector<std::pair<uint64_t, uint64_t>> &interval_pairs
+) {
+  std::vector<Interval> intervals;
+  for (const auto &pair : interval_pairs) {
+    intervals.emplace_back(pair.first, pair.second);
+  }
+  return intervals;
+}
+
+// Helper function to compare intervals
+bool intervals_equal(
+    const std::vector<Interval> &actual,
+    const std::vector<Interval> &expected
+) {
+  if (actual.size() != expected.size()) {
+    return false;
+  }
+
+  for (size_t i = 0; i < actual.size(); ++i) {
+    if (actual[i].left != expected[i].left ||
+        actual[i].right != expected[i].right) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+// Helper function to print intervals
+void print_intervals(const std::vector<Interval> &intervals) {
+  std::cout << "[";
+  for (size_t i = 0; i < intervals.size(); ++i) {
+    if (i > 0)
+      std::cout << ", ";
+    intervals[i].print();
+  }
+  std::cout << "]";
+}
+
 /**
  * @brief Transformation function that converts simple lists into real iterators
  * @param simple_lists The simple lists (e.g., {{9}, {1,2,9,11}, ...})
@@ -56,7 +99,6 @@ IteratorSetup create_iterators_from_simple_lists(
 
   // Step 2: Create RDF index
   cltj::compact_dyn_ltj index(triples.begin(), triples.end());
-  // RDF index created successfully
 
   // Step 3: Create triple patterns for each list
   std::vector<ltj::triple_pattern> patterns;
@@ -108,8 +150,6 @@ IteratorSetup create_iterators_from_simple_lists(
     // Sort for comparison
     std::sort(iterator_values.begin(), iterator_values.end());
 
-    // Validation successful - iterator contains expected values
-
     // Compare with expected simple list
     std::vector<uint64_t> expected = simple_lists[i];
     std::sort(expected.begin(), expected.end());
@@ -160,7 +200,14 @@ void test_transformation_only() {
     }
     std::cout << "]" << std::endl;
   }
-  std::cout << "Expected: [(-∞, 9), [9, 10), [10, +∞)]" << std::endl;
+
+  // Expected intervals: [(-∞, 9), [9, 10), [10, +∞)]
+  auto expected =
+      create_expected_intervals({{NEG_INF, 9}, {9, 10}, {10, POS_INF}});
+
+  std::cout << "Expected: ";
+  print_intervals(expected);
+  std::cout << std::endl;
 
   // Transform to real iterators
   auto setup = create_iterators_from_simple_lists(simple_lists);
@@ -178,7 +225,7 @@ void test_transformation_only() {
 void test_case_generic(
     const std::string &test_name,
     const std::vector<std::vector<uint64_t>> &simple_lists,
-    const std::string &expected_output
+    const std::vector<std::pair<uint64_t, uint64_t>> &expected_intervals
 ) {
   std::cout << "\n=== " << test_name << " ===" << std::endl;
 
@@ -192,7 +239,11 @@ void test_case_generic(
     }
     std::cout << "]" << std::endl;
   }
-  std::cout << "Expected: " << expected_output << std::endl;
+
+  auto expected = create_expected_intervals(expected_intervals);
+  std::cout << "Expected: ";
+  print_intervals(expected);
+  std::cout << std::endl;
 
   auto setup = create_iterators_from_simple_lists(simple_lists);
   if (setup.is_valid) {
@@ -210,22 +261,22 @@ int main() {
     // Test with different intersection patterns
     test_case_generic(
         "Common Intersection", {{2, 6, 10}, {3, 7, 10}, {4, 8, 10}},
-        "[(-∞, 4), [4, 7), [7, 10), {10}, [10, +∞)]"
+        {{NEG_INF, 4}, {4, 7}, {7, 10}, {10, 10}, {10, POS_INF}}
     );
 
     test_case_generic(
         "Single Element Intersection", {{5}, {3, 5, 7}, {1, 5, 9}},
-        "[(-∞, 5), {5}, [5, +∞)]"
+        {{NEG_INF, 5}, {5, 5}, {5, POS_INF}}
     );
 
     test_case_generic(
         "Empty Intersection", {{5}, {3, 7, 9}, {1, 6, 8}},
-        "[(-∞, 5), [5, 7), [7, +∞)]"
+        {{NEG_INF, 5}, {5, 7}, {7, POS_INF}}
     );
 
     test_case_generic(
         "Identical Lists", {{2, 4, 6}, {2, 4, 6}, {2, 4, 6}},
-        "[(-∞, 2), {2}, [2, 4), {4}, [4, 6), {6}, [6, +∞)]"
+        {{NEG_INF, 2}, {2, 2}, {2, 4}, {4, 4}, {4, 6}, {6, 6}, {6, POS_INF}}
     );
 
     std::cout << "\nAll transformation tests completed!" << std::endl;
