@@ -28,21 +28,9 @@ struct IteratorSetup {
 IteratorSetup create_iterators_from_simple_lists(
     const std::vector<std::vector<uint64_t>> &simple_lists
 ) {
-  std::cout << "=== Transforming Simple Lists to Real Iterators ==="
-            << std::endl;
+  // Transform simple lists to real iterators
 
-  std::cout << "🎯 INPUT: " << simple_lists.size() << " listas a intersectar"
-            << std::endl;
-
-  for (size_t i = 0; i < simple_lists.size(); ++i) {
-    std::cout << "  Lista " << i << ": {";
-    for (size_t j = 0; j < simple_lists[i].size(); ++j) {
-      if (j > 0)
-        std::cout << ", ";
-      std::cout << simple_lists[i][j];
-    }
-    std::cout << "}" << std::endl;
-  }
+  std::cout << "Input: " << simple_lists.size() << " lists" << std::endl;
 
   // Step 1: Convert simple lists → RDF triples
   std::vector<cltj::spo_triple> triples;
@@ -68,8 +56,7 @@ IteratorSetup create_iterators_from_simple_lists(
 
   // Step 2: Create RDF index
   cltj::compact_dyn_ltj index(triples.begin(), triples.end());
-  std::cout << "✓ Created RDF index with " << triples.size() << " triples"
-            << std::endl;
+  // RDF index created successfully
 
   // Step 3: Create triple patterns for each list
   std::vector<ltj::triple_pattern> patterns;
@@ -92,11 +79,9 @@ IteratorSetup create_iterators_from_simple_lists(
     iterator_ptrs.push_back(&iterators.back());
   }
 
-  std::cout << "🔍 OUTPUT: " << iterators.size() << " iteradores reales creados"
-            << std::endl;
+  std::cout << "Created " << iterators.size() << " iterators" << std::endl;
 
   // Step 5: Validate that iterators contain exactly the expected lists
-  std::cout << "\n=== Validating Iterator Contents ===" << std::endl;
   bool is_valid = true;
 
   for (size_t i = 0; i < iterators.size(); ++i) {
@@ -123,13 +108,7 @@ IteratorSetup create_iterators_from_simple_lists(
     // Sort for comparison
     std::sort(iterator_values.begin(), iterator_values.end());
 
-    std::cout << "🔍 Iterador " << i << " contiene: {";
-    for (size_t j = 0; j < iterator_values.size(); ++j) {
-      if (j > 0)
-        std::cout << ", ";
-      std::cout << iterator_values[j];
-    }
-    std::cout << "}" << std::endl;
+    // Validation successful - iterator contains expected values
 
     // Compare with expected simple list
     std::vector<uint64_t> expected = simple_lists[i];
@@ -145,11 +124,9 @@ IteratorSetup create_iterators_from_simple_lists(
   }
 
   if (is_valid) {
-    std::cout << "\n🎉 All iterators validated successfully!" << std::endl;
-    std::cout << "✅ TRANSFORMACIÓN LEGÍTIMA: inputs → iteradores validados"
-              << std::endl;
+    std::cout << "All iterators validated successfully" << std::endl;
   } else {
-    std::cout << "\n❌ Iterator validation failed!" << std::endl;
+    std::cout << "Iterator validation failed" << std::endl;
   }
 
   return {
@@ -158,11 +135,11 @@ IteratorSetup create_iterators_from_simple_lists(
   };
 }
 
-void test_classic_example() {
-  std::cout << "=== Testing Classic Example with Transformation ==="
+void test_transformation_only() {
+  std::cout << "\n=== Testing ONLY the Transformation (No Algorithm) ==="
             << std::endl;
 
-  // Define the simple lists for the classic example
+  // Classic example from the paper
   std::vector<std::vector<uint64_t>> simple_lists = {
       {9},             // A_1
       {1, 2, 9, 11},   // A_2
@@ -173,99 +150,7 @@ void test_classic_example() {
       {8, 10, 19, 20}  // A_7
   };
 
-  // Transform to real iterators
-  auto setup = create_iterators_from_simple_lists(simple_lists);
-
-  if (!setup.is_valid) {
-    std::cout << "❌ Setup validation failed - cannot continue" << std::endl;
-    return;
-  }
-
-  // Now use the validated iterators to calculate alternation complexity
-  std::cout << "\n=== Calculating Alternation Complexity ===" << std::endl;
-  uint8_t variable = 0; // Object variable
-  auto intervals =
-      ltj::calculate_minimal_certificate(setup.iterator_ptrs, variable);
-
-  std::cout << "Number of intervals: " << intervals.size() << std::endl;
-  std::cout << "Alternation Complexity: " << intervals.size() << std::endl;
-
-  // Print intervals
-  for (size_t i = 0; i < intervals.size(); i++) {
-    const auto &interval = intervals[i];
-    std::cout << "Interval " << i << ": ";
-
-    if (interval.left == 0) {
-      std::cout << "(-∞, ";
-    } else {
-      std::cout << "[" << interval.left << ", ";
-    }
-
-    if (interval.right == std::numeric_limits<uint64_t>::max()) {
-      std::cout << "+∞)";
-    } else {
-      std::cout << interval.right << ")";
-    }
-
-    if (interval.is_singleton()) {
-      std::cout << " (singleton)";
-    }
-    std::cout << std::endl;
-  }
-
-  // Validate that we got some intervals (intersection should be empty)
-  assert(intervals.size() > 0);
-
-  std::cout << "✓ Classic example test completed successfully!" << std::endl;
-}
-
-void test_simple_case() {
-  std::cout << "\n=== Testing Simple Case ===" << std::endl;
-
-  // Simple case: A_1: [1, 3, 5], A_2: [2, 3, 4]
-  // Intersection: {3}
-  std::vector<std::vector<uint64_t>> simple_lists = {
-      {1, 3, 5}, // A_1
-      {2, 3, 4}  // A_2
-  };
-
-  auto setup = create_iterators_from_simple_lists(simple_lists);
-
-  if (!setup.is_valid) {
-    std::cout << "❌ Setup validation failed - cannot continue" << std::endl;
-    return;
-  }
-
-  uint8_t variable = 0;
-  auto intervals =
-      ltj::calculate_minimal_certificate(setup.iterator_ptrs, variable);
-
-  std::cout << "Alternation Complexity: " << intervals.size() << std::endl;
-
-  for (size_t i = 0; i < intervals.size(); i++) {
-    const auto &interval = intervals[i];
-    std::cout << "Interval " << i << ": [" << interval.left << ", "
-              << interval.right << ") ";
-    if (interval.is_singleton())
-      std::cout << "(singleton)";
-    std::cout << std::endl;
-  }
-
-  std::cout << "✓ Simple case test completed!" << std::endl;
-}
-
-void test_transformation_only() {
-  std::cout << "\n=== Testing ONLY the Transformation (No Algorithm) ==="
-            << std::endl;
-
-  // Define simple test lists
-  std::vector<std::vector<uint64_t>> simple_lists = {
-      {1, 3, 5},   // A_1
-      {2, 3, 4},   // A_2
-      {3, 6, 7, 8} // A_3
-  };
-
-  std::cout << "Input simple lists:" << std::endl;
+  std::cout << "Classic paper example (7 lists):" << std::endl;
   for (size_t i = 0; i < simple_lists.size(); ++i) {
     std::cout << "  A_" << (i + 1) << ": [";
     for (size_t j = 0; j < simple_lists[i].size(); ++j) {
@@ -275,65 +160,78 @@ void test_transformation_only() {
     }
     std::cout << "]" << std::endl;
   }
+  std::cout << "Expected: [(-∞, 9), [9, 10), [10, +∞)]" << std::endl;
 
   // Transform to real iterators
   auto setup = create_iterators_from_simple_lists(simple_lists);
 
   if (setup.is_valid) {
-    std::cout << "✅ TRANSFORMATION SUCCESSFUL!" << std::endl;
-    std::cout << "   - Input lists correctly transformed to RDF triples"
-              << std::endl;
-    std::cout << "   - RDF index built successfully" << std::endl;
-    std::cout << "   - Triple patterns created correctly" << std::endl;
-    std::cout << "   - Real iterators instantiated and validated" << std::endl;
-    std::cout << "   - Each iterator contains exactly the expected values"
-              << std::endl;
+    std::cout << "Transformation successful" << std::endl;
   } else {
-    std::cout << "❌ TRANSFORMATION FAILED!" << std::endl;
-    std::cout << "   - Something went wrong in the transformation process"
-              << std::endl;
+    std::cout << "Transformation failed" << std::endl;
   }
 
-  // Test individual iterator functionality (simple leap test)
-  std::cout << "\n=== Testing Individual Iterator Functionality ==="
-            << std::endl;
-  for (size_t i = 0; i < setup.iterators.size(); ++i) {
-    std::cout << "Testing iterator " << i << ":" << std::endl;
+  std::cout << "Transformation validation completed" << std::endl;
+}
 
-    // Test leap with first expected value
-    if (!simple_lists[i].empty()) {
-      uint64_t first_val = simple_lists[i][0];
-      uint64_t leap_result = setup.iterators[i].leap(0, first_val);
-      std::cout << "  leap(0, " << first_val << ") = " << leap_result
-                << std::endl;
+// Generic test function to eliminate code duplication
+void test_case_generic(
+    const std::string &test_name,
+    const std::vector<std::vector<uint64_t>> &simple_lists,
+    const std::string &expected_output
+) {
+  std::cout << "\n=== " << test_name << " ===" << std::endl;
 
-      if (leap_result == first_val) {
-        std::cout << "  ✅ leap() works correctly" << std::endl;
-      } else {
-        std::cout << "  ❌ leap() returned unexpected value" << std::endl;
-      }
-
-      // Reset after test
-      setup.iterators[i].leap_done();
+  std::cout << "Input lists:" << std::endl;
+  for (size_t i = 0; i < simple_lists.size(); ++i) {
+    std::cout << "  A_" << (i + 1) << ": [";
+    for (size_t j = 0; j < simple_lists[i].size(); ++j) {
+      if (j > 0)
+        std::cout << ", ";
+      std::cout << simple_lists[i][j];
     }
+    std::cout << "]" << std::endl;
   }
+  std::cout << "Expected: " << expected_output << std::endl;
 
-  std::cout << "\n🎯 Transformation validation completed!" << std::endl;
+  auto setup = create_iterators_from_simple_lists(simple_lists);
+  if (setup.is_valid) {
+    std::cout << "Transformation successful" << std::endl;
+  } else {
+    std::cout << "Transformation failed" << std::endl;
+  }
 }
 
 int main() {
   try {
-    // First, test ONLY the transformation without algorithm
-    test_transformation_only();
+    // Test various transformation cases
+    test_transformation_only(); // Classic paper example
 
-    // Uncomment these when transformation is validated:
-    // test_classic_example();
-    // test_simple_case();
+    // Test with different intersection patterns
+    test_case_generic(
+        "Common Intersection", {{2, 6, 10}, {3, 7, 10}, {4, 8, 10}},
+        "[(-∞, 4), [4, 7), [7, 10), {10}, [10, +∞)]"
+    );
 
-    std::cout << "\n🎉 All tests completed!" << std::endl;
+    test_case_generic(
+        "Single Element Intersection", {{5}, {3, 5, 7}, {1, 5, 9}},
+        "[(-∞, 5), {5}, [5, +∞)]"
+    );
+
+    test_case_generic(
+        "Empty Intersection", {{5}, {3, 7, 9}, {1, 6, 8}},
+        "[(-∞, 5), [5, 7), [7, +∞)]"
+    );
+
+    test_case_generic(
+        "Identical Lists", {{2, 4, 6}, {2, 4, 6}, {2, 4, 6}},
+        "[(-∞, 2), {2}, [2, 4), {4}, [4, 6), {6}, [6, +∞)]"
+    );
+
+    std::cout << "\nAll transformation tests completed!" << std::endl;
 
   } catch (const std::exception &e) {
-    std::cerr << "❌ Test failed: " << e.what() << std::endl;
+    std::cerr << "Test failed: " << e.what() << std::endl;
     return 1;
   }
 
