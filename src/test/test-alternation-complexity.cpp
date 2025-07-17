@@ -4,14 +4,11 @@
 #include <iostream>
 #include <vector>
 
-// Includes for real iterators
 #include <index/cltj_index_spo_dyn.hpp>
-#include <query/ltj_iterator_lite.hpp>
-#include <triple_pattern.hpp>
-
-// Includes for LTJ algorithm
 #include <query/ltj_algorithm.hpp>
+#include <query/ltj_iterator_lite.hpp>
 #include <results/results_collector.hpp>
+#include <triple_pattern.hpp>
 #include <util/rdf_util.hpp>
 #include <veo/veo_simple.hpp>
 
