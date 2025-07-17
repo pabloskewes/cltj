@@ -17,6 +17,7 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "../../include/util/csv_util.hpp"
 #include <chrono>
 #include <index/cltj_index_spo_lite.hpp>
 #include <iostream>
@@ -118,8 +119,35 @@ void query(
               .count();
       cout << nQ << ";" << res.size() << ";" << time << endl;
 
-      // Print intersection statistics (comment out this line to disable)
-      print_intersection_stats(ltj, nQ, query_string);
+      // Initialize CSVWriter with batching
+      std::vector<std::string> header = {
+          "query_text", "intersection", "result_size", "alternation_complexity",
+          "list_sizes"
+      };
+      util::CSVWriter csv_writer("intersection_statistics.csv", header, 10000);
+
+      // Write intersection statistics to CSV
+      const auto &stats = ltj.get_stats();
+      for (size_t i = 0; i < stats.size(); ++i) {
+        const auto &stat = stats[i];
+
+        // Build the list_sizes string
+        std::string list_sizes;
+        for (size_t j = 0; j < stat.list_sizes.size(); ++j) {
+          list_sizes += std::to_string(stat.list_sizes[j]);
+          if (j < stat.list_sizes.size() - 1) {
+            list_sizes += ";";
+          }
+        }
+
+        // Create csv row with the intersection statistics
+        std::vector<std::string> row = {
+            query_string, std::to_string(i), std::to_string(stat.result_size),
+            std::to_string(stat.alternation_complexity), list_sizes
+        };
+
+        csv_writer.add_row(row);
+      }
       nQ++;
 
       count += 1;
