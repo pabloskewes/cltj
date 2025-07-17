@@ -162,8 +162,9 @@ IteratorSetup create_iterators_from_simple_lists(
         iterator_values.push_back(val);
         val = iterators[i].leap(0, val + 1);
       }
-      iterators[i].leap_done(); // Reset for next use
     }
+
+    iterators[i].leap_done(); // Reset for next use
 
     // Sort for comparison
     std::sort(iterator_values.begin(), iterator_values.end());
