@@ -19,11 +19,10 @@ namespace ltj {
 struct IntersectionStats {
 
   // --- Contextual Data ---
-  /// @brief The ID of the variable being processed in this intersection.
+  /// @brief The ID of the variable being eliminated in this step.
   uint8_t variable_id = 0;
 
-  /// @brief The depth in the query execution plan (0 for the first variable, 1
-  /// for the second, etc.).
+  /// @brief Position in the Variable Elimination Order (VEO)
   int depth = 0;
 
   // --- Primary Data (Stored) ---

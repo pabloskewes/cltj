@@ -119,35 +119,49 @@ void query(
               .count();
       cout << nQ << ";" << res.size() << ";" << time << endl;
 
-      // Initialize CSVWriter with batching
-      std::vector<std::string> header = {
-          "query_text", "intersection", "result_size", "alternation_complexity",
-          "list_sizes"
-      };
+      std::vector<std::string> header = {"query_text",
+                                         "var_appearance_order",
+                                         "veo_step",
+                                         "intersection_size",
+                                         "alternation_complexity",
+                                         "intersected_list_sizes"};
       util::CSVWriter csv_writer("intersection_statistics.csv", header, 10000);
 
-      // Write intersection statistics to CSV
+      static size_t total_rows_written = 0;
+
       const auto &stats = ltj.get_stats();
       for (size_t i = 0; i < stats.size(); ++i) {
         const auto &stat = stats[i];
 
-        // Build the list_sizes string
-        std::string list_sizes;
+        // Build the list sizes string with semicolon separator
+        std::string list_sizes_str;
         for (size_t j = 0; j < stat.list_sizes.size(); ++j) {
-          list_sizes += std::to_string(stat.list_sizes[j]);
+          list_sizes_str += std::to_string(stat.list_sizes[j]);
           if (j < stat.list_sizes.size() - 1) {
-            list_sizes += ";";
+            list_sizes_str += ";";
           }
         }
 
         // Create csv row with the intersection statistics
         std::vector<std::string> row = {
-            query_string, std::to_string(i), std::to_string(stat.result_size),
-            std::to_string(stat.alternation_complexity), list_sizes
+            query_string,
+            std::to_string(stat.variable_id),
+            std::to_string(stat.depth),
+            std::to_string(stat.result_size),
+            std::to_string(stat.alternation_complexity),
+            list_sizes_str
         };
 
         csv_writer.add_row(row);
+        total_rows_written++;
       }
+
+      // Write remaining data to the CSV file
+      if (nQ == dummy_queries.size() - 1) {
+        csv_writer.flush();
+        std::cout << "Total rows written: " << total_rows_written << std::endl;
+      }
+
       nQ++;
 
       count += 1;
