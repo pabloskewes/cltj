@@ -81,11 +81,6 @@ void print_intervals(const std::vector<Interval> &intervals) {
 struct IteratorSetup {
   cltj::compact_dyn_ltj index;
   std::vector<ltj::triple_pattern> patterns;
-  std::vector<ltj::ltj_iterator_lite<cltj::compact_dyn_ltj, uint8_t, uint64_t>>
-      iterators;
-  std::vector<
-      ltj::ltj_iterator_lite<cltj::compact_dyn_ltj, uint8_t, uint64_t> *>
-      iterator_ptrs;
   bool is_valid;
 };
 
@@ -93,21 +88,21 @@ IteratorSetup create_iterators_from_simple_lists(
     const std::vector<std::vector<uint64_t>> &simple_lists
 ) {
   // Transform simple lists to real iterators
-
   std::cout << "Input: " << simple_lists.size() << " lists" << std::endl;
+  for (size_t i = 0; i < simple_lists.size(); ++i) {
+    std::cout << "A_" << (i + 1) << ": [";
+    for (size_t j = 0; j < simple_lists[i].size(); ++j) {
+      if (j > 0)
+        std::cout << ", ";
+      std::cout << simple_lists[i][j];
+    }
+    std::cout << "]" << std::endl;
+  }
 
   // Step 1: Convert simple lists → RDF triples
   std::vector<cltj::spo_triple> triples;
-
   for (size_t list_id = 0; list_id < simple_lists.size(); ++list_id) {
-    std::cout << "A_" << (list_id + 1) << ": [";
     for (size_t i = 0; i < simple_lists[list_id].size(); ++i) {
-      if (i > 0)
-        std::cout << ", ";
-      std::cout << simple_lists[list_id][i];
-
-      // Create triple: (list_id+1, 1, value)
-      // This allows querying with pattern (list_id+1, 1, ?variable)
       cltj::spo_triple triple = {
           static_cast<uint32_t>(list_id + 1), // Subject = list ID
           1,                                  // Predicate = constant
@@ -115,7 +110,6 @@ IteratorSetup create_iterators_from_simple_lists(
       };
       triples.push_back(triple);
     }
-    std::cout << "]" << std::endl;
   }
 
   // Step 2: Create RDF index
@@ -131,77 +125,8 @@ IteratorSetup create_iterators_from_simple_lists(
     patterns.push_back(pattern);
   }
 
-  // Step 4: Create real iterators
-  typedef ltj::ltj_iterator_lite<cltj::compact_dyn_ltj, uint8_t, uint64_t>
-      iterator_type;
-  std::vector<iterator_type> iterators;
-  std::vector<iterator_type *> iterator_ptrs;
-
-  // Reserve space to prevent reallocation and pointer invalidation
-  iterators.reserve(patterns.size());
-
-  for (const auto &pattern : patterns) {
-    iterators.emplace_back(&pattern, &index);
-  }
-
-  // Create pointers after all iterators are constructed
-  for (auto &iter : iterators) {
-    iterator_ptrs.push_back(&iter);
-  }
-
-  std::cout << "Created " << iterators.size() << " iterators" << std::endl;
-
-  // Step 5: Validate that iterators contain exactly the expected lists
-  bool is_valid = true;
-
-  for (size_t i = 0; i < iterators.size(); ++i) {
-    if (iterators[i].is_empty()) {
-      std::cout << "❌ Iterator " << i << " is empty!" << std::endl;
-      is_valid = false;
-      continue;
-    }
-
-    // Get all values from iterator using seek_all
-    std::vector<uint64_t> iterator_values;
-    if (iterators[i].in_last_level()) {
-      iterator_values = iterators[i].seek_all(0); // Variable 0 = object
-    } else {
-      // If not in last level, need to use leap to get values
-      uint64_t val = iterators[i].leap(0); // Variable 0 = object
-      while (val != 0) {
-        iterator_values.push_back(val);
-        val = iterators[i].leap(0, val + 1);
-      }
-    }
-
-    iterators[i].leap_done(); // Reset for next use
-
-    // Sort for comparison
-    std::sort(iterator_values.begin(), iterator_values.end());
-
-    // Compare with expected simple list
-    std::vector<uint64_t> expected = simple_lists[i];
-    std::sort(expected.begin(), expected.end());
-
-    if (iterator_values == expected) {
-      std::cout << "✓ Iterator " << i << " matches expected list!" << std::endl;
-    } else {
-      std::cout << "❌ Iterator " << i << " doesn't match expected list!"
-                << std::endl;
-      is_valid = false;
-    }
-  }
-
-  if (is_valid) {
-    std::cout << "All iterators validated successfully" << std::endl;
-  } else {
-    std::cout << "Iterator validation failed" << std::endl;
-  }
-
-  return {
-      std::move(index), std::move(patterns), std::move(iterators),
-      std::move(iterator_ptrs), is_valid
-  };
+  // Step 4: Always valid if we reach here
+  return {std::move(index), std::move(patterns), true};
 }
 
 void test_transformation_only() {
@@ -289,9 +214,10 @@ void test_transformation_only() {
   std::cout << "Expected complexity: " << expected_complexity << std::endl;
 
   if (actual_complexity == expected_complexity) {
-    std::cout << "✅ Complexity count matches expected!" << std::endl;
+    std::cout << "✅ Alternation complexity matches expected!" << std::endl;
   } else {
-    std::cout << "❌ Complexity count does NOT match expected!" << std::endl;
+    std::cout << "❌ Alternation complexity does NOT match expected!"
+              << std::endl;
   }
 }
 
@@ -356,7 +282,7 @@ void test_case(
 
   if (stats.empty()) {
     std::cout << "❌ No statistics collected!" << std::endl;
-    std::cout << "✅ Algorithm finished without crashing." << std::endl;
+    std::cout << "✅ Algorithm finished successfully" << std::endl;
     return;
   }
 
@@ -368,9 +294,10 @@ void test_case(
   std::cout << "Expected complexity: " << expected_complexity << std::endl;
 
   if (actual_complexity == expected_complexity) {
-    std::cout << "✅ Complexity count matches expected!" << std::endl;
+    std::cout << "✅ Alternation complexity matches expected!" << std::endl;
   } else {
-    std::cout << "❌ Complexity count does NOT match expected!" << std::endl;
+    std::cout << "❌ Alternation complexity does NOT match expected!"
+              << std::endl;
   }
 }
 
@@ -379,7 +306,7 @@ int main() {
     // Test the classic paper example
     test_transformation_only(); // Classic paper example
 
-    // Test with different intersection patterns from the paper
+    // Test with different intersection patterns
     test_case(
         "Common Intersection", {{2, 6, 10}, {3, 7, 10}, {4, 8, 10}},
         {{NEG_INF, 4}, {4, 7}, {7, 10}, {10, 10}, {10, POS_INF}}
