@@ -276,8 +276,8 @@ void test_transformation_only() {
   }
 }
 
-// Generic test function to eliminate code duplication
-void test_case_generic(
+// Test case for a specific intersection pattern
+void test_case(
     const std::string &test_name,
     const std::vector<std::vector<uint64_t>> &simple_lists,
     const std::vector<std::pair<uint64_t, uint64_t>> &expected_intervals
@@ -355,22 +355,22 @@ int main() {
     test_transformation_only(); // Classic paper example
 
     // Test with different intersection patterns from the paper
-    test_case_generic(
+    test_case(
         "Common Intersection", {{2, 6, 10}, {3, 7, 10}, {4, 8, 10}},
         {{NEG_INF, 4}, {4, 7}, {7, 10}, {10, 10}, {10, POS_INF}}
     );
 
-    test_case_generic(
+    test_case(
         "Single Element Intersection", {{5}, {3, 5, 7}, {1, 5, 9}},
         {{NEG_INF, 5}, {5, 5}, {5, POS_INF}}
     );
 
-    test_case_generic(
+    test_case(
         "Empty Intersection", {{5}, {3, 7, 9}, {1, 6, 8}},
         {{NEG_INF, 5}, {5, 7}, {7, POS_INF}}
     );
 
-    test_case_generic(
+    test_case(
         "Identical Lists", {{2, 4, 6}, {2, 4, 6}, {2, 4, 6}},
         {{NEG_INF, 2}, {2, 2}, {2, 4}, {4, 4}, {4, 6}, {6, 6}, {6, POS_INF}}
     );
