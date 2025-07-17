@@ -87,18 +87,6 @@ struct IteratorSetup {
 IteratorSetup create_iterators_from_simple_lists(
     const std::vector<std::vector<uint64_t>> &simple_lists
 ) {
-  // Transform simple lists to real iterators
-  std::cout << "Input: " << simple_lists.size() << " lists" << std::endl;
-  for (size_t i = 0; i < simple_lists.size(); ++i) {
-    std::cout << "A_" << (i + 1) << ": [";
-    for (size_t j = 0; j < simple_lists[i].size(); ++j) {
-      if (j > 0)
-        std::cout << ", ";
-      std::cout << simple_lists[i][j];
-    }
-    std::cout << "]" << std::endl;
-  }
-
   // Step 1: Convert simple lists → RDF triples
   std::vector<cltj::spo_triple> triples;
   for (size_t list_id = 0; list_id < simple_lists.size(); ++list_id) {
@@ -308,22 +296,41 @@ int main() {
 
     // Test with different intersection patterns
     test_case(
-        "Common Intersection", {{2, 6, 10}, {3, 7, 10}, {4, 8, 10}},
+        "Perfectly interleaved",
+        {{1, 4, 7, 10, 13, 16}, {2, 5, 8, 11, 14, 17}, {3, 6, 9, 12, 15, 18}},
+        {{NEG_INF, 3},
+         {3, 5},
+         {5, 7},
+         {7, 9},
+         {9, 11},
+         {11, 13},
+         {13, 15},
+         {15, 17},
+         {17, POS_INF}}
+    );
+
+    test_case(
+        "Intersection at the beginning", {{1, 5, 9}, {1, 6, 10}, {1, 7, 11}},
+        {{NEG_INF, 1}, {1, 1}, {1, 7}, {7, 10}, {10, POS_INF}}
+    );
+
+    test_case(
+        "Intersection at the end", {{2, 6, 10}, {3, 7, 10}, {4, 8, 10}},
         {{NEG_INF, 4}, {4, 7}, {7, 10}, {10, 10}, {10, POS_INF}}
     );
 
     test_case(
-        "Single Element Intersection", {{5}, {3, 5, 7}, {1, 5, 9}},
+        "Intersection at the middle", {{5}, {3, 5, 7}, {1, 5, 9}},
         {{NEG_INF, 5}, {5, 5}, {5, POS_INF}}
     );
 
     test_case(
-        "Empty Intersection", {{5}, {3, 7, 9}, {1, 6, 8}},
+        "No intersection", {{5}, {3, 7, 9}, {1, 6, 8}},
         {{NEG_INF, 5}, {5, 7}, {7, POS_INF}}
     );
 
     test_case(
-        "Identical Lists", {{2, 4, 6}, {2, 4, 6}, {2, 4, 6}},
+        "All lists are identical", {{2, 4, 6}, {2, 4, 6}, {2, 4, 6}},
         {{NEG_INF, 2}, {2, 2}, {2, 4}, {4, 4}, {4, 6}, {6, 6}, {6, POS_INF}}
     );
 
