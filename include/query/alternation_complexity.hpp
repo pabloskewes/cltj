@@ -103,17 +103,17 @@ std::vector<Interval> calculate_minimal_certificate(
     }
 
     // Check if element is in the intersection
-    uint64_t min_value = POS_INF;
+    bool in_intersection = true;
     for (auto *iter : iterators) {
       uint64_t val = seek_next(iter, variable, current_value);
-      if (val < min_value) {
-        min_value = val;
+      if (val != current_value) {
+        in_intersection = false;
+        break;
       }
     }
-    bool in_intersection =
-        (min_value == current_value) && (current_value != POS_INF);
+    in_intersection = in_intersection && (current_value != POS_INF);
 
-    std::cout << "[DEBUG] min_value=" << min_value
+    std::cout << "[DEBUG] min_value=" << current_value
               << ", in_intersection=" << in_intersection << std::endl;
 
     if (in_intersection) {
