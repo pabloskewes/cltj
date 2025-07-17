@@ -72,7 +72,8 @@ std::vector<Interval> calculate_minimal_certificate(
   uint64_t right_bound = NEG_INF;
   bool previous_value_in_intersection = false;
 
-  std::cout << "[DEBUG] Starting minimal certificate calculation" << std::endl;
+  // std::cout << "[DEBUG] Starting minimal certificate calculation" <<
+  // std::endl;
 
   while (right_bound < POS_INF) {
     // Advance all iterators
@@ -81,9 +82,9 @@ std::vector<Interval> calculate_minimal_certificate(
       value_to_seek = left_bound + 1;
     }
 
-    std::cout << "[DEBUG] Iteration: left_bound=" << left_bound
-              << ", right_bound=" << right_bound
-              << ", value_to_seek=" << value_to_seek << std::endl;
+    // std::cout << "[DEBUG] Iteration: left_bound=" << left_bound
+    //           << ", right_bound=" << right_bound
+    //           << ", value_to_seek=" << value_to_seek << std::endl;
 
     // Find the maximum value among all iterators (greedy choice)
     uint64_t current_value = NEG_INF;
@@ -94,11 +95,12 @@ std::vector<Interval> calculate_minimal_certificate(
       }
     }
 
-    std::cout << "[DEBUG] Current value (max): " << current_value << std::endl;
+    // std::cout << "[DEBUG] Current value (max): " << current_value <<
+    // std::endl;
 
     // If all iterators returned POS_INF, we're done
     if (current_value == POS_INF) {
-      std::cout << "[DEBUG] All iterators exhausted, breaking" << std::endl;
+      // std::cout << "[DEBUG] All iterators exhausted, breaking" << std::endl;
       break;
     }
 
@@ -113,24 +115,26 @@ std::vector<Interval> calculate_minimal_certificate(
     }
     in_intersection = in_intersection && (current_value != POS_INF);
 
-    std::cout << "[DEBUG] min_value=" << current_value
-              << ", in_intersection=" << in_intersection << std::endl;
+    // std::cout << "[DEBUG] min_value=" << current_value
+    //           << ", in_intersection=" << in_intersection << std::endl;
 
     if (in_intersection) {
       // Add gap before singleton and singleton itself (always, like Python)
       intervals.emplace_back(left_bound, current_value);
       intervals.emplace_back(current_value, current_value);
-      std::cout << "[DEBUG] Added gap [" << left_bound << ", " << current_value
-                << ") and singleton [" << current_value << ", " << current_value
-                << "]" << std::endl;
+      // std::cout << "[DEBUG] Added gap [" << left_bound << ", " <<
+      // current_value
+      //           << ") and singleton [" << current_value << ", " <<
+      //           current_value
+      //           << "]" << std::endl;
       left_bound = current_value;
       previous_value_in_intersection = true;
     } else {
       // Add interval
       right_bound = current_value;
       intervals.emplace_back(left_bound, right_bound);
-      std::cout << "[DEBUG] Added interval [" << left_bound << ", "
-                << right_bound << ")" << std::endl;
+      // std::cout << "[DEBUG] Added interval [" << left_bound << ", "
+      //           << right_bound << ")" << std::endl;
       left_bound = right_bound;
       previous_value_in_intersection = false;
     }
@@ -144,8 +148,8 @@ std::vector<Interval> calculate_minimal_certificate(
   // Add final interval if needed
   if (left_bound < POS_INF) {
     intervals.emplace_back(left_bound, POS_INF);
-    std::cout << "[DEBUG] Added final interval [" << left_bound << ", +∞)"
-              << std::endl;
+    // std::cout << "[DEBUG] Added final interval [" << left_bound << ", +∞)"
+    //           << std::endl;
   }
 
   return intervals;
@@ -164,25 +168,26 @@ int calculate_alternation_complexity(
     const std::vector<ltj_iter_type *> &iterators,
     var_type variable
 ) {
-  std::cout << "[DEBUG] calculate_alternation_complexity called with "
-            << iterators.size() << " iterators for variable " << (int)variable
-            << std::endl;
+  // std::cout << "[DEBUG] calculate_alternation_complexity called with "
+  //           << iterators.size() << " iterators for variable " <<
+  //           (int)variable
+  //           << std::endl;
 
   auto intervals = calculate_minimal_certificate(iterators, variable);
   int result = static_cast<int>(intervals.size());
 
-  std::cout << "[DEBUG] Alternation complexity calculated: " << result
-            << std::endl;
+  // std::cout << "[DEBUG] Alternation complexity calculated: " << result
+  //           << std::endl;
 
   // Optional: Print intervals for debugging
-  std::cout << "[DEBUG] Intervals: ";
-  for (size_t i = 0; i < intervals.size(); ++i) {
-    intervals[i].print();
-    if (i < intervals.size() - 1) {
-      std::cout << ", ";
-    }
-  }
-  std::cout << std::endl;
+  // std::cout << "[DEBUG] Intervals: ";
+  // for (size_t i = 0; i < intervals.size(); ++i) {
+  //   intervals[i].print();
+  //   if (i < intervals.size() - 1) {
+  //     std::cout << ", ";
+  //   }
+  // }
+  // std::cout << std::endl;
 
   return result;
 }
