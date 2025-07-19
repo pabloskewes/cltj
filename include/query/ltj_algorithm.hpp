@@ -23,6 +23,8 @@
 #include <triple_pattern.hpp>
 // #include <ltj_iterator.hpp>
 #include <dict/dict_map.hpp>
+#include <query/alternation_complexity.hpp>
+#include <query/intersection_stats.hpp>
 #include <query/ltj_iterator_basic.hpp>
 #include <query/ltj_iterator_lite.hpp>
 #include <query/ltj_iterator_metatrie.hpp>
@@ -62,6 +64,7 @@ private:
   vector<ltj_iter_type> m_iterators;
   var_to_iterators_type m_var_to_iterators;
   bool m_is_empty = false;
+  std::vector<IntersectionStats> m_stats;
 
   void copy(const ltj_algorithm &o) {
     m_ptr_triple_patterns = o.m_ptr_triple_patterns;
@@ -70,6 +73,7 @@ private:
     m_iterators = o.m_iterators;
     m_var_to_iterators = o.m_var_to_iterators;
     m_is_empty = o.m_is_empty;
+    m_stats = o.m_stats;
   }
 
   inline void
@@ -100,6 +104,10 @@ private:
   }
 
 public:
+  const std::vector<IntersectionStats> &get_stats() const {
+    return m_stats;
+  }
+
   ltj_algorithm() = default;
 
   ltj_algorithm(
@@ -165,6 +173,7 @@ public:
       m_iterators = move(o.m_iterators);
       m_var_to_iterators = move(o.m_var_to_iterators);
       m_is_empty = o.m_is_empty;
+      m_stats = move(o.m_stats);
     }
     return *this;
   }
@@ -176,6 +185,7 @@ public:
     std::swap(m_iterators, o.m_iterators);
     std::swap(m_var_to_iterators, o.m_var_to_iterators);
     std::swap(m_is_empty, o.m_is_empty);
+    std::swap(m_stats, o.m_stats);
   }
 
   /**
@@ -405,10 +415,30 @@ public:
           m_veo.up();
         }
       } else {
+        // TODO: Make stats optional
+        IntersectionStats stats;
+        stats.variable_id = x_j;
+        stats.depth = j;
+
+        // Collect list sizes from each iterator
+        for (ltj_iter_type *iter : itrs) {
+          // Determine which state/variable this iterator represents
+          state_type state = o; // default
+          if (iter->is_variable_subject(x_j)) {
+            state = s;
+          } else if (iter->is_variable_predicate(x_j)) {
+            state = p;
+          }
+          stats.list_sizes.push_back(iter->children(state));
+        }
+
         value_type c = seek(x_j);
         // cout << "Seek (init): (" << (uint64_t) x_j << ": " << c << ")"
         // <<endl;
         while (c != 0) { // If empty c=0
+          // Count each result found
+          stats.result_size++;
+
           // 1. Adding result to tuple
           tuple[j] = {x_j, c};
           // 2. Going down in the tries by setting x_j = c (\mu(t_i) in paper)
@@ -430,6 +460,13 @@ public:
           // cout << "Seek (bucle): (" << (uint64_t) x_j << ": " << c << ")"
           // <<endl;
         }
+
+        // TODO: Make stats optional
+        stats.alternation_complexity =
+            calculate_alternation_complexity(itrs, x_j);
+
+        // TODO: compute leapfrog_seeks (needs to be done in seek)
+        m_stats.push_back(stats);
       }
       m_veo.done();
     }
@@ -447,6 +484,7 @@ public:
   value_type seek(const var_type x_j, value_type c = -1) {
     vector<ltj_iter_type *> &itrs = m_var_to_iterators[x_j];
     value_type c_i, c_prev = 0, i = 0, n_ok = 0;
+
     while (true) {
       // Compute leap for each triple that contains x_j
       // std::cout << "Leap of " << (::uint64_t) x_j << " in iterator: " << i <<
@@ -464,8 +502,9 @@ public:
         return 0; // Empty intersection
       }
       n_ok = (c_i == c_prev) ? n_ok + 1 : 1;
-      if (n_ok == itrs.size())
+      if (n_ok == itrs.size()) {
         return c_i;
+      }
       c = c_prev = c_i;
       i = (i + 1 == itrs.size()) ? 0 : i + 1;
     }

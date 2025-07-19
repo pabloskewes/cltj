@@ -246,3 +246,7 @@ set_target_properties(test-dyn PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINAR
 add_executable(cltj-louds src/test/cltj_louds.cpp)
 target_link_libraries(cltj-louds sdsl divsufsort divsufsort64 hybridbv_gn)
 set_target_properties(cltj-louds PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
+
+add_executable(test-alternation-complexity src/test/test-alternation-complexity.cpp)
+target_link_libraries(test-alternation-complexity sdsl divsufsort divsufsort64 hybridbv_gn)
+set_target_properties(test-alternation-complexity PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)

@@ -341,6 +341,7 @@ public:
     // auto child = trie->child(parent(), 1)
     beg = trie->first_child(parent());
     end = beg + cnt - 1;
+    // TODO: Replace this with HashTable method for thesis.
     auto p = trie->binary_search_seek(c, beg, end);
     if (p.second > end or p.first != c)
       return false;
@@ -386,6 +387,7 @@ public:
       value = trie->seq[beg];
       m_status[m_nfixed + 1].beg = beg; // First position in the sequence
     } else {
+      // TODO: Replace this with HashTable method for thesis.
       const auto p = trie->binary_search_seek(c, beg, end);
       if (p.second > end)
         return 0;

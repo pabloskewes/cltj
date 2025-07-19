@@ -2,6 +2,8 @@
 # Edit at https://www.toptal.com/developers/gitignore?templates=osx
 
 data/
+.vscode/
+*intersection_statistics*
 
 ### OSX ###
 # General

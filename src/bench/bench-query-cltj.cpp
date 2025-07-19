@@ -17,6 +17,7 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "../../include/util/csv_util.hpp"
 #include <chrono>
 #include <index/cltj_index_spo_lite.hpp>
 #include <iostream>
@@ -32,6 +33,36 @@ using namespace std;
 // #include<ctime>
 
 using namespace ::util::time;
+
+// Function to print intersection statistics for debugging/experimentation
+template <class algorithm_type>
+void print_intersection_stats(
+    const algorithm_type &ltj,
+    uint64_t query_id,
+    const string &query_text
+) {
+  const auto &stats = ltj.get_stats();
+  cout << "=== Query " << query_id << " Intersection Statistics ===" << endl;
+  cout << "Query text: " << query_text << endl;
+  cout << "Total intersections: " << stats.size() << endl;
+  for (size_t i = 0; i < stats.size(); ++i) {
+    const auto &stat = stats[i];
+    cout << "Intersection " << i << ": ";
+    cout << "var_id=" << (int)stat.variable_id << ", ";
+    cout << "depth=" << stat.depth << ", ";
+    cout << "result_size=" << stat.result_size << ", ";
+    cout << "min_list_size=" << stat.min_list_size() << ", ";
+    cout << "alternation_complexity=" << stat.alternation_complexity << ", ";
+    cout << "list_sizes=[";
+    for (size_t j = 0; j < stat.list_sizes.size(); ++j) {
+      cout << stat.list_sizes[j];
+      if (j < stat.list_sizes.size() - 1)
+        cout << ",";
+    }
+    cout << "]" << endl;
+  }
+  cout << "=============================================" << endl;
+}
 
 template <class index_scheme_type, class trait_type>
 void query(
@@ -87,6 +118,50 @@ void query(
           std::chrono::duration_cast<std::chrono::nanoseconds>(stop - start)
               .count();
       cout << nQ << ";" << res.size() << ";" << time << endl;
+
+      std::vector<std::string> header = {"query_text",
+                                         "var_appearance_order",
+                                         "veo_step",
+                                         "intersection_size",
+                                         "alternation_complexity",
+                                         "intersected_list_sizes"};
+      util::CSVWriter csv_writer("intersection_statistics.csv", header, 10000);
+
+      static size_t total_rows_written = 0;
+
+      const auto &stats = ltj.get_stats();
+      for (size_t i = 0; i < stats.size(); ++i) {
+        const auto &stat = stats[i];
+
+        // Build the list sizes string with semicolon separator
+        std::string list_sizes_str;
+        for (size_t j = 0; j < stat.list_sizes.size(); ++j) {
+          list_sizes_str += std::to_string(stat.list_sizes[j]);
+          if (j < stat.list_sizes.size() - 1) {
+            list_sizes_str += ";";
+          }
+        }
+
+        // Create csv row with the intersection statistics
+        std::vector<std::string> row = {
+            query_string,
+            std::to_string(stat.variable_id),
+            std::to_string(stat.depth),
+            std::to_string(stat.result_size),
+            std::to_string(stat.alternation_complexity),
+            list_sizes_str
+        };
+
+        csv_writer.add_row(row);
+        total_rows_written++;
+      }
+
+      // Write remaining data to the CSV file
+      if (nQ == dummy_queries.size() - 1) {
+        csv_writer.flush();
+        std::cout << "Total rows written: " << total_rows_written << std::endl;
+      }
+
       nQ++;
 
       count += 1;
