@@ -3,7 +3,7 @@
 
 data/
 .vscode/
-*intersection_statistics.csv*
+*intersection_statistics*
 
 ### OSX ###
 # General
