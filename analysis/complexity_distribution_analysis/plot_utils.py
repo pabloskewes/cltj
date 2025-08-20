@@ -3,16 +3,24 @@ import numpy as np
 import pandas as pd
 
 
+ALT_COL = "alternation_complexity"
+MIN_COL = "q * min"
+TEORICAL_COL = "δ * log2(n)"
+
+
 def plot_scatter_alt_vs_min(
-    df: pd.DataFrame, title: str = "Alternation Complexity vs Minimum Size"
+    df: pd.DataFrame,
+    title: str = "Alternation Complexity vs Minimum Size",
+    x_col: str = ALT_COL,
+    y_col: str = MIN_COL,
 ):
     """
     Plot a scatter plot of alternation complexity vs minimum size.
     """
     plt.figure(figsize=(8, 6))
-    plt.scatter(df["alternation_complexity"], df["min_size"], alpha=0.5)
-    plt.xlabel("Alternation Complexity")
-    plt.ylabel("Minimum Size")
+    plt.scatter(df[x_col], df[y_col], alpha=0.5)
+    plt.xlabel(x_col)
+    plt.ylabel(y_col)
     plt.title(title)
     plt.grid(True, which="both", ls="--", alpha=0.7)
 
@@ -21,8 +29,8 @@ def plot_scatter_alt_vs_min(
 
     # add x=y reference line
     lims = [
-        np.min([df["alternation_complexity"].min(), df["min_size"].min()]),
-        np.max([df["alternation_complexity"].max(), df["min_size"].max()]),
+        np.min([df[x_col].min(), df[y_col].min()]),
+        np.max([df[x_col].max(), df[y_col].max()]),
     ]
     plt.plot(lims, lims, "r--", label="x = y")
     plt.legend()
@@ -31,15 +39,18 @@ def plot_scatter_alt_vs_min(
 
 
 def plot_boxplot_alt_vs_min(
-    df: pd.DataFrame, title: str = "Alternation Complexity vs Minimum Size"
+    df: pd.DataFrame,
+    title: str = "Alternation Complexity vs q * min",
+    x_col: str = ALT_COL,
+    y_col: str = MIN_COL,
 ):
     """
     Plot a boxplot of alternation complexity vs minimum size.
     """
     plt.figure(figsize=(8, 6))
     plt.boxplot(
-        [df["alternation_complexity"], df["min_size"]],
-        tick_labels=["Alternation Complexity", "Minimum Size"],
+        [df[x_col], df[y_col]],
+        tick_labels=[x_col, y_col],
         patch_artist=True,
     )
     plt.title(title)
