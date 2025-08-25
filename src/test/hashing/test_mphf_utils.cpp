@@ -1,5 +1,5 @@
 #include <cassert>
-#include <cltj/hashing/mphf_utils.hpp>
+#include <include/hashing/mphf_utils.hpp>
 #include <iostream>
 
 using namespace cltj::hashing;
@@ -50,13 +50,13 @@ void test_is_prime() {
   assert(is_prime(2));
   assert(is_prime(3));
   assert(is_prime(13));
-  assert(is_prime(1'000'000'007));
+  assert(is_prime(1000000007));
 
   // Known composites
   assert(!is_prime(1));
   assert(!is_prime(4));
   assert(!is_prime(15));
-  assert(!is_prime(1'000'000'008));
+  assert(!is_prime(1000000008));
 
   // Edge cases
   assert(!is_prime(0));
@@ -73,10 +73,10 @@ void test_next_prime() {
   assert(next_prime(3) == 3);
   assert(next_prime(4) == 5);
   assert(next_prime(100) == 101);
-  assert(next_prime(1'000'000) == 1'000'003);
+  assert(next_prime(1000000) == 1000003);
 
   // Verify it skips even numbers
-  assert(next_prime(1'000'000'000) == 1'000'000'007);
+  assert(next_prime(1000000000) == 1000000007);
 
   std::cout << "next_prime tests passed!\n";
 }
