@@ -14,7 +14,7 @@ void test_mod_mul() {
   // Large numbers
   uint64_t large = 1ULL << 60;
   assert(
-      mod_mul(large, large + 1, large + 2) == 1
+      mod_mul(large, large + 1, large + 2) == 2
   ); // (2^60)*(2^60+1) mod (2^60+2)
 
   // Edge cases
@@ -33,7 +33,7 @@ void test_mod_pow() {
   assert(mod_pow(3, 4, 7) == 4); // 3^4=81 ≡ 4 mod 7
 
   // Large exponents
-  assert(mod_pow(2, 60, 1000) == 376); // 2^60 mod 1000
+  assert(mod_pow(2, 60, 1000) == 976); // 2^60 mod 1000
 
   // Edge cases
   assert(mod_pow(0, 100, 7) == 0);
