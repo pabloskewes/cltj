@@ -2,7 +2,8 @@
 #include <cstdint>
 #include <vector>
 
-namespace cltj::hashing {
+namespace cltj {
+namespace hashing {
 
 /**
  * @brief Efficient modular multiplication. Complexity: O(1)
@@ -110,4 +111,13 @@ inline bool all_coprime(const std::vector<uint64_t> &keys, uint64_t mod) {
   return true;
 }
 
-} // namespace cltj::hashing
+// Minimal Perfect Hash Function (MPHF) Builder
+class MPHF {
+public:
+  MPHF() = default;
+
+  // TODO: Implement MPHF builder logic
+};
+
+} // namespace hashing
+} // namespace cltj
