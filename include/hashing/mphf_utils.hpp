@@ -111,13 +111,5 @@ inline bool all_coprime(const std::vector<uint64_t> &keys, uint64_t mod) {
   return true;
 }
 
-// Minimal Perfect Hash Function (MPHF) Builder
-class MPHF {
-public:
-  MPHF() = default;
-
-  // TODO: Implement MPHF builder logic
-};
-
 } // namespace hashing
 } // namespace cltj
