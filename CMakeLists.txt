@@ -250,3 +250,7 @@ set_target_properties(cltj-louds PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BIN
 add_executable(test-alternation-complexity src/test/test-alternation-complexity.cpp)
 target_link_libraries(test-alternation-complexity sdsl divsufsort divsufsort64 hybridbv_gn)
 set_target_properties(test-alternation-complexity PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
+
+add_executable(test-mphf-utils src/test/hashing/test_mphf_utils.cpp)
+target_link_libraries(test-mphf-utils sdsl divsufsort divsufsort64)
+set_target_properties(test-mphf-utils PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
