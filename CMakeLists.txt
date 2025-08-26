@@ -194,3 +194,5 @@ add_cltj_executable(cltj-louds src/test/cltj_louds.cpp test hybridbv_gn)
 add_cltj_executable(test-alternation-complexity src/test/test-alternation-complexity.cpp test hybridbv_gn)
 
 add_cltj_executable(test-mphf-utils src/test/hashing/test_mphf_utils.cpp test)
+
+add_cltj_executable(test-mphf-skeleton src/test/hashing/test_mphf_skeleton.cpp test)
