@@ -1,9 +1,13 @@
 #pragma once
+#include "mphf_utils.hpp"
 #include <algorithm>
+#include <array>
 #include <cstdint>
 #include <list>
 #include <queue>
 #include <random>
+#include <sdsl/bit_vectors.hpp>
+#include <sdsl/rank_support_v.hpp>
 #include <stack>
 #include <vector>
 
@@ -11,90 +15,84 @@ namespace cltj {
 namespace hashing {
 
 /**
- * @brief Triple structure representing a hyperedge in the 3-uniform hypergraph.
- *
- * Each key generates exactly one triple during the MPHF construction process.
- * The three vertices (v0, v1, v2) are positions in the array G that will be
- * used to determine the final hash value for this key.
- *
- * @param key  Original key value.
- * @param v0   First vertex position in the hypergraph.
- * @param v1   Second vertex position in the hypergraph.
- * @param v2   Third vertex position in the hypergraph.
+ * @brief Triple structure representing a hyperedge in the 3-uniform hypergraph
  */
 struct Triple {
-  uint64_t key;
-  uint32_t v0, v1, v2;
+  uint64_t key;        // Original key value
+  uint32_t v0, v1, v2; // Three vertices in the hypergraph
 
   Triple() : key(0), v0(0), v1(0), v2(0) {
   }
-
   Triple(uint64_t k, uint32_t vertex0, uint32_t vertex1, uint32_t vertex2)
       : key(k), v0(vertex0), v1(vertex1), v2(vertex2) {
   }
 };
 
 /**
- * @brief Minimal Perfect Hash Function (MPHF) builder using the MWHC/BDZ
- * algorithm.
+ * @brief Minimal Perfect Hash Function (MPHF) Builder using MWHC/BDZ algorithm
  *
- * Maps n distinct keys to [0, n-1] with no collisions and near-minimal space.
- *
- * @par Algorithm Overview
- * 1) Triple generation: map each key to (v0, v1, v2) via three hash functions.
- * 2) Hypergraph build: 3-uniform hypergraph; keys are hyperedges.
- * 3) Peeling: topological ordering (degree-1 eliminations).
- * 4) G-assignment: set G so each triple has a unique “winner” vertex.
- * 5) Compactification: bitvector + rank to compress indices to [0, n).
- *
- * @par Complexity
- * - Build: O(n) expected.
- * - Query: O(1) worst-case.
- *
- * @code
- * std::vector<uint64_t> keys = {10, 20, 30, 40, 50};
- * MPHF mphf;
- * if (mphf.build(keys)) {
- *   uint32_t hv = mphf.query(30); // in [0, 4]
- * }
- * @endcode
+ * Algorithm overview:
+ * 1. Map each key to a triple (v0, v1, v2) using 3 hash functions
+ * 2. Build a 3-uniform hypergraph and perform "peeling" to get topological
+ * order
+ * 3. Assign values to array G such that each triple has a unique "winner"
+ * vertex
+ * 4. Use a bitvector to compact the hash function to minimal range [0,n)
  */
 class MPHF {
 private:
-  // ===== Core data structures =====
-  std::vector<uint8_t>
-      G_; // Assignment array; values in {0,1,2,3}. (3 = unassigned)
-  std::vector<bool>
-      used_positions_; // Bitvector: marks which positions in [0, m) are used.
-  uint32_t m_;         // Size of G (~1.23 * n), must be divisible by 3.
-  uint32_t n_;         // Number of input keys.
+  // Core data structures
+  std::vector<uint8_t> G_;          // Assignment array, values in {0,1,2,3}
+  sdsl::bit_vector used_positions_; // Bitvector marking used positions
+  sdsl::rank_support_v<1> rank_support_; // For O(1) rank queries
+  uint32_t m_;                           // Size of G array (~1.23 * n)
+  uint32_t n_;                           // Number of keys
 
-  // ===== Hash parameters =====
-  uint64_t seed0_; // Seed for h0.
-  uint64_t seed1_; // Seed for h1.
-  uint64_t seed2_; // Seed for h2.
-  uint64_t prime_; // Large prime for universal hashing; prime_ > max(keys).
+  // Hash function parameters
+  std::array<uint64_t, 3> primes_;      // r[k] = prime for hash function k
+  std::array<uint64_t, 3> offsets_;     // d[k] = offset for hash function k
+  std::array<uint64_t, 3> multipliers_; // a[k] = multiplier for hash function k
 
-  // ===== Advanced structures (compactification) =====
-  // TODO: Add SDSL bit_vector and rank support.
+  // For retry logic
+  static constexpr int MAX_RETRIES = 10;
 
 public:
-  MPHF() : m_(0), n_(0), seed0_(0), seed1_(0), seed2_(0), prime_(0) {
+  MPHF()
+      : m_(0), n_(0), primes_{0, 0, 0}, offsets_{0, 0, 0},
+        multipliers_{0, 0, 0} {
   }
 
   /**
    * @brief Build MPHF for given keys
    * @param keys Vector of keys to hash
-   * @return true if successful, false if failed (need to retry with different
-   * salts)
+   * @return true if successful, false if failed after all retries
    */
   bool build(const std::vector<uint64_t> &keys) {
     n_ = keys.size();
     if (n_ == 0)
       return false;
 
+    // Retry logic
+    for (int retry = 0; retry < MAX_RETRIES; ++retry) {
+      if (try_build(keys, retry)) {
+        return true;
+      }
+      // If failed, the next retry will use different hash parameters
+    }
+
+    return false; // Failed after all retries
+  }
+
+  /**
+   * @brief Single attempt to build MPHF
+   * @param keys Vector of keys to hash
+   * @param retry_count Number of previous failed attempts (affects hash
+   * parameters)
+   * @return true if successful, false if need to retry
+   */
+  bool try_build(const std::vector<uint64_t> &keys, int retry_count) {
     // TODO: Step 1 - Initialize hash functions and arrays
-    if (!initialize_hash_functions(keys)) {
+    if (!initialize_hash_functions(keys, retry_count)) {
       return false;
     }
 
@@ -141,7 +139,7 @@ public:
       selected_vertex = triple.v2;
       break;
     default:
-      throw std::runtime_error("Invalid G value");
+      selected_vertex = triple.v0; // Should never happen
     }
 
     // TODO: Step 4 - Apply rank operation for compactification
@@ -152,14 +150,18 @@ private:
   // ========== STEP 1: Hash Function Initialization ==========
   /**
    * @brief Initialize the three hash functions h0, h1, h2
-   * We'll use universal hashing: h_i(x) = ((a_i * x + b_i) mod prime) mod (m/3)
+   * Uses separate primes for each hash function (inspired by colleague's
+   * approach)
    */
-  bool initialize_hash_functions(const std::vector<uint64_t> &keys) {
+  bool initialize_hash_functions(
+      const std::vector<uint64_t> &keys,
+      int retry_count
+  ) {
     // TODO:
-    // 1. Calculate m = ceil(1.23 * n), ensure it's divisible by 3
-    // 2. Find a suitable prime > max(keys)
-    // 3. Generate random salts for h0, h1, h2
-    // 4. Verify all keys are coprime to the prime (optional check)
+    // 1. Calculate m as sum of three prime-sized segments
+    // 2. Find three suitable primes, skipping some based on retry_count
+    // 3. Generate random multipliers for each hash function
+    // 4. Verify all keys are coprime to the primes (optional check)
     // 5. Initialize G array with value 3 (means unassigned, equivalent to 0 mod
     // 3)
     return false; // Placeholder
@@ -230,22 +232,27 @@ private:
 
   // ========== HELPER FUNCTIONS ==========
   /**
-   * @brief Compute hash function h_i(key) for i ∈ {0,1,2}
+   * @brief Compute hash function h_k(key) for k ∈ {0,1,2}
+   * Uses the improved approach: h_k(x) = offset_k + (key % prime_k) *
+   * multiplier_k % prime_k
    */
   uint32_t hash_function(uint64_t key, int function_index) const {
-    // TODO: Implement universal hashing
-    // h_i(x) = ((salt_i * x + salt_{i+3}) mod prime_) mod (m/3)
+    // TODO: Implement the colleague's hash approach
+    // return offsets_[function_index] + mod_mul(key % primes_[function_index],
+    //                                          multipliers_[function_index],
+    //                                          primes_[function_index]);
     return 0; // Placeholder
   }
 
   /**
    * @brief Compute triple (v0, v1, v2) for a given key
+   * Each hash function maps to its own segment of the vertex space
    */
   Triple compute_triple(uint64_t key) const {
-    // TODO:
-    // v0 = hash_function(key, 0)
-    // v1 = m/3 + hash_function(key, 1)
-    // v2 = 2*m/3 + hash_function(key, 2)
+    // TODO: Each hash function has its own range
+    // v0 = hash_function(key, 0)  // in range [0, r[0])
+    // v1 = hash_function(key, 1)  // in range [r[0], r[0] + r[1])
+    // v2 = hash_function(key, 2)  // in range [r[0] + r[1], r[0] + r[1] + r[2])
     return Triple(key, 0, 0, 0); // Placeholder
   }
 
@@ -253,8 +260,9 @@ private:
    * @brief Convert position in [0,m) to compact position in [0,n)
    */
   uint32_t compact_position(uint32_t position) const {
-    // TODO: Use rank operation on bitvector
-    // return rank1(used_positions_, position) - 1
+    // TODO: Use SDSL rank operation on bitvector
+    // return rank_support_(position);
+    return 0; // Placeholder
     return 0; // Placeholder
   }
 };
