@@ -263,7 +263,6 @@ private:
     // TODO: Use SDSL rank operation on bitvector
     // return rank_support_(position);
     return 0; // Placeholder
-    return 0; // Placeholder
   }
 };
 
