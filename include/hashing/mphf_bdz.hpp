@@ -51,16 +51,18 @@ class MPHF {
     uint32_t n_;  // Number of keys
 
     // Hash function parameters
-    std::array<uint64_t, 3> primes_;  // r[k] = prime for hash function k
-    std::array<uint64_t, 3> multipliers_;  // a[k] = multiplier for hash function k
-    std::array<uint64_t, 3> offsets_;  // b[k] = offset for hash function k
+    std::array<uint64_t, 3> primes_;  // r[k] = modulus (prime) per hash function
+    std::array<uint64_t, 3> multipliers_;  // a[k] = multiplier inside modulo
+    std::array<uint64_t, 3> biases_;  // b[k] = additive bias inside modulo
+    std::array<uint64_t, 3> segment_starts_;  // d[k] = global segment start
 
     // For retry logic
     static constexpr int MAX_RETRIES = 10;
     static constexpr uint64_t SEED = 0xC1A0ULL;
 
   public:
-    MPHF() : m_(0), n_(0), primes_{0, 0, 0}, offsets_{0, 0, 0}, multipliers_{0, 0, 0} {}
+    MPHF()
+        : m_(0), n_(0), primes_{0, 0, 0}, multipliers_{0, 0, 0}, biases_{0, 0, 0}, segment_starts_{0, 0, 0} {}
 
     /**
      * @brief Build MPHF for given keys
@@ -171,18 +173,25 @@ class MPHF {
         primes_[1] = p1;
         primes_[2] = p2;
 
-        // Compute segment offsets and total m
-        offsets_[0] = 0;
-        offsets_[1] = primes_[0];
-        offsets_[2] = primes_[0] + primes_[1];
+        // Compute segment starts and total m
+        segment_starts_[0] = 0;
+        segment_starts_[1] = primes_[0];
+        segment_starts_[2] = primes_[0] + primes_[1];
         m_ = static_cast<uint32_t>(primes_[0] + primes_[1] + primes_[2]);
 
         // Deterministic RNG for multipliers with retry_count offset
         std::mt19937_64 rng(SEED + static_cast<uint64_t>(retry_count));
         for (int k = 0; k < 3; ++k) {
             uint64_t p = primes_[static_cast<size_t>(k)];
-            std::uniform_int_distribution<uint64_t> dist(1, p - 1);
-            multipliers_[static_cast<size_t>(k)] = dist(rng);  // a[k] = randint(1, p-1)
+            std::uniform_int_distribution<uint64_t> distA(1, p - 1);
+            multipliers_[static_cast<size_t>(k)] = distA(rng);  // a[k] ∈ [1, p-1]
+        }
+
+        // Sample biases b[k] ∈ [0, p-1]
+        for (int k = 0; k < 3; ++k) {
+            uint64_t p = primes_[static_cast<size_t>(k)];
+            std::uniform_int_distribution<uint64_t> distB(0, p - 1);
+            biases_[static_cast<size_t>(k)] = distB(rng);
         }
 
         // Initialize G with sentinel value 3 (acts as 0 mod 3 but marks unassigned)
@@ -190,9 +199,11 @@ class MPHF {
 
         std::cout << "[MPHF::initialize] n=" << n_ << " target_m=" << target_m << " primes(r): {"
                   << primes_[0] << ", " << primes_[1] << ", " << primes_[2] << "}"
-                  << " offsets(d): {" << offsets_[0] << ", " << offsets_[1] << ", " << offsets_[2] << "}"
+                  << " segment_starts(d): {" << segment_starts_[0] << ", " << segment_starts_[1] << ", "
+                  << segment_starts_[2] << "}"
                   << " multipliers(a): {" << multipliers_[0] << ", " << multipliers_[1] << ", "
                   << multipliers_[2] << "}"
+                  << " biases(b): {" << biases_[0] << ", " << biases_[1] << ", " << biases_[2] << "}"
                   << " m=" << m_ << "\n";
 
         return true;
@@ -260,16 +271,18 @@ class MPHF {
 
     // ========== HELPER FUNCTIONS ==========
     /**
-     * @brief Compute hash function h_k(key) for k ∈ {0,1,2}
-     * Uses the improved approach: h_k(x) = offset_k + (key % prime_k) *
-     * multiplier_k % prime_k (i.e. h_k(x) = a_k * x + b_k mod p_k)
+     * @brief Compute hash function h_k(x) for k ∈ {0,1,2}
+     * h_k(x) = d_k + ((a_k · x + b_k) mod r_k)
+     * with r_k = primes_[k], a_k = multipliers_[k], b_k = biases_[k], d_k = segment_starts_[k].
      */
-    uint32_t hash_function(uint64_t key, int function_index) const {
-        // TODO: Implement the colleague's hash approach
-        // return offsets_[function_index] + mod_mul(key % primes_[function_index],
-        //                                          multipliers_[function_index],
-        //                                          primes_[function_index]);
-        return 0;  // Placeholder
+    uint32_t hash_function(uint64_t x, int k) const {
+        const size_t i = static_cast<size_t>(k);
+        const uint64_t r = primes_[i];
+        uint64_t mapped = mod_mul(x, multipliers_[i], r);  // in [0, r)
+        mapped += biases_[i];
+        if (mapped >= r)
+            mapped -= r;  // single correction instead of modulo
+        return static_cast<uint32_t>(segment_starts_[i] + mapped);
     }
 
     /**
