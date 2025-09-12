@@ -233,29 +233,127 @@ class MPHF {
      * @return true if peeling successful (graph is peelable)
      */
     bool perform_peeling(const std::vector<Triple>& triples, std::vector<Triple>& peeling_order) {
-        // TODO: Implement the peeling algorithm from the pseudocode
-        // 1. Build adjacency lists L[0..m-1] and degree counters N[0..m-1]
-        // 2. Use priority queue Q to always extract minimum degree vertex
-        // 3. While queue not empty:
-        //    - Extract vertex v with degree 1
-        //    - If degree > 1, return false (not peelable)
-        //    - Push corresponding triple to stack
-        //    - Remove triple and update degrees of other vertices
-        // 4. peeling_order should contain all triples in the order they were
-        // processed
-        return false;  // Placeholder
+        peeling_order.clear();
+        if (m_ == 0 || triples.empty()) {
+            return false;
+        }
+
+        // Build adjacency: incident edges per vertex and degree counts
+        std::vector<std::vector<uint32_t>> incident(m_);
+        incident.reserve(m_);
+        for (uint32_t ei = 0; ei < triples.size(); ++ei) {
+            const Triple& t = triples[ei];
+            incident[t.v0].push_back(ei);
+            incident[t.v1].push_back(ei);
+            incident[t.v2].push_back(ei);
+        }
+        std::vector<uint32_t> degree(m_, 0);
+        for (uint32_t v = 0; v < m_; ++v) {
+            degree[v] = static_cast<uint32_t>(incident[v].size());
+        }
+
+        // Queue of vertices with degree 1
+        std::queue<uint32_t> q;
+        for (uint32_t v = 0; v < m_; ++v) {
+            if (degree[v] == 1)
+                q.push(v);
+        }
+
+        // Track removed edges
+        std::vector<uint8_t> edge_removed(triples.size(), 0);
+
+        // Process vertices of degree 1
+        while (!q.empty()) {
+            uint32_t v = q.front();
+            q.pop();
+
+            if (degree[v] != 1)
+                continue;  // stale
+
+            // Find the unique non-removed edge incident to v
+            uint32_t ei = UINT32_MAX;
+            for (uint32_t e : incident[v]) {
+                if (!edge_removed[e]) {
+                    ei = e;
+                    break;
+                }
+            }
+            if (ei == UINT32_MAX)
+                continue;  // already handled
+
+            // Output order: push this edge
+            peeling_order.push_back(triples[ei]);
+            edge_removed[ei] = 1;
+
+            const Triple& t = triples[ei];
+            uint32_t vertices_local[3] = {t.v0, t.v1, t.v2};
+            for (int idx = 0; idx < 3; ++idx) {
+                uint32_t u = vertices_local[idx];
+                if (degree[u] > 0) {
+                    degree[u] -= 1;
+                    if (degree[u] == 1)
+                        q.push(u);
+                }
+            }
+        }
+
+        bool ok = (peeling_order.size() == triples.size());
+        if (!ok) {
+            std::cout << "[MPHF::peeling] Failed: peeled " << peeling_order.size() << "/" << triples.size()
+                      << " edges (cycle remains)\n";
+        } else {
+            std::cout << "[MPHF::peeling] Success: peeled all " << triples.size() << " edges\n";
+        }
+        return ok;
     }
 
     // ========== STEP 4: G Array Assignment ==========
     /**
      * @brief Assign values to G array based on peeling order
+     * For each triple (v0, v1, v2) in reverse order of peeling:
+     * 1. Find first unvisited vertex index j
+     * 2. Set G[vj] = (j - G[v0] - G[v1] - G[v2]) mod 3
+     * 3. Mark all three vertices as visited
+     * @param peeling_order Reverse order of peeling
+     * @return void
      */
     void assign_g_values(const std::vector<Triple>& peeling_order) {
-        // TODO: Process triples in REVERSE order of peeling
-        // For each triple (v0, v1, v2):
-        // 1. Find first unvisited vertex vj (j ∈ {0,1,2})
-        // 2. Set G[vj] = (j - G[v0] - G[v1] - G[v2]) mod 3
-        // 3. Mark all three vertices as visited
+        if (m_ == 0)
+            return;
+        std::vector<uint8_t> visited(m_, 0);
+
+        // Process in reverse order
+        for (auto it = peeling_order.rbegin(); it != peeling_order.rend(); ++it) {
+            const Triple& t = *it;
+            uint32_t vertices[3] = {t.v0, t.v1, t.v2};
+
+            // Find first unvisited vertex index j
+            int j = -1;
+            for (int idx = 0; idx < 3; ++idx) {
+                if (!visited[vertices[idx]]) {
+                    j = idx;
+                    break;
+                }
+            }
+            if (j == -1) {
+                // Should not happen; all three already assigned
+                continue;
+            }
+
+            // Sum of current G values modulo 3 (treat 3 as 0)
+            auto val = [&](uint32_t v) { return static_cast<uint32_t>(G_[v] % 3); };
+            uint32_t s = (val(vertices[0]) + val(vertices[1]) + val(vertices[2])) % 3;
+
+            // Need (G[v0] + G[v1] + G[v2]) % 3 == j
+            uint32_t need = static_cast<uint32_t>((3 + j - static_cast<int>(s)) % 3);
+            G_[vertices[j]] = static_cast<uint8_t>(need);
+
+            // Mark all as visited (only one was newly assigned, but the others are effectively fixed now)
+            visited[vertices[0]] = visited[vertices[1]] = visited[vertices[2]] = 1;
+
+            std::cout << "[MPHF::assignG] triple=(" << vertices[0] << ", " << vertices[1] << ", "
+                      << vertices[2] << ") j=" << j << " set G[" << vertices[j] << "]=" << need << "\n";
+        }
     }
 
     // ========== STEP 5: Compactification ==========
