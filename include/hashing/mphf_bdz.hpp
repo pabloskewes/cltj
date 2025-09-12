@@ -74,10 +74,11 @@ class MPHF {
     // For retry logic
     static constexpr int MAX_RETRIES = 10;
     static constexpr uint64_t SEED = 0xC1A0ULL;
+    int retry_count_;  // Number of retries used in last build
 
   public:
     MPHF()
-        : m_(0), n_(0), primes_{0, 0, 0}, multipliers_{0, 0, 0}, biases_{0, 0, 0}, segment_starts_{0, 0, 0} {}
+        : m_(0), n_(0), retry_count_(0), primes_{0, 0, 0}, multipliers_{0, 0, 0}, biases_{0, 0, 0}, segment_starts_{0, 0, 0} {}
 
     /**
      * @brief Build MPHF for given keys
@@ -92,14 +93,20 @@ class MPHF {
 
         // Retry logic
         for (int retry = 0; retry < MAX_RETRIES; ++retry) {
+            retry_count_ = retry;
             if (try_build(keys, retry)) {
                 return true;
             }
             // If failed, the next retry will use different hash parameters
         }
 
-        return false;  // Failed after all retries
+        retry_count_ = MAX_RETRIES;  // Failed after all retries
+        return false;
     }
+
+    uint32_t n() const { return n_; }
+    uint32_t m() const { return m_; }
+    int retry_count() const { return retry_count_; }
 
     /**
      * @brief Single attempt to build MPHF
@@ -159,11 +166,11 @@ class MPHF {
         // Apply rank operation for compactification
         uint32_t res = compact_position(selected_vertex);
 
-        std::cout << "[MPHF::query] key=" << key << " triple=(" << triple.v0 << ", " << triple.v1 << ", "
-                  << triple.v2 << ") j=" << j << " sel=" << selected_vertex
-                  << " used=" << (used_positions_.size() ? (int)used_positions_[selected_vertex] : -1)
-                  << " rank=" << (used_positions_.size() ? (uint64_t)rank_support_(selected_vertex) : 0)
-                  << " -> res=" << res << "\n";
+        // std::cout << "[MPHF::query] key=" << key << " triple=(" << triple.v0 << ", " << triple.v1 << ", "
+        //           << triple.v2 << ") j=" << j << " sel=" << selected_vertex
+        //           << " used=" << (used_positions_.size() ? (int)used_positions_[selected_vertex] : -1)
+        //           << " rank=" << (used_positions_.size() ? (uint64_t)rank_support_(selected_vertex) : 0)
+        //           << " -> res=" << res << "\n";
         return res;
     }
 
@@ -212,14 +219,14 @@ class MPHF {
         // Initialize G with sentinel value 3 (acts as 0 mod 3 but marks unassigned)
         G_.assign(m_, static_cast<uint8_t>(3));
 
-        std::cout << "[MPHF::initialize] n=" << n_ << " target_m=" << target_m << " primes(r): {"
-                  << primes_[0] << ", " << primes_[1] << ", " << primes_[2] << "}"
-                  << " segment_starts(d): {" << segment_starts_[0] << ", " << segment_starts_[1] << ", "
-                  << segment_starts_[2] << "}"
-                  << " multipliers(a): {" << multipliers_[0] << ", " << multipliers_[1] << ", "
-                  << multipliers_[2] << "}"
-                  << " biases(b): {" << biases_[0] << ", " << biases_[1] << ", " << biases_[2] << "}"
-                  << " m=" << m_ << "\n";
+        // std::cout << "[MPHF::initialize] n=" << n_ << " target_m=" << target_m << " primes(r): {"
+        //           << primes_[0] << ", " << primes_[1] << ", " << primes_[2] << "}"
+        //           << " segment_starts(d): {" << segment_starts_[0] << ", " << segment_starts_[1] << ", "
+        //           << segment_starts_[2] << "}"
+        //           << " multipliers(a): {" << multipliers_[0] << ", " << multipliers_[1] << ", "
+        //           << multipliers_[2] << "}"
+        //           << " biases(b): {" << biases_[0] << ", " << biases_[1] << ", " << biases_[2] << "}"
+        //           << " m=" << m_ << "\n";
 
         return true;
     }
@@ -234,8 +241,8 @@ class MPHF {
         for (auto x : keys) {
             Triple t = compute_triple(x);
             triples.push_back(t);
-            std::cout << "[MPHF::triples] key=" << x << " -> (" << t.v0 << ", " << t.v1 << ", " << t.v2
-                      << ")\n";
+            // std::cout << "[MPHF::triples] key=" << x << " -> (" << t.v0 << ", " << t.v1 << ", " << t.v2
+            //           << ")\n";
         }
         return triples;
     }
@@ -365,8 +372,8 @@ class MPHF {
             // Mark all as visited (only one was newly assigned, but the others are effectively fixed now)
             visited[t.v0] = visited[t.v1] = visited[t.v2] = 1;
 
-            std::cout << "[MPHF::assignG] triple=(" << t.v0 << ", " << t.v1 << ", " << t.v2 << ") j=" << j
-                      << " set G[" << t.v(j) << "]=" << need << "\n";
+            // std::cout << "[MPHF::assignG] triple=(" << t.v0 << ", " << t.v1 << ", " << t.v2 << ") j=" << j
+            //           << " set G[" << t.v(j) << "]=" << need << "\n";
         }
     }
 
@@ -382,7 +389,7 @@ class MPHF {
             used_positions_[pos] = 1;
         }
         sdsl::util::init_support(rank_support_, &used_positions_);
-        std::cout << "[MPHF::compact] built bitvector with " << triples.size() << " used positions\n";
+        // std::cout << "[MPHF::compact] built bitvector with " << triples.size() << " used positions\n";
     }
 
     // ========== HELPER FUNCTIONS ==========
