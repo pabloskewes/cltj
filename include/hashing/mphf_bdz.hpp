@@ -78,7 +78,13 @@ class MPHF {
 
   public:
     MPHF()
-        : m_(0), n_(0), retry_count_(0), primes_{0, 0, 0}, multipliers_{0, 0, 0}, biases_{0, 0, 0}, segment_starts_{0, 0, 0} {}
+        : m_(0),
+          n_(0),
+          retry_count_(0),
+          primes_{0, 0, 0},
+          multipliers_{0, 0, 0},
+          biases_{0, 0, 0},
+          segment_starts_{0, 0, 0} {}
 
     /**
      * @brief Build MPHF for given keys
