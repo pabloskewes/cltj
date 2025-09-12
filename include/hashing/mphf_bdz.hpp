@@ -2,6 +2,7 @@
 #include "mphf_utils.hpp"
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <cmath>
 #include <cstdint>
 #include <iostream>
@@ -28,6 +29,20 @@ struct Triple {
 
     Triple(uint64_t k, uint32_t vertex0, uint32_t vertex1, uint32_t vertex2)
         : key(k), v0(vertex0), v1(vertex1), v2(vertex2) {}
+
+    uint32_t v(int idx) const {
+        switch (idx) {
+            case 0:
+                return v0;
+            case 1:
+                return v1;
+            case 2:
+                return v2;
+            default:
+                assert(false && "Triple index out of range");
+                return 0u;
+        }
+    }
 };
 
 /**
@@ -102,13 +117,13 @@ class MPHF {
         // Step 2 - Generate triples for all keys
         std::vector<Triple> triples = generate_triples(keys);
 
-        // TODO: Step 3 - Perform peeling to get topological ordering
+        // Step 3 - Perform peeling to get topological ordering
         std::vector<Triple> peeling_order;
         if (!perform_peeling(triples, peeling_order)) {
             return false;  // Graph not peelable, need to retry
         }
 
-        // TODO: Step 4 - Assign G array values in reverse order
+        // Step 4 - Assign G array values in reverse order
         assign_g_values(peeling_order);
 
         // Step 5 - Build compactification structures
@@ -133,20 +148,7 @@ class MPHF {
         uint32_t j = (G_[triple.v0] + G_[triple.v1] + G_[triple.v2]) % 3;
 
         // Step 3 - Select vertex based on j
-        uint32_t selected_vertex;
-        switch (j) {
-            case 0:
-                selected_vertex = triple.v0;
-                break;
-            case 1:
-                selected_vertex = triple.v1;
-                break;
-            case 2:
-                selected_vertex = triple.v2;
-                break;
-            default:
-                selected_vertex = triple.v0;  // Should never happen
-        }
+        uint32_t selected_vertex = triple.v(static_cast<int>(j));
 
         // Step 4 - Apply rank operation for compactification
         uint32_t res = compact_position(selected_vertex);
@@ -347,17 +349,17 @@ class MPHF {
             }
 
             // Sum of current G values modulo 3
-            uint32_t s = (G_[vertices[0]] + G_[vertices[1]] + G_[vertices[2]]) % 3;
+            uint32_t s = (G_[t.v0] + G_[t.v1] + G_[t.v2]) % 3;
 
             // Need (G[v0] + G[v1] + G[v2]) % 3 == j
             uint32_t need = static_cast<uint32_t>((3 + j - static_cast<int>(s)) % 3);
-            G_[vertices[j]] = static_cast<uint8_t>(need);
+            G_[t.v(j)] = static_cast<uint8_t>(need);
 
             // Mark all as visited (only one was newly assigned, but the others are effectively fixed now)
-            visited[vertices[0]] = visited[vertices[1]] = visited[vertices[2]] = 1;
+            visited[t.v0] = visited[t.v1] = visited[t.v2] = 1;
 
-            std::cout << "[MPHF::assignG] triple=(" << vertices[0] << ", " << vertices[1] << ", "
-                      << vertices[2] << ") j=" << j << " set G[" << vertices[j] << "]=" << need << "\n";
+            std::cout << "[MPHF::assignG] triple=(" << t.v0 << ", " << t.v1 << ", " << t.v2 << ") j=" << j
+                      << " set G[" << t.v(j) << "]=" << need << "\n";
         }
     }
 
