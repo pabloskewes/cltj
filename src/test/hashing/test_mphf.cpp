@@ -34,6 +34,7 @@ struct TestResult {
     long long build_time_us = 0;
     bool build_success = false;
     bool is_permutation = false;
+    double false_positive_rate = 0.0;
 };
 
 // Runs a full test case for a given n, checking correctness, performance, and size.
@@ -59,10 +60,11 @@ TestResult run_test_case(size_t n) {
         return result;
     }
 
-    // 2. Check for Correct Permutation
+    // 2. Check for Correct Permutation & `contains` for true positives
     std::unordered_set<uint32_t> seen;
     bool distinct = true;
     bool in_range = true;
+    bool contains_all_positives = true;
     for (auto k : keys) {
         uint32_t h = mphf.query(k);
         if (h >= n) {
@@ -71,14 +73,43 @@ TestResult run_test_case(size_t n) {
         if (!seen.insert(h).second) {
             distinct = false;
         }
+        if (!mphf.contains(k)) {
+            contains_all_positives = false;
+        }
     }
-    result.is_permutation = distinct && in_range;
+    result.is_permutation = distinct && in_range && contains_all_positives;
 
-    // 3. Collect Metrics
+    // 3. Check for False Positives
+    if (result.is_permutation) {
+        size_t negative_sample_size = std::min((size_t)100000, n);  // Limit sample size
+        std::unordered_set<uint64_t> key_set(keys.begin(), keys.end());
+        std::mt19937_64 rng(12345 + n);  // Different seed from keygen
+        size_t false_positives = 0;
+        for (size_t i = 0; i < negative_sample_size; ++i) {
+            uint64_t non_key;
+            do {
+                non_key = rng();
+            } while (key_set.count(non_key));  // Ensure it's not actually a key
+
+            if (mphf.contains(non_key)) {
+                false_positives++;
+            }
+        }
+        result.false_positive_rate = (double)false_positives / negative_sample_size;
+    }
+
+    // 4. Manually calculate the true size by summing the components.
+    size_t g_bytes = sdsl::size_in_bytes(mphf.get_g());
+    size_t used_pos_bytes = sdsl::size_in_bytes(mphf.get_used_positions());
+    size_t rank_bytes = sdsl::size_in_bytes(mphf.get_rank_support());
+    size_t q_bytes = sdsl::size_in_bytes(mphf.get_q());
+    size_t other_bytes = sizeof(mphf.m()) + sizeof(mphf.n()) + sizeof(mphf.get_primes()) +
+        sizeof(mphf.get_multipliers()) + sizeof(mphf.get_biases()) + sizeof(mphf.get_segment_starts());
+    result.size_bytes = g_bytes + used_pos_bytes + rank_bytes + q_bytes + other_bytes;
+
+    result.bits_per_key = (result.size_bytes * 8.0) / n;
     result.m = mphf.m();
     result.retries = mphf.retry_count();
-    result.size_bytes = sdsl::size_in_bytes(mphf);
-    result.bits_per_key = (result.size_bytes * 8.0) / n;
     result.overhead = (double)result.m / n;
 
     return result;
@@ -92,7 +123,11 @@ void print_results(const TestResult& result) {
     }
 
     std::cout << "  Correctness:\n";
-    std::cout << "    Is permutation? " << (result.is_permutation ? "YES" : "NO") << "\n";
+    std::cout << "    Is permutation & contains all keys? " << (result.is_permutation ? "YES" : "NO") << "\n";
+    if (result.is_permutation) {
+        std::cout << "    False positive rate: " << std::fixed << std::setprecision(4)
+                  << (result.false_positive_rate * 100.0) << "%\n";
+    }
     std::cout << "  Performance:\n";
     std::cout << "    Build time: " << result.build_time_us << " us (" << result.build_time_us / 1000.0
               << " ms)\n";
@@ -104,7 +139,7 @@ void print_results(const TestResult& result) {
 }
 
 int main() {
-    std::cout << "========== MPHF Test Suite ==========\n";
+    std::cout << "========== Unified MPHF Test Suite ==========\n";
     std::cout << "Correctness, Performance, and Size Analysis\n\n";
 
     std::vector<size_t> test_sizes = {100, 1000, 10000, 100000, 1000000, 2000000, 5000000, 10000000};

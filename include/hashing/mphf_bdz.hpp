@@ -19,6 +19,10 @@
 namespace cltj {
 namespace hashing {
 
+// A constant for the number of bits in our fingerprints. 8 bits gives a 1/256
+// chance of a random collision (false positive).
+static constexpr int FINGERPRINT_BITS = 8;
+
 /**
  * @brief Triple structure representing a hyperedge in the 3-uniform hypergraph
  */
@@ -60,9 +64,10 @@ struct Triple {
 class MPHF {
   private:
     // Core data structures
-    std::vector<uint8_t> G_;  // Assignment array, values in {0,1,2,3}
+    sdsl::int_vector<2> G_;  // Assignment array, values in {0,1,2,3}
     sdsl::bit_vector used_positions_;  // Bitvector marking used positions
     sdsl::rank_support_v<1> rank_support_;  // For O(1) rank queries
+    sdsl::int_vector<> Q_;  // Fingerprints for membership queries
     uint32_t m_;  // Size of G array (~1.23 * n)
     uint32_t n_;  // Number of keys
 
@@ -125,6 +130,16 @@ class MPHF {
     uint32_t m() const { return m_; }
     int retry_count() const { return retry_count_; }
 
+    // --- Getters for manual size calculation ---
+    const sdsl::int_vector<2>& get_g() const { return G_; }
+    const sdsl::bit_vector& get_used_positions() const { return used_positions_; }
+    const sdsl::rank_support_v<1>& get_rank_support() const { return rank_support_; }
+    const sdsl::int_vector<>& get_q() const { return Q_; }
+    const std::array<uint64_t, 3>& get_primes() const { return primes_; }
+    const std::array<uint64_t, 3>& get_multipliers() const { return multipliers_; }
+    const std::array<uint64_t, 3>& get_biases() const { return biases_; }
+    const std::array<uint64_t, 3>& get_segment_starts() const { return segment_starts_; }
+
     /**
      * @brief Serialize the MPHF to an output stream.
      * Conforms to the SDSL serialization interface.
@@ -142,6 +157,7 @@ class MPHF {
         written_bytes += sdsl::write_member(G_, out, child, "G_");
         written_bytes += used_positions_.serialize(out, child, "used_positions_");
         written_bytes += rank_support_.serialize(out, child, "rank_support_");
+        written_bytes += sdsl::write_member(Q_, out, child, "Q_");
         written_bytes += sdsl::write_member(m_, out, child, "m_");
         written_bytes += sdsl::write_member(n_, out, child, "n_");
 
@@ -167,6 +183,7 @@ class MPHF {
         used_positions_.load(in);
         rank_support_.load(in);
         rank_support_.set_vector(&used_positions_);  // Re-link rank support
+        sdsl::read_member(Q_, in);
         sdsl::read_member(m_, in);
         sdsl::read_member(n_, in);
 
@@ -178,6 +195,19 @@ class MPHF {
 
         // Reset retry_count since it's not serialized
         retry_count_ = 0;
+    }
+
+    /**
+     * @brief Check if a key is in the set.
+     * This query can have false positives, but no false negatives.
+     * @param key The key to check.
+     * @return true if the key is likely in the set, false otherwise.
+     */
+    bool contains(uint64_t key) const {
+        if (n_ == 0)
+            return false;
+        uint32_t idx = query(key);
+        return Q_[idx] == fingerprint(key);
     }
 
     /**
@@ -208,6 +238,8 @@ class MPHF {
         assign_g_values(peeling_order);
 
         build_compactification(triples);
+
+        build_fingerprints(keys);
 
         return true;
     }
@@ -290,7 +322,7 @@ class MPHF {
         }
 
         // Initialize G with sentinel value 3 (acts as 0 mod 3 but marks unassigned)
-        G_.assign(m_, static_cast<uint8_t>(3));
+        G_ = sdsl::int_vector<2>(m_, 3);
 
         // std::cout << "[MPHF::initialize] n=" << n_ << " target_m=" << target_m << " primes(r): {"
         //           << primes_[0] << ", " << primes_[1] << ", " << primes_[2] << "}"
@@ -415,7 +447,7 @@ class MPHF {
     void assign_g_values(const std::vector<Triple>& peeling_order) {
         if (m_ == 0)
             return;
-        std::vector<uint8_t> visited(m_, 0);
+        sdsl::int_vector<1> visited(m_, 0);
 
         // Process in reverse order
         for (auto it = peeling_order.rbegin(); it != peeling_order.rend(); ++it) {
@@ -440,7 +472,7 @@ class MPHF {
 
             // Need (G[v0] + G[v1] + G[v2]) % 3 == j
             uint32_t need = static_cast<uint32_t>((3 + j - static_cast<int>(s)) % 3);
-            G_[t.v(j)] = static_cast<uint8_t>(need);
+            G_[t.v(j)] = need;
 
             // Mark all as visited (only one was newly assigned, but the others are effectively fixed now)
             visited[t.v0] = visited[t.v1] = visited[t.v2] = 1;
@@ -463,6 +495,20 @@ class MPHF {
         }
         sdsl::util::init_support(rank_support_, &used_positions_);
         // std::cout << "[MPHF::compact] built bitvector with " << triples.size() << " used positions\n";
+    }
+
+    // ========== STEP 6: Fingerprint Generation ==========
+    /**
+     * @brief Build the fingerprint array for membership queries.
+     */
+    void build_fingerprints(const std::vector<uint64_t>& keys) {
+        if (n_ == 0)
+            return;
+        Q_ = sdsl::int_vector<>(n_, 0, FINGERPRINT_BITS);
+        for (const auto& key : keys) {
+            uint32_t idx = query(key);
+            Q_[idx] = fingerprint(key);
+        }
     }
 
     // ========== HELPER FUNCTIONS ==========
@@ -495,6 +541,14 @@ class MPHF {
     uint32_t compact_position(uint32_t position) const {
         // rank before position in [0, position)
         return static_cast<uint32_t>(rank_support_(position));
+    }
+
+    /**
+     * @brief Computes a fingerprint for a key.
+     */
+    uint8_t fingerprint(uint64_t key) const {
+        // A simple fingerprint. Can be replaced with something more robust.
+        return static_cast<uint8_t>(key & ((1 << FINGERPRINT_BITS) - 1));
     }
 };
 
