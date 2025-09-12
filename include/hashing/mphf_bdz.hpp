@@ -215,12 +215,13 @@ class MPHF {
      */
     std::vector<Triple> generate_triples(const std::vector<uint64_t>& keys) {
         std::vector<Triple> triples;
-        // TODO:
-        // For each key:
-        // 1. Compute h0(key), h1(key), h2(key)
-        // 2. Map to vertices: v0 = h0(key), v1 = m/3 + h1(key), v2 = 2*m/3 +
-        // h2(key)
-        // 3. Create Triple(key, v0, v1, v2) and add to vector
+        triples.reserve(keys.size());
+        for (auto x : keys) {
+            Triple t = compute_triple(x);
+            triples.push_back(t);
+            std::cout << "[MPHF::triples] key=" << x << " -> (" << t.v0 << ", " << t.v1 << ", " << t.v2
+                      << ")\n";
+        }
         return triples;
     }
 
@@ -290,11 +291,7 @@ class MPHF {
      * Each hash function maps to its own segment of the vertex space
      */
     Triple compute_triple(uint64_t key) const {
-        // TODO: Each hash function has its own range
-        // v0 = hash_function(key, 0)  // in range [0, r[0])
-        // v1 = hash_function(key, 1)  // in range [r[0], r[0] + r[1])
-        // v2 = hash_function(key, 2)  // in range [r[0] + r[1], r[0] + r[1] + r[2])
-        return Triple(key, 0, 0, 0);  // Placeholder
+        return Triple(key, hash_function(key, 0), hash_function(key, 1), hash_function(key, 2));
     }
 
     /**
