@@ -99,7 +99,7 @@ class MPHF {
             return false;
         }
 
-        // TODO: Step 2 - Generate triples for all keys
+        // Step 2 - Generate triples for all keys
         std::vector<Triple> triples = generate_triples(keys);
 
         // TODO: Step 3 - Perform peeling to get topological ordering
@@ -111,8 +111,8 @@ class MPHF {
         // TODO: Step 4 - Assign G array values in reverse order
         assign_g_values(peeling_order);
 
-        // TODO: Step 5 - Build compactification structures
-        build_compactification();
+        // Step 5 - Build compactification structures
+        build_compactification(triples);
 
         return true;
     }
@@ -126,13 +126,13 @@ class MPHF {
         if (m_ == 0 || G_.empty()) {
             return 0;
         }
-        // TODO: Step 1 - Compute triple (v0, v1, v2)
+        // Step 1 - Compute triple (v0, v1, v2)
         auto triple = compute_triple(key);
 
-        // TODO: Step 2 - Compute j = (G[v0] + G[v1] + G[v2]) mod 3
+        // Step 2 - Compute j = (G[v0] + G[v1] + G[v2]) mod 3
         uint32_t j = (G_[triple.v0] + G_[triple.v1] + G_[triple.v2]) % 3;
 
-        // TODO: Step 3 - Select vertex based on j
+        // Step 3 - Select vertex based on j
         uint32_t selected_vertex;
         switch (j) {
             case 0:
@@ -148,8 +148,14 @@ class MPHF {
                 selected_vertex = triple.v0;  // Should never happen
         }
 
-        // TODO: Step 4 - Apply rank operation for compactification
-        return compact_position(selected_vertex);
+        // Step 4 - Apply rank operation for compactification
+        uint32_t res = compact_position(selected_vertex);
+        std::cout << "[MPHF::query] key=" << key << " triple=(" << triple.v0 << ", " << triple.v1 << ", "
+                  << triple.v2 << ") j=" << j << " sel=" << selected_vertex
+                  << " used=" << (used_positions_.size() ? (int)used_positions_[selected_vertex] : -1)
+                  << " rank=" << (used_positions_.size() ? (uint64_t)rank_support_(selected_vertex) : 0)
+                  << " -> res=" << res << "\n";
+        return res;
     }
 
   private:
@@ -340,10 +346,8 @@ class MPHF {
                 continue;
             }
 
-            // Sum of current G values modulo 3 (3 acts as 0 automatically)
-            uint32_t s = (static_cast<uint32_t>(G_[vertices[0]]) + static_cast<uint32_t>(G_[vertices[1]]) +
-                          static_cast<uint32_t>(G_[vertices[2]])) %
-                3;
+            // Sum of current G values modulo 3
+            uint32_t s = (G_[vertices[0]] + G_[vertices[1]] + G_[vertices[2]]) % 3;
 
             // Need (G[v0] + G[v1] + G[v2]) % 3 == j
             uint32_t need = static_cast<uint32_t>((3 + j - static_cast<int>(s)) % 3);
@@ -361,12 +365,15 @@ class MPHF {
     /**
      * @brief Build structures for compacting hash function to [0,n)
      */
-    void build_compactification() {
-        // TODO:
-        // 1. Identify which positions in [0,m) are actually used by the PHF
-        // 2. Build bitvector marking used positions
-        // 3. Build rank support structure for O(1) rank queries
-        // 4. Store used_positions_ and initialize SDSL structures
+    void build_compactification(const std::vector<Triple>& triples) {
+        used_positions_ = sdsl::bit_vector(m_, 0);
+        for (const auto& t : triples) {
+            uint32_t j = static_cast<uint32_t>((G_[t.v0] + G_[t.v1] + G_[t.v2]) % 3);
+            uint32_t pos = (j == 0 ? t.v0 : (j == 1 ? t.v1 : t.v2));
+            used_positions_[pos] = 1;
+        }
+        sdsl::util::init_support(rank_support_, &used_positions_);
+        std::cout << "[MPHF::compact] built bitvector with " << triples.size() << " used positions\n";
     }
 
     // ========== HELPER FUNCTIONS ==========
@@ -397,9 +404,8 @@ class MPHF {
      * @brief Convert position in [0,m) to compact position in [0,n)
      */
     uint32_t compact_position(uint32_t position) const {
-        // TODO: Use SDSL rank operation on bitvector
-        // return rank_support_(position);
-        return 0;  // Placeholder
+        // rank before position in [0, position)
+        return static_cast<uint32_t>(rank_support_(position));
     }
 };
 
