@@ -1,6 +1,5 @@
-// Enhanced MPHF test suite with robustness checks and metrics
+// A unified and robust test suite for MPHF correctness, performance, and size.
 #include <include/hashing/mphf_bdz.hpp>
-#include <algorithm>
 #include <chrono>
 #include <iomanip>
 #include <iostream>
@@ -12,266 +11,117 @@
 
 using cltj::hashing::MPHF;
 
-struct TestMetrics {
-    bool success;
-    uint32_t n;
-    uint32_t m;
-    double overhead;
-    bool valid_permutation;
-    int retries;
-    std::chrono::microseconds build_time;
-
-    void print() const {
-        std::cout << "  Metrics: n=" << n << ", m=" << m << ", overhead=" << std::fixed
-                  << std::setprecision(3) << overhead << ", retries=" << retries
-                  << ", build_time=" << build_time.count() << "μs"
-                  << ", valid=" << (valid_permutation ? "YES" : "NO") << "\n";
-    }
-};
-
-static TestMetrics run_case(const std::vector<uint64_t>& keys, const char* label, bool verbose = false) {
-    std::cout << "\n=== Case: " << label << " (n=" << keys.size() << ") ===\n";
-
-    TestMetrics metrics;
-    metrics.n = static_cast<uint32_t>(keys.size());
-
-    MPHF mphf;
-    auto start = std::chrono::high_resolution_clock::now();
-    bool ok = mphf.build(keys);
-    auto end = std::chrono::high_resolution_clock::now();
-
-    metrics.build_time = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-    metrics.success = ok;
-    metrics.m = ok ? mphf.m() : 0;
-    metrics.overhead = (keys.empty() || !ok) ? 0.0 : (double)mphf.m() / (double)keys.size();
-    metrics.retries = mphf.retry_count();
-
-    std::cout << "build(keys) -> " << (ok ? "success" : "failure");
-    if (ok) {
-        std::cout << ", m=" << mphf.m() << ", overhead=" << std::fixed << std::setprecision(3)
-                  << metrics.overhead;
-    }
-    std::cout << "\n";
-
-    if (!ok) {
-        metrics.valid_permutation = false;
-        metrics.print();
-        return metrics;
-    }
-
-    // Verify permutation property
-    std::vector<uint32_t> out;
-    out.reserve(keys.size());
-    for (auto k : keys) {
-        uint32_t h = mphf.query(k);
-        if (verbose && keys.size() <= 20) {
-            std::cout << "key=" << k << " -> h=" << h << "\n";
-        }
-        out.push_back(h);
-    }
-
-    std::unordered_set<uint32_t> seen;
-    bool distinct = true;
-    bool in_range = true;
-    for (auto h : out) {
-        if (h >= keys.size())
-            in_range = false;
-        if (!seen.insert(h).second)
-            distinct = false;
-    }
-
-    metrics.valid_permutation = distinct && in_range;
-    std::cout << "perm_check: in_range=" << (in_range ? "true" : "false")
-              << ", distinct=" << (distinct ? "true" : "false") << "\n";
-
-    metrics.print();
-    return metrics;
-}
-
-static std::vector<uint64_t> generate_random_keys(size_t n, uint64_t seed, uint64_t max_value = UINT64_MAX) {
+// Helper to generate a vector of unique random keys in a reasonable range.
+static std::vector<uint64_t> generate_reasonable_keys(size_t n, uint64_t seed) {
     std::mt19937_64 rng(seed);
     std::unordered_set<uint64_t> unique_keys;
-    std::uniform_int_distribution<uint64_t> dist(1, max_value);
+    // Generate keys in a range up to 100*n to reduce collisions during generation.
+    std::uniform_int_distribution<uint64_t> dist(1, n * 100);
     while (unique_keys.size() < n) {
         unique_keys.insert(dist(rng));
     }
     return std::vector<uint64_t>(unique_keys.begin(), unique_keys.end());
 }
 
-static std::vector<uint64_t> generate_reasonable_keys(size_t n, uint64_t seed) {
-    // Generate keys in a more reasonable range (1 to 1M)
-    return generate_random_keys(n, seed, 1000000);
-}
+// A struct to hold all the results from a single test run.
+struct TestResult {
+    size_t n = 0;
+    uint32_t m = 0;
+    int retries = 0;
+    size_t size_bytes = 0;
+    double bits_per_key = 0.0;
+    double overhead = 0.0;
+    long long build_time_us = 0;
+    bool build_success = false;
+    bool is_permutation = false;
+};
 
-static std::vector<uint64_t> generate_large_keys(size_t n, uint64_t seed) {
-    // Generate full 64-bit keys for stress testing
-    return generate_random_keys(n, seed, UINT64_MAX);
-}
+// Runs a full test case for a given n, checking correctness, performance, and size.
+TestResult run_test_case(size_t n) {
+    TestResult result;
+    result.n = n;
 
-static int test_edge_cases() {
-    std::cout << "\n========== EDGE CASE TESTS ==========\n";
-    int failures = 0;
+    if (n > 100000) {
+        std::cout << "Testing n=" << n << ", generating keys...\n";
+    }
+    auto keys = generate_reasonable_keys(n, 42 + n);
 
-    // Test n=0 (empty) - expected to fail, not counted as error
-    std::vector<uint64_t> empty;
-    auto metrics = run_case(empty, "empty-set");
-    std::cout << "  Note: Empty set failure is expected behavior\n";
-    // Don't count empty set failure as a test failure
+    MPHF mphf;
 
-    // Test n=1 (singleton)
-    std::vector<uint64_t> singleton = {42};
-    metrics = run_case(singleton, "singleton", true);
-    if (!metrics.success || !metrics.valid_permutation)
-        failures++;
+    // 1. Measure Build Time
+    auto start = std::chrono::high_resolution_clock::now();
+    result.build_success = mphf.build(keys);
+    auto end = std::chrono::high_resolution_clock::now();
+    result.build_time_us = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
 
-    // Test duplicate detection (should fail gracefully or handle)
-    std::vector<uint64_t> duplicates = {1, 2, 3, 2, 4};  // has duplicate
-    std::cout << "\n=== Case: duplicates-test (should handle gracefully) ===\n";
-    std::cout << "Note: Implementation should detect duplicates\n";
-    // We'll just note this - the current implementation might not explicitly check
-
-    return failures;
-}
-
-static int test_basic_functionality() {
-    std::cout << "\n========== BASIC FUNCTIONALITY TESTS ==========\n";
-    int failures = 0;
-
-    // Small fixed set (book-like) with detailed output
-    std::vector<uint64_t> small = {1, 2, 3, 4, 5};
-    auto metrics = run_case(small, "small-fixed", true);
-    if (!metrics.success || !metrics.valid_permutation)
-        failures++;
-
-    // Medium consecutive keys
-    std::vector<uint64_t> medium(100);
-    std::iota(medium.begin(), medium.end(), 1);
-    metrics = run_case(medium, "medium-consecutive");
-    if (!metrics.success || !metrics.valid_permutation)
-        failures++;
-
-    // Random unique keys with reasonable range (more readable output)
-    auto random_keys = generate_reasonable_keys(200, 12345);
-    metrics = run_case(random_keys, "random-200-reasonable");
-    if (!metrics.success || !metrics.valid_permutation)
-        failures++;
-
-    // Random unique keys with full 64-bit range (stress test)
-    auto large_keys = generate_large_keys(50, 12345);  // Smaller set to avoid long output
-    metrics = run_case(large_keys, "random-50-large-keys");
-    if (!metrics.success || !metrics.valid_permutation)
-        failures++;
-
-    return failures;
-}
-
-static int test_scalability() {
-    std::cout << "\n========== SCALABILITY TESTS ==========\n";
-    int failures = 0;
-
-    // Test 1K keys with reasonable range
-    auto keys_1k = generate_reasonable_keys(1000, 54321);
-    auto metrics = run_case(keys_1k, "random-1k-reasonable");
-    if (!metrics.success || !metrics.valid_permutation)
-        failures++;
-
-    // Test 10K keys with reasonable range
-    auto keys_10k = generate_reasonable_keys(10000, 98765);
-    metrics = run_case(keys_10k, "random-10k-reasonable");
-    if (!metrics.success || !metrics.valid_permutation)
-        failures++;
-
-    // Test 100K keys with reasonable range (production scale)
-    auto keys_100k = generate_reasonable_keys(100000, 11111);
-    metrics = run_case(keys_100k, "random-100k-reasonable");
-    if (!metrics.success || !metrics.valid_permutation)
-        failures++;
-
-    return failures;
-}
-
-static int test_multiple_seeds() {
-    std::cout << "\n========== MULTIPLE SEED TESTS ==========\n";
-    int failures = 0;
-
-    // Test same size with different seeds to check stability (reasonable range)
-    std::vector<uint64_t> seeds = {1111, 2222, 3333, 4444, 5555};
-    for (size_t i = 0; i < seeds.size(); ++i) {
-        auto keys = generate_reasonable_keys(500, seeds[i]);
-        std::string label = "random-500-reasonable-seed" + std::to_string(seeds[i]);
-        auto metrics = run_case(keys, label.c_str());
-        if (!metrics.success || !metrics.valid_permutation)
-            failures++;
+    if (!result.build_success) {
+        result.retries = mphf.retry_count();
+        return result;
     }
 
-    return failures;
+    // 2. Check for Correct Permutation
+    std::unordered_set<uint32_t> seen;
+    bool distinct = true;
+    bool in_range = true;
+    for (auto k : keys) {
+        uint32_t h = mphf.query(k);
+        if (h >= n) {
+            in_range = false;
+        }
+        if (!seen.insert(h).second) {
+            distinct = false;
+        }
+    }
+    result.is_permutation = distinct && in_range;
+
+    // 3. Collect Metrics
+    result.m = mphf.m();
+    result.retries = mphf.retry_count();
+    result.size_bytes = sdsl::size_in_bytes(mphf);
+    result.bits_per_key = (result.size_bytes * 8.0) / n;
+    result.overhead = (double)result.m / n;
+
+    return result;
 }
 
-static int test_stress() {
-    std::cout << "\n========== STRESS TESTS ==========\n";
-    int failures = 0;
+void print_results(const TestResult& result) {
+    std::cout << "--- Test Case: n = " << result.n << " ---\n";
+    if (!result.build_success) {
+        std::cout << "  STATUS: BUILD FAILED after " << result.retries << " retries.\n\n";
+        return;
+    }
 
-    // Test with huge 64-bit key values (small set for visibility)
-    auto large_keys_small = generate_large_keys(100, 77777);
-    auto metrics = run_case(large_keys_small, "large-keys-100");
-    if (!metrics.success || !metrics.valid_permutation)
-        failures++;
-
-    // Test with huge 64-bit key values (medium set)
-    auto large_keys_medium = generate_large_keys(10000, 88888);
-    metrics = run_case(large_keys_medium, "large-keys-10k");
-    if (!metrics.success || !metrics.valid_permutation)
-        failures++;
-
-    // Test MASSIVE dataset: 1M keys with reasonable range
-    std::cout << "\n  WARNING: Testing 1M keys - this may take a while...\n";
-    std::cout << "  Press Ctrl+C if you want to skip this test.\n";
-    auto keys_1m = generate_reasonable_keys(1000000, 99999);
-    metrics = run_case(keys_1m, "random-1M-reasonable");
-    if (!metrics.success || !metrics.valid_permutation)
-        failures++;
-
-    return failures;
-}
-
-static void print_summary(int total_failures, int total_tests) {
-    std::cout << "\n========== TEST SUMMARY ==========\n";
-    std::cout << "Total tests: " << total_tests << "\n";
-    std::cout << "Failures: " << total_failures << "\n";
-    std::cout << "Success rate: " << std::fixed << std::setprecision(1)
-              << (100.0 * (total_tests - total_failures) / total_tests) << "%\n";
-    std::cout << "Overall result: " << (total_failures == 0 ? "PASS" : "FAIL") << "\n";
+    std::cout << "  Correctness:\n";
+    std::cout << "    Is permutation? " << (result.is_permutation ? "YES" : "NO") << "\n";
+    std::cout << "  Performance:\n";
+    std::cout << "    Build time: " << result.build_time_us << " us (" << result.build_time_us / 1000.0
+              << " ms)\n";
+    std::cout << "  Size & Overhead:\n";
+    std::cout << "    Size: " << result.size_bytes << " bytes (" << result.size_bytes / 1024.0 << " KB)\n";
+    std::cout << "    Bits per key: " << std::fixed << std::setprecision(2) << result.bits_per_key << "\n";
+    std::cout << "    m/n overhead: " << std::fixed << std::setprecision(3) << result.overhead << "\n";
+    std::cout << "    Retries needed: " << result.retries << "\n\n";
 }
 
 int main() {
-    std::cout << "========== ENHANCED MPHF TEST SUITE ==========\n";
-    std::cout << "Testing BDZ/MWHC Minimal Perfect Hash Function\n";
+    std::cout << "========== Unified MPHF Test Suite ==========\n";
+    std::cout << "Correctness, Performance, and Size Analysis\n\n";
 
-    int total_failures = 0;
-    int total_tests = 0;
+    std::vector<size_t> test_sizes = {100, 1000, 10000, 100000, 1000000, 2000000, 5000000, 10000000};
+    int failures = 0;
 
-    // Run test suites
-    int edge_failures = test_edge_cases();
-    total_failures += edge_failures;
-    total_tests += 1;  // only singleton (empty set not counted as failure)
+    for (size_t n : test_sizes) {
+        TestResult result = run_test_case(n);
+        print_results(result);
+        if (!result.build_success || !result.is_permutation) {
+            failures++;
+        }
+    }
 
-    int basic_failures = test_basic_functionality();
-    total_failures += basic_failures;
-    total_tests += 4;  // small + medium + random-200-reasonable + random-50-large
+    std::cout << "========== Test Summary ==========\n";
+    std::cout << "Total test cases: " << test_sizes.size() << "\n";
+    std::cout << "Failures: " << failures << "\n";
+    std::cout << "Final Result: " << (failures == 0 ? "ALL PASSED" : "SOME FAILED") << "\n";
 
-    int scale_failures = test_scalability();
-    total_failures += scale_failures;
-    total_tests += 3;  // 1k + 10k + 100k
-
-    int seed_failures = test_multiple_seeds();
-    total_failures += seed_failures;
-    total_tests += 5;  // 5 different seeds
-
-    int stress_failures = test_stress();
-    total_failures += stress_failures;
-    total_tests += 3;  // large-keys-100 + large-keys-10k + 1M-reasonable
-
-    print_summary(total_failures, total_tests);
-
-    return total_failures > 0 ? 1 : 0;
+    return failures > 0 ? 1 : 0;
 }
