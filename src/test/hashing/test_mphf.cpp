@@ -104,7 +104,7 @@ void print_results(const TestResult& result) {
 }
 
 int main() {
-    std::cout << "========== Unified MPHF Test Suite ==========\n";
+    std::cout << "========== MPHF Test Suite ==========\n";
     std::cout << "Correctness, Performance, and Size Analysis\n\n";
 
     std::vector<size_t> test_sizes = {100, 1000, 10000, 100000, 1000000, 2000000, 5000000, 10000000};
