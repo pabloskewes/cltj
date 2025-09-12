@@ -198,3 +198,5 @@ add_cltj_executable(test-mphf-utils src/test/hashing/test_mphf_utils.cpp test)
 add_cltj_executable(test-mphf-skeleton src/test/hashing/test_mphf_skeleton.cpp test)
 
 add_cltj_executable(test-mphf src/test/hashing/test_mphf.cpp test)
+
+add_cltj_executable(test-mphf-size src/test/hashing/test_mphf_size.cpp test)

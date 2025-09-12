@@ -11,6 +11,7 @@
 #include <random>
 #include <sdsl/bit_vectors.hpp>
 #include <sdsl/rank_support_v.hpp>
+#include <sdsl/structure_tree.hpp>
 #include <sdsl/util.hpp>
 #include <stack>
 #include <vector>
@@ -77,6 +78,8 @@ class MPHF {
     int retry_count_;  // Number of retries used in last build
 
   public:
+    using size_type = size_t;  // Required for sdsl::size_in_bytes
+
     MPHF()
         : m_(0),
           n_(0),
@@ -85,6 +88,14 @@ class MPHF {
           multipliers_{0, 0, 0},
           biases_{0, 0, 0},
           segment_starts_{0, 0, 0} {}
+
+    // Disabling copy and move because this class has a complex resource
+    // management like the pointer relationship between rank_support_ and its vector.
+    // TODO: Understand why this is necessary and try to make it cleaner
+    MPHF(const MPHF&) = delete;
+    MPHF& operator=(const MPHF&) = delete;
+    MPHF(MPHF&&) = delete;
+    MPHF& operator=(MPHF&&) = delete;
 
     /**
      * @brief Build MPHF for given keys
@@ -113,6 +124,61 @@ class MPHF {
     uint32_t n() const { return n_; }
     uint32_t m() const { return m_; }
     int retry_count() const { return retry_count_; }
+
+    /**
+     * @brief Serialize the MPHF to an output stream.
+     * Conforms to the SDSL serialization interface.
+     * @param out The output stream.
+     * @param v The structure tree node (for visualization).
+     * @param name The name for the structure tree node.
+     * @return The number of bytes written.
+     */
+    size_t serialize(std::ostream& out, sdsl::structure_tree_node* v = nullptr, std::string name = "") const {
+        sdsl::structure_tree_node* child =
+            sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
+        size_t written_bytes = 0;
+
+        // Core data structures (essential for queries)
+        written_bytes += sdsl::write_member(G_, out, child, "G_");
+        written_bytes += used_positions_.serialize(out, child, "used_positions_");
+        written_bytes += rank_support_.serialize(out, child, "rank_support_");
+        written_bytes += sdsl::write_member(m_, out, child, "m_");
+        written_bytes += sdsl::write_member(n_, out, child, "n_");
+
+        // Hash function parameters (essential for queries)
+        written_bytes += sdsl::write_member(primes_, out, child, "primes_");
+        written_bytes += sdsl::write_member(multipliers_, out, child, "multipliers_");
+        written_bytes += sdsl::write_member(biases_, out, child, "biases_");
+        written_bytes += sdsl::write_member(segment_starts_, out, child, "segment_starts_");
+
+        // Note: retry_count_ is NOT serialized as it's only needed during construction
+
+        sdsl::structure_tree::add_size(child, written_bytes);
+        return written_bytes;
+    }
+
+    /**
+     * @brief Load the MPHF from an input stream.
+     * @param in The input stream.
+     */
+    void load(std::istream& in) {
+        // Core data structures
+        sdsl::read_member(G_, in);
+        used_positions_.load(in);
+        rank_support_.load(in);
+        rank_support_.set_vector(&used_positions_);  // Re-link rank support
+        sdsl::read_member(m_, in);
+        sdsl::read_member(n_, in);
+
+        // Hash function parameters
+        sdsl::read_member(primes_, in);
+        sdsl::read_member(multipliers_, in);
+        sdsl::read_member(biases_, in);
+        sdsl::read_member(segment_starts_, in);
+
+        // Reset retry_count since it's not serialized
+        retry_count_ = 0;
+    }
 
     /**
      * @brief Single attempt to build MPHF
