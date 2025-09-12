@@ -260,3 +260,8 @@ add_executable(test-mphf src/test/hashing/test_mphf.cpp)
 target_link_libraries(test-mphf sdsl divsufsort divsufsort64)
 set_target_properties(test-mphf PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
 target_include_directories(test-mphf PRIVATE ${CMAKE_SOURCE_DIR})
+
+add_executable(test-mphf-size src/test/hashing/test_mphf_size.cpp)
+target_link_libraries(test-mphf-size sdsl divsufsort divsufsort64)
+set_target_properties(test-mphf-size PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
+target_include_directories(test-mphf-size PRIVATE ${CMAKE_SOURCE_DIR})
