@@ -52,11 +52,12 @@ class MPHF {
 
     // Hash function parameters
     std::array<uint64_t, 3> primes_;  // r[k] = prime for hash function k
-    std::array<uint64_t, 3> offsets_;  // d[k] = offset for hash function k
     std::array<uint64_t, 3> multipliers_;  // a[k] = multiplier for hash function k
+    std::array<uint64_t, 3> offsets_;  // b[k] = offset for hash function k
 
     // For retry logic
     static constexpr int MAX_RETRIES = 10;
+    static constexpr uint64_t SEED = 0xC1A0ULL;
 
   public:
     MPHF() : m_(0), n_(0), primes_{0, 0, 0}, offsets_{0, 0, 0}, multipliers_{0, 0, 0} {}
@@ -160,18 +161,15 @@ class MPHF {
         const uint64_t target_m = static_cast<uint64_t>(std::ceil(1.25 * static_cast<double>(n_)));
         const uint64_t target_segment = std::max<uint64_t>(3, (target_m + 2) / 3);  // ceil(target_m/3)
 
-        // Pick three primes near target_segment; advance based on retry_count
-        // We stagger starts slightly across k to diversify
-        for (int k = 0; k < 3; ++k) {
-            uint64_t start = target_segment + static_cast<uint64_t>(retry_count) + static_cast<uint64_t>(k);
-            uint64_t p = next_prime(start);
-            // Ensure no key (non-zero) is divisible by p; if so, advance to next
-            // prime
-            while (!all_coprime(keys, p)) {
-                p = next_prime(p + 1);
-            }
-            primes_[static_cast<size_t>(k)] = p;
-        }
+        // Pick three close but distinct primes near target_segment, varying by retry
+        uint64_t stride = std::max<uint64_t>(3, target_segment / 4);
+        uint64_t base = target_segment + static_cast<uint64_t>(retry_count) * stride;
+        uint64_t p0 = next_prime(base);
+        uint64_t p1 = next_prime(p0 + 1);
+        uint64_t p2 = next_prime(p1 + 1);
+        primes_[0] = p0;
+        primes_[1] = p1;
+        primes_[2] = p2;
 
         // Compute segment offsets and total m
         offsets_[0] = 0;
@@ -179,24 +177,17 @@ class MPHF {
         offsets_[2] = primes_[0] + primes_[1];
         m_ = static_cast<uint32_t>(primes_[0] + primes_[1] + primes_[2]);
 
-        // Deterministic RNG for multipliers, varied by retry_count
-        // 0xC1A0 is an arbitrary hex seed constant; offset by retry_count for
-        // variety
-        std::mt19937_64 rng(0xC1A0ULL + static_cast<uint64_t>(retry_count));
+        // Deterministic RNG for multipliers with retry_count offset
+        std::mt19937_64 rng(SEED + static_cast<uint64_t>(retry_count));
         for (int k = 0; k < 3; ++k) {
             uint64_t p = primes_[static_cast<size_t>(k)];
             std::uniform_int_distribution<uint64_t> dist(1, p - 1);
-            multipliers_[static_cast<size_t>(k)] = dist(rng);
+            multipliers_[static_cast<size_t>(k)] = dist(rng);  // a[k] = randint(1, p-1)
         }
 
         // Initialize G with sentinel value 3 (acts as 0 mod 3 but marks unassigned)
         G_.assign(m_, static_cast<uint8_t>(3));
 
-        // Initialize compactification structures to empty; will be rebuilt later
-        used_positions_ = sdsl::bit_vector(m_, 0);
-        sdsl::util::init_support(rank_support_, &used_positions_);
-
-        // Debug prints (will be replaced by logging later)
         std::cout << "[MPHF::initialize] n=" << n_ << " target_m=" << target_m << " primes(r): {"
                   << primes_[0] << ", " << primes_[1] << ", " << primes_[2] << "}"
                   << " offsets(d): {" << offsets_[0] << ", " << offsets_[1] << ", " << offsets_[2] << "}"
@@ -271,7 +262,7 @@ class MPHF {
     /**
      * @brief Compute hash function h_k(key) for k ∈ {0,1,2}
      * Uses the improved approach: h_k(x) = offset_k + (key % prime_k) *
-     * multiplier_k % prime_k
+     * multiplier_k % prime_k (i.e. h_k(x) = a_k * x + b_k mod p_k)
      */
     uint32_t hash_function(uint64_t key, int function_index) const {
         // TODO: Implement the colleague's hash approach
