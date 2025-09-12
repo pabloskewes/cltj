@@ -103,30 +103,31 @@ class MPHF {
 
     /**
      * @brief Single attempt to build MPHF
+     * Algorithm:
+     * 1. Initialize hash functions and arrays
+     * 2. Generate triples for all keys
+     * 3. Perform peeling to get topological ordering
+     * 4. Assign G array values in reverse order
+     * 5. Build compactification structures
      * @param keys Vector of keys to hash
      * @param retry_count Number of previous failed attempts (affects hash
      * parameters)
      * @return true if successful, false if need to retry
      */
     bool try_build(const std::vector<uint64_t>& keys, int retry_count) {
-        // Step 1 - Initialize hash functions and arrays
         if (!initialize_hash_functions(keys, retry_count)) {
             return false;
         }
 
-        // Step 2 - Generate triples for all keys
         std::vector<Triple> triples = generate_triples(keys);
 
-        // Step 3 - Perform peeling to get topological ordering
         std::vector<Triple> peeling_order;
         if (!perform_peeling(triples, peeling_order)) {
             return false;  // Graph not peelable, need to retry
         }
 
-        // Step 4 - Assign G array values in reverse order
         assign_g_values(peeling_order);
 
-        // Step 5 - Build compactification structures
         build_compactification(triples);
 
         return true;
@@ -134,6 +135,11 @@ class MPHF {
 
     /**
      * @brief Query the MPHF for a key
+     * Algorithm:
+     * 1. Compute triple (v0, v1, v2)
+     * 2. Compute j = (G[v0] + G[v1] + G[v2]) mod 3
+     * 3. Select vertex based on j
+     * 4. Apply rank operation for compactification
      * @param key Key to query
      * @return Hash value in range [0, n)
      */
@@ -141,17 +147,18 @@ class MPHF {
         if (m_ == 0 || G_.empty()) {
             return 0;
         }
-        // Step 1 - Compute triple (v0, v1, v2)
+
         auto triple = compute_triple(key);
 
-        // Step 2 - Compute j = (G[v0] + G[v1] + G[v2]) mod 3
+        // Compute j = (G[v0] + G[v1] + G[v2]) mod 3
         uint32_t j = (G_[triple.v0] + G_[triple.v1] + G_[triple.v2]) % 3;
 
-        // Step 3 - Select vertex based on j
+        // Select v_j
         uint32_t selected_vertex = triple.v(static_cast<int>(j));
 
-        // Step 4 - Apply rank operation for compactification
+        // Apply rank operation for compactification
         uint32_t res = compact_position(selected_vertex);
+
         std::cout << "[MPHF::query] key=" << key << " triple=(" << triple.v0 << ", " << triple.v1 << ", "
                   << triple.v2 << ") j=" << j << " sel=" << selected_vertex
                   << " used=" << (used_positions_.size() ? (int)used_positions_[selected_vertex] : -1)
