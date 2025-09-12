@@ -191,8 +191,9 @@ class MPHF {
         const uint64_t target_m = static_cast<uint64_t>(std::ceil(1.25 * static_cast<double>(n_)));
         const uint64_t target_segment = std::max<uint64_t>(3, (target_m + 2) / 3);  // ceil(target_m/3)
 
-        // Pick three close but distinct primes near target_segment, varying by retry
-        uint64_t stride = std::max<uint64_t>(3, target_segment / 4);
+        // On retries, increase m by a moderate linear factor.
+        // A 10% stride is a balance between guaranteeing success and keeping overhead low.
+        uint64_t stride = std::max<uint64_t>(3, target_segment / 10);  // 10% stride
         uint64_t base = target_segment + static_cast<uint64_t>(retry_count) * stride;
         uint64_t p0 = next_prime(base);
         uint64_t p1 = next_prime(p0 + 1);
