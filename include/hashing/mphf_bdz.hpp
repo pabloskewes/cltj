@@ -340,9 +340,10 @@ class MPHF {
                 continue;
             }
 
-            // Sum of current G values modulo 3 (treat 3 as 0)
-            auto val = [&](uint32_t v) { return static_cast<uint32_t>(G_[v] % 3); };
-            uint32_t s = (val(vertices[0]) + val(vertices[1]) + val(vertices[2])) % 3;
+            // Sum of current G values modulo 3 (3 acts as 0 automatically)
+            uint32_t s = (static_cast<uint32_t>(G_[vertices[0]]) + static_cast<uint32_t>(G_[vertices[1]]) +
+                          static_cast<uint32_t>(G_[vertices[2]])) %
+                3;
 
             // Need (G[v0] + G[v1] + G[v2]) % 3 == j
             uint32_t need = static_cast<uint32_t>((3 + j - static_cast<int>(s)) % 3);
