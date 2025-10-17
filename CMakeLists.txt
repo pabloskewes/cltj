@@ -205,3 +205,6 @@ add_cltj_executable(test-mphf-size-breakdown src/test/hashing/test_mphf_size_bre
 
 # Analysis executables
 add_cltj_executable(analyze-trie-structure src/test/hashing/analyze_trie_structure.cpp analysis)
+
+# Distinct counter executable
+add_cltj_executable(count-distinct-spo src/analysis/count_distinct_spo.cpp analysis)
