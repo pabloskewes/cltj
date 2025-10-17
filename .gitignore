@@ -4,6 +4,7 @@
 data/
 .vscode/
 *intersection_statistics*
+notes/
 
 ### OSX ###
 # General
