@@ -272,3 +272,8 @@ target_link_libraries(analyze-trie-structure sdsl divsufsort divsufsort64)
 set_target_properties(analyze-trie-structure PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/analysis)
 target_include_directories(analyze-trie-structure PRIVATE ${CMAKE_SOURCE_DIR})
 
+# Distinct counter executable
+add_executable(count-distinct-spo src/analysis/count_distinct_spo.cpp)
+set_target_properties(count-distinct-spo PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/analysis)
+target_include_directories(count-distinct-spo PRIVATE ${CMAKE_SOURCE_DIR})
+
