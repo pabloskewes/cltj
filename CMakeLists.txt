@@ -265,3 +265,10 @@ add_executable(test-mphf-size-breakdown src/test/hashing/test_mphf_size_breakdow
 target_link_libraries(test-mphf-size-breakdown sdsl divsufsort divsufsort64)
 set_target_properties(test-mphf-size-breakdown PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
 target_include_directories(test-mphf-size-breakdown PRIVATE ${CMAKE_SOURCE_DIR})
+
+# Analysis executables
+add_executable(analyze-trie-structure src/test/hashing/analyze_trie_structure.cpp)
+target_link_libraries(analyze-trie-structure sdsl divsufsort divsufsort64)
+set_target_properties(analyze-trie-structure PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/analysis)
+target_include_directories(analyze-trie-structure PRIVATE ${CMAKE_SOURCE_DIR})
+
