@@ -202,3 +202,6 @@ add_cltj_executable(test-mphf src/test/hashing/test_mphf.cpp test)
 add_cltj_executable(test-mphf-size src/test/hashing/test_mphf_size.cpp test)
 
 add_cltj_executable(test-mphf-size-breakdown src/test/hashing/test_mphf_size_breakdown.cpp test)
+
+# Analysis executables
+add_cltj_executable(analyze-trie-structure src/test/hashing/analyze_trie_structure.cpp analysis)
