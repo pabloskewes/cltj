@@ -37,12 +37,11 @@ void analyze_trie_structure_correct(
 
     std::cout << "    Root has " << root_children << " children" << std::endl;
 
-    // Level 1: Children of root (limit to first 1000 for testing)
+    // Level 1: Children of root (process all)
     if (root_children > 0) {
         std::cout << "  Processing Level 1 (Children of root)..." << std::endl;
         cltj::compact_trie::size_type first_child_pos = trie.first_child(0);
-        cltj::compact_trie::size_type level1_limit =
-            std::min(root_children, (cltj::compact_trie::size_type)1000);
+        cltj::compact_trie::size_type level1_limit = root_children;
 
         for (cltj::compact_trie::size_type i = 0; i < level1_limit; i++) {
             cltj::compact_trie::size_type pos = first_child_pos + i;
@@ -67,11 +66,10 @@ void analyze_trie_structure_correct(
 
         std::cout << "    Processed " << level1_limit << " level 1 nodes" << std::endl;
 
-        // Level 2: Children of level 1 (limit to first 100 for testing)
+        // Level 2: Children of level 1 (process all)
         if (level1_limit > 0) {
             std::cout << "  Processing Level 2 (Children of level 1)..." << std::endl;
-            cltj::compact_trie::size_type level2_limit =
-                std::min(level1_limit, (cltj::compact_trie::size_type)100);
+            cltj::compact_trie::size_type level2_limit = level1_limit;
 
             for (cltj::compact_trie::size_type i = 0; i < level2_limit; i++) {
                 cltj::compact_trie::size_type pos = first_child_pos + i;
@@ -80,10 +78,8 @@ void analyze_trie_structure_correct(
 
                 if (level1_children > 0) {
                     cltj::compact_trie::size_type level1_first_child_pos = trie.first_child(level1_node);
-                    cltj::compact_trie::size_type level2_sample =
-                        std::min(level1_children, (cltj::compact_trie::size_type)10);
 
-                    for (cltj::compact_trie::size_type j = 0; j < level2_sample; j++) {
+                    for (cltj::compact_trie::size_type j = 0; j < level1_children; j++) {
                         cltj::compact_trie::size_type level2_pos = level1_first_child_pos + j;
                         cltj::compact_trie::size_type level2_node =
                             trie.nodeselect(level2_pos, 0);  // gap = 0 for no root
