@@ -19,6 +19,10 @@
 
 #include <CLI11.hpp>
 #include <util/csv_util.hpp>
+// For --check-index option
+#include <sdsl/load.hpp>
+#include <index/cltj_index_spo_lite.hpp>
+#include <trie/cltj_compact_trie.hpp>
 
 namespace {
 
@@ -75,22 +79,35 @@ struct Args {
     std::string out_dir = "data/trie_analysis";
     uint64_t max_lines = 0;  // 0 = no limit
     size_t kmv_k = 200000;  // ~1/sqrt(k) ≈ 0.22% rel. error
+    std::string index_path;  // optional: if set, perform index root check and exit
 };
 
-}  // namespace
+// Check and print root degrees from a CLTJ index
+int check_index_roots(const std::string& index_path) {
+    try {
+        std::cout << "Loading index from " << index_path << "..." << std::endl;
+        cltj::cltj_index_spo_lite<cltj::compact_trie> index;
+        sdsl::load_from_file(index, index_path);
+        std::cout << "Index loaded. Size: " << sdsl::size_in_bytes(index) << " bytes" << std::endl;
 
-int main(int argc, char** argv) {
-    std::ios::sync_with_stdio(false);
-    std::cin.tie(nullptr);
+        for (int i = 0; i < 6; ++i) {
+            const auto* trie = index.get_trie(i);
+            if (!trie) {
+                std::cout << "Trie " << i << ": null" << std::endl;
+                continue;
+            }
+            auto root_deg = trie->children(0);
+            std::cout << "Trie " << i << " root children: " << root_deg << std::endl;
+        }
+        return 0;
+    } catch (const std::exception& e) {
+        std::cerr << "Error loading index: " << e.what() << std::endl;
+        return 1;
+    }
+}
 
-    Args args;
-    CLI::App app{"Count distinct S, P, O from a triples .dat file (KMV for S/O, exact for P)"};
-    app.add_option("input", args.dat_path, "Path to triples .dat (S P O)")->required();
-    app.add_option("--kmv-k", args.kmv_k, "KMV k (controls error ~1/sqrt(k))");
-    app.add_option("--max-lines", args.max_lines, "Max lines to read (0 = all)");
-    app.add_option("--outdir", args.out_dir, "Output directory");
-    CLI11_PARSE(app, argc, argv);
-
+// Count distinct S, P, O from a .dat file using KMV for S/O and exact for P
+int count_distinct_spo(const Args& args) {
     // Ensure output directory exists
     {
         std::string cmd = std::string("mkdir -p ") + args.out_dir;
@@ -167,4 +184,35 @@ int main(int argc, char** argv) {
     }
 
     return 0;
+}
+
+}  // namespace
+
+int main(int argc, char** argv) {
+    std::ios::sync_with_stdio(false);
+    std::cin.tie(nullptr);
+
+    Args args;
+    CLI::App app{"Count distinct S, P, O from a triples .dat file (KMV for S/O, exact for P)"};
+    app.add_option("input", args.dat_path, "Path to triples .dat (S P O)");
+    app.add_option("--kmv-k", args.kmv_k, "KMV k (controls error ~1/sqrt(k))");
+    app.add_option("--max-lines", args.max_lines, "Max lines to read (0 = all)");
+    app.add_option("--outdir", args.out_dir, "Output directory");
+    app.add_option(
+        "--check-index", args.index_path, "Path to .cltj index to print root degrees (children(0)) and exit"
+    );
+    CLI11_PARSE(app, argc, argv);
+
+    // Route to appropriate function based on arguments
+    if (!args.index_path.empty()) {
+        return check_index_roots(args.index_path);
+    }
+
+    // Require input .dat when not using --check-index
+    if (args.dat_path.empty()) {
+        std::cerr << "Error: input .dat required when --check-index is not used" << std::endl;
+        return 1;
+    }
+
+    return count_distinct_spo(args);
 }
