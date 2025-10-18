@@ -17,6 +17,9 @@
 #include <unordered_set>
 #include <vector>
 
+#include <CLI11.hpp>
+#include <util/csv_util.hpp>
+
 namespace {
 
 // SplitMix64: fast 64-bit hash (suitable as a mixer to uniform [0, 2^64))
@@ -74,32 +77,6 @@ struct Args {
     size_t kmv_k = 200000;  // ~1/sqrt(k) ≈ 0.22% rel. error
 };
 
-bool parse_args(int argc, char** argv, Args& args) {
-    if (argc < 2)
-        return false;
-    args.dat_path = argv[1];
-    for (int i = 2; i < argc; ++i) {
-        std::string a = argv[i];
-        if (a == "--kmv-k" && i + 1 < argc) {
-            args.kmv_k = static_cast<size_t>(std::stoull(argv[++i]));
-        } else if (a == "--max-lines" && i + 1 < argc) {
-            args.max_lines = std::stoull(argv[++i]);
-        } else if (a == "--outdir" && i + 1 < argc) {
-            args.out_dir = argv[++i];
-        } else if (a == "-h" || a == "--help") {
-            return false;
-        } else {
-            std::cerr << "Unknown argument: " << a << "\n";
-            return false;
-        }
-    }
-    return true;
-}
-
-void print_usage(const char* prog) {
-    std::cerr << "Usage: " << prog << " <path-to-.dat> [--kmv-k N] [--max-lines N] [--outdir DIR]\n";
-}
-
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -107,10 +84,12 @@ int main(int argc, char** argv) {
     std::cin.tie(nullptr);
 
     Args args;
-    if (!parse_args(argc, argv, args)) {
-        print_usage(argv[0]);
-        return 1;
-    }
+    CLI::App app{"Count distinct S, P, O from a triples .dat file (KMV for S/O, exact for P)"};
+    app.add_option("input", args.dat_path, "Path to triples .dat (S P O)")->required();
+    app.add_option("--kmv-k", args.kmv_k, "KMV k (controls error ~1/sqrt(k))");
+    app.add_option("--max-lines", args.max_lines, "Max lines to read (0 = all)");
+    app.add_option("--outdir", args.out_dir, "Output directory");
+    CLI11_PARSE(app, argc, argv);
 
     // Ensure output directory exists
     {
@@ -152,15 +131,23 @@ int main(int argc, char** argv) {
     std::cout << "Distinct P (exact): " << distinct_P << "\n";
     std::cout << "Distinct O (KMV k=" << args.kmv_k << "): ~" << static_cast<uint64_t>(est_O) << "\n";
 
-    // Write CSV
-    {
-        std::string csv_path = args.out_dir + "/distinct_counts.csv";
-        std::ofstream csv(csv_path);
-        if (csv) {
-            csv << "triples,distinct_S_est,distinct_P,distinct_O_est,kmv_k,max_lines\n";
-            csv << triples << "," << static_cast<uint64_t>(est_S) << "," << distinct_P << ","
-                << static_cast<uint64_t>(est_O) << "," << args.kmv_k << "," << args.max_lines << "\n";
-        }
+    // Write CSV via util::CSVWriter
+    try {
+        std::vector<std::string> header = {
+            "triples", "distinct_S_est", "distinct_P", "distinct_O_est", "kmv_k", "max_lines"
+        };
+        util::CSVWriter writer(args.out_dir + "/distinct_counts.csv", header, 1);
+        writer.add_row(
+            {std::to_string(triples),
+             std::to_string(static_cast<uint64_t>(est_S)),
+             std::to_string(distinct_P),
+             std::to_string(static_cast<uint64_t>(est_O)),
+             std::to_string(args.kmv_k),
+             std::to_string(args.max_lines)}
+        );
+        writer.flush();
+    } catch (...) {
+        std::cerr << "Warning: failed to write CSV via CSVWriter" << std::endl;
     }
 
     // Write JSON
