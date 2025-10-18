@@ -19,8 +19,6 @@
 
 #include <CLI11.hpp>
 #include <util/csv_util.hpp>
-// For --check-index option
-#include <sdsl/load.hpp>
 #include <index/cltj_index_spo_lite.hpp>
 #include <trie/cltj_compact_trie.hpp>
 
