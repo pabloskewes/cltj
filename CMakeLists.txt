@@ -250,3 +250,31 @@ set_target_properties(cltj-louds PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BIN
 add_executable(test-alternation-complexity src/test/test-alternation-complexity.cpp)
 target_link_libraries(test-alternation-complexity sdsl divsufsort divsufsort64 hybridbv_gn)
 set_target_properties(test-alternation-complexity PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
+
+add_executable(test-mphf-utils src/test/hashing/test_mphf_utils.cpp)
+target_link_libraries(test-mphf-utils sdsl divsufsort divsufsort64)
+set_target_properties(test-mphf-utils PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
+target_include_directories(test-mphf-utils PRIVATE ${CMAKE_SOURCE_DIR})
+
+add_executable(test-mphf src/test/hashing/test_mphf.cpp)
+target_link_libraries(test-mphf sdsl divsufsort divsufsort64)
+set_target_properties(test-mphf PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
+target_include_directories(test-mphf PRIVATE ${CMAKE_SOURCE_DIR})
+
+add_executable(test-mphf-size-breakdown src/test/hashing/test_mphf_size_breakdown.cpp)
+target_link_libraries(test-mphf-size-breakdown sdsl divsufsort divsufsort64)
+set_target_properties(test-mphf-size-breakdown PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
+target_include_directories(test-mphf-size-breakdown PRIVATE ${CMAKE_SOURCE_DIR})
+
+# Analysis executables
+add_executable(analyze-trie-structure src/test/hashing/analyze_trie_structure.cpp)
+target_link_libraries(analyze-trie-structure sdsl divsufsort divsufsort64)
+set_target_properties(analyze-trie-structure PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/analysis)
+target_include_directories(analyze-trie-structure PRIVATE ${CMAKE_SOURCE_DIR})
+
+# Distinct counter executable
+add_executable(count-distinct-spo src/analysis/count_distinct_spo.cpp)
+set_target_properties(count-distinct-spo PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/analysis)
+target_include_directories(count-distinct-spo PRIVATE ${CMAKE_SOURCE_DIR})
+target_link_libraries(count-distinct-spo sdsl divsufsort divsufsort64)
+
