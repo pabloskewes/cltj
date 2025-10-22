@@ -10,27 +10,24 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
 endif()
 
-# C++11 compiler Check
-if(NOT CMAKE_CXX_COMPILER_VERSION) # work around for cmake versions smaller than 2.8.10
-    execute_process(COMMAND ${CMAKE_CXX_COMPILER} -dumpversion OUTPUT_VARIABLE CMAKE_CXX_COMPILER_VERSION)
-endif()
-if(CMAKE_CXX_COMPILER MATCHES ".*clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    set(CMAKE_COMPILER_IS_CLANGXX 1)
-endif()
-if( (CMAKE_COMPILER_IS_GNUCXX AND ${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS 4.7) OR
-(CMAKE_COMPILER_IS_CLANGXX AND ${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS 3.2))
-    message(FATAL_ERROR "Your C++ compiler does not support C++11. Please install g++ 4.7 (or greater) or clang 3.2 (or greater)")
-else()
-    message(STATUS "Compiler is recent enough to support C++11.")
-endif()
-if( CMAKE_COMPILER_IS_GNUCXX )
-    append_cxx_compiler_flags("-fpermissive -std=c++11 -Wall -Wextra " "GCC" CMAKE_CXX_FLAGS)
-    append_cxx_compiler_flags("-O3 -ffast-math -funroll-loops -fno-omit-frame-pointer -g" "GCC" CMAKE_CXX_FLAGS_RELEASE)
-else()
-    append_cxx_compiler_flags("-fpermissive -std=c++11" "CLANG" CMAKE_CXX_FLAGS)
-    append_cxx_compiler_flags("-stdlib=libc++" "CLANG" CMAKE_CXX_FLAGS)
-    append_cxx_compiler_flags("-O3  -ffast-math -funroll-loops -DNDEBUG" "CLANG" CMAKE_CXX_FLAGS_RELEASE)
-endif()
+# Options to control permissive mode and libc++ usage
+option(CLTJ_PERMISSIVE "Add -fpermissive to mimic legacy builds" ON)
+option(CLTJ_USE_LIBCXX "Force -stdlib=libc++ (needed mainly on macOS)" ON)
+set(CLTJ_LEGACY_CXX_STANDARD 11 CACHE STRING "C++ standard for legacy targets")
+set_property(CACHE CLTJ_LEGACY_CXX_STANDARD PROPERTY STRINGS 11 14 17)
+
+add_library(cltj_core INTERFACE)
+target_compile_features(cltj_core INTERFACE cxx_std_${CLTJ_LEGACY_CXX_STANDARD})
+target_compile_options(cltj_core INTERFACE
+  $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall -Wextra>
+  $<$<AND:$<BOOL:${CLTJ_PERMISSIVE}>,$<CXX_COMPILER_ID:GNU,Clang>>:-fpermissive>
+  $<$<CONFIG:Release>:-O3 -ffast-math -funroll-loops>
+  $<$<AND:$<BOOL:${CLTJ_USE_LIBCXX}>,$<CXX_COMPILER_ID:Clang>,${APPLE}>:-stdlib=libc++>
+)
+target_include_directories(cltj_core INTERFACE
+  ${CMAKE_CURRENT_SOURCE_DIR}/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/lib/hybridBV/include
+)
 include(CheckSSE)
 FindSSE ()
 if( SSE4_2_FOUND )
