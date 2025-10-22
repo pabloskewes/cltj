@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.18)
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules")
 include(AppendCompilerFlags)
 
-project(CLTJ)
+project(CLTJ LANGUAGES C CXX)
 set(CMAKE_PROJECT_NAME "CLTJ")
 
 #Change to "Debug" when you need it
