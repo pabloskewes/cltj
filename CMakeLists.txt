@@ -5,8 +5,10 @@ include(AppendCompilerFlags)
 project(CLTJ LANGUAGES C CXX)
 set(CMAKE_PROJECT_NAME "CLTJ")
 
-#Change to "Debug" when you need it
-set(CMAKE_BUILD_TYPE "Release")
+# Build type
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+endif()
 
 # C++11 compiler Check
 if(NOT CMAKE_CXX_COMPILER_VERSION) # work around for cmake versions smaller than 2.8.10
