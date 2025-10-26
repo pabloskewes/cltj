@@ -28,6 +28,31 @@ target_include_directories(cltj_core INTERFACE
   ${CMAKE_CURRENT_SOURCE_DIR}/include
   ${CMAKE_CURRENT_SOURCE_DIR}/lib/hybridBV/include
 )
+
+# Logging interface target wired through cltj_core
+add_library(cltj_logging INTERFACE)
+target_include_directories(cltj_logging INTERFACE
+  ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+# CMake options to allow overriding defaults
+set(CLTJ_ENABLE_LOGGING "" CACHE STRING "Override ENABLE_LOGGING (0 or 1). Empty uses config defaults")
+set(CLTJ_MIN_LOG_LEVEL "" CACHE STRING "Override MIN_LOG_LEVEL numeric (10=DEBUG,20=INFO,30=WARN,40=ERROR)")
+
+target_compile_definitions(cltj_logging INTERFACE
+  # ENABLE_LOGGING: explicit override takes precedence
+  $<$<BOOL:${CLTJ_ENABLE_LOGGING}>:ENABLE_LOGGING=${CLTJ_ENABLE_LOGGING}>
+  # Defaults by config when not overridden
+  $<$<AND:$<NOT:$<BOOL:${CLTJ_ENABLE_LOGGING}>>,$<CONFIG:Debug>>:ENABLE_LOGGING=1>
+  $<$<AND:$<NOT:$<BOOL:${CLTJ_ENABLE_LOGGING}>>,$<CONFIG:Release>>:ENABLE_LOGGING=0>
+  $<$<AND:$<NOT:$<BOOL:${CLTJ_ENABLE_LOGGING}>>,$<CONFIG:RelWithDebInfo>>:ENABLE_LOGGING=0>
+  $<$<AND:$<NOT:$<BOOL:${CLTJ_ENABLE_LOGGING}>>,$<CONFIG:MinSizeRel>>:ENABLE_LOGGING=0>
+  # MIN_LOG_LEVEL: explicit override or Debug default to DEBUG(10)
+  $<$<BOOL:${CLTJ_MIN_LOG_LEVEL}>:MIN_LOG_LEVEL=${CLTJ_MIN_LOG_LEVEL}>
+  $<$<AND:$<NOT:$<BOOL:${CLTJ_MIN_LOG_LEVEL}>>,$<CONFIG:Debug>>:MIN_LOG_LEVEL=10>
+)
+
+target_link_libraries(cltj_core INTERFACE cltj_logging)
 include(CheckSSE)
 FindSSE ()
 if( SSE4_2_FOUND )
