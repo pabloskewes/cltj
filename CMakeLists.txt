@@ -192,3 +192,13 @@ add_cltj_executable(test-dyn src/test/test-dyn.cpp test hybridbv_gn)
 add_cltj_executable(cltj-louds src/test/cltj_louds.cpp test hybridbv_gn)
 
 add_cltj_executable(test-alternation-complexity src/test/test-alternation-complexity.cpp test hybridbv_gn)
+
+add_cltj_executable(test-mphf-utils src/test/hashing/test_mphf_utils.cpp test)
+
+add_cltj_executable(test-mphf src/test/hashing/test_mphf.cpp test)
+
+add_cltj_executable(test-mphf-size-breakdown src/test/hashing/test_mphf_size_breakdown.cpp test)
+
+add_cltj_executable(analyze-trie-structure src/test/hashing/analyze_trie_structure.cpp analysis)
+
+add_cltj_executable(count-distinct-spo src/analysis/count_distinct_spo.cpp analysis)
