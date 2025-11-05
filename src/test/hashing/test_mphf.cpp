@@ -1,5 +1,5 @@
 // A unified and robust test suite for MPHF correctness, performance, and size.
-#include <include/hashing/mphf_bdz.hpp>
+#include <hashing/mphf_bdz.hpp>
 #include <chrono>
 #include <iomanip>
 #include <iostream>

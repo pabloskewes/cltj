@@ -1,4 +1,4 @@
-#include <include/hashing/mphf_bdz.hpp>
+#include <hashing/mphf_bdz.hpp>
 #include <iostream>
 #include <iomanip>
 #include <vector>

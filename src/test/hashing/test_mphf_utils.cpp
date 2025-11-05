@@ -1,5 +1,5 @@
 #include <cassert>
-#include <include/hashing/mphf_utils.hpp>
+#include <hashing/mphf_utils.hpp>
 #include <iostream>
 
 using namespace cltj::hashing;
