@@ -1,11 +1,11 @@
 #pragma once
 #include "mphf_utils.hpp"
+#include <util/logger.hpp>
 #include <algorithm>
 #include <array>
 #include <cassert>
 #include <cmath>
 #include <cstdint>
-#include <iostream>
 #include <list>
 #include <queue>
 #include <random>
@@ -426,10 +426,10 @@ class MPHF {
 
         bool ok = (peeling_order.size() == triples.size());
         if (!ok) {
-            std::cout << "[MPHF::peeling] Failed: peeled " << peeling_order.size() << "/" << triples.size()
-                      << " edges (cycle remains)\n";
+            LOG_WARN("[MPHF::peeling] Failed: peeled " << peeling_order.size() << "/" << triples.size()
+                      << " edges (cycle remains)");
         } else {
-            std::cout << "[MPHF::peeling] Success: peeled all " << triples.size() << " edges\n";
+            LOG_INFO("[MPHF::peeling] Success: peeled all " << triples.size() << " edges");
         }
         return ok;
     }

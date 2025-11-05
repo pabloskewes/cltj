@@ -1,11 +1,11 @@
 // A unified and robust test suite for MPHF correctness, performance, and size.
 #include <hashing/mphf_bdz.hpp>
+#include <util/logger.hpp>
 #include <chrono>
 #include <iomanip>
-#include <iostream>
+#include <sstream>
 #include <numeric>
 #include <random>
-#include <sstream>
 #include <unordered_set>
 #include <vector>
 
@@ -43,7 +43,7 @@ TestResult run_test_case(size_t n) {
     result.n = n;
 
     if (n > 100000) {
-        std::cout << "Testing n=" << n << ", generating keys...\n";
+        LOG_INFO("Testing n=" << n << ", generating keys...");
     }
     auto keys = generate_reasonable_keys(n, 42 + n);
 
@@ -116,31 +116,36 @@ TestResult run_test_case(size_t n) {
 }
 
 void print_results(const TestResult& result) {
-    std::cout << "--- Test Case: n = " << result.n << " ---\n";
+    LOG_INFO("--- Test Case: n = " << result.n << " ---");
     if (!result.build_success) {
-        std::cout << "  STATUS: BUILD FAILED after " << result.retries << " retries.\n\n";
+        LOG_WARN("  STATUS: BUILD FAILED after " << result.retries << " retries.");
         return;
     }
 
-    std::cout << "  Correctness:\n";
-    std::cout << "    Is permutation & contains all keys? " << (result.is_permutation ? "YES" : "NO") << "\n";
+    LOG_INFO("  Correctness:");
+    LOG_INFO("    Is permutation & contains all keys? " << (result.is_permutation ? "YES" : "NO"));
     if (result.is_permutation) {
-        std::cout << "    False positive rate: " << std::fixed << std::setprecision(4)
-                  << (result.false_positive_rate * 100.0) << "%\n";
+        std::ostringstream oss;
+        oss << std::fixed << std::setprecision(4) << (result.false_positive_rate * 100.0);
+        LOG_INFO("    False positive rate: " << oss.str() << "%");
     }
-    std::cout << "  Performance:\n";
-    std::cout << "    Build time: " << result.build_time_us << " us (" << result.build_time_us / 1000.0
-              << " ms)\n";
-    std::cout << "  Size & Overhead:\n";
-    std::cout << "    Size: " << result.size_bytes << " bytes (" << result.size_bytes / 1024.0 << " KB)\n";
-    std::cout << "    Bits per key: " << std::fixed << std::setprecision(2) << result.bits_per_key << "\n";
-    std::cout << "    m/n overhead: " << std::fixed << std::setprecision(3) << result.overhead << "\n";
-    std::cout << "    Retries needed: " << result.retries << "\n\n";
+    LOG_INFO("  Performance:");
+    LOG_INFO(
+        "    Build time: " << result.build_time_us << " us (" << result.build_time_us / 1000.0 << " ms)"
+    );
+    LOG_INFO("  Size & Overhead:");
+    LOG_INFO("    Size: " << result.size_bytes << " bytes (" << result.size_bytes / 1024.0 << " KB)");
+    std::ostringstream oss_bits, oss_overhead;
+    oss_bits << std::fixed << std::setprecision(2) << result.bits_per_key;
+    oss_overhead << std::fixed << std::setprecision(3) << result.overhead;
+    LOG_INFO("    Bits per key: " << oss_bits.str());
+    LOG_INFO("    m/n overhead: " << oss_overhead.str());
+    LOG_INFO("    Retries needed: " << result.retries);
 }
 
 int main() {
-    std::cout << "========== Unified MPHF Test Suite ==========\n";
-    std::cout << "Correctness, Performance, and Size Analysis\n\n";
+    LOG_INFO("========== Unified MPHF Test Suite ==========");
+    LOG_INFO("Correctness, Performance, and Size Analysis");
 
     std::vector<size_t> test_sizes = {100, 1000, 10000, 100000, 1000000, 2000000, 5000000, 10000000};
     int failures = 0;
@@ -153,10 +158,10 @@ int main() {
         }
     }
 
-    std::cout << "========== Test Summary ==========\n";
-    std::cout << "Total test cases: " << test_sizes.size() << "\n";
-    std::cout << "Failures: " << failures << "\n";
-    std::cout << "Final Result: " << (failures == 0 ? "ALL PASSED" : "SOME FAILED") << "\n";
+    LOG_INFO("========== Test Summary ==========");
+    LOG_INFO("Total test cases: " << test_sizes.size());
+    LOG_INFO("Failures: " << failures);
+    LOG_INFO("Final Result: " << (failures == 0 ? "ALL PASSED" : "SOME FAILED"));
 
     return failures > 0 ? 1 : 0;
 }

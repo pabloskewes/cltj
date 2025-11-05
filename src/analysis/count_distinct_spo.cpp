@@ -19,6 +19,7 @@
 
 #include <CLI11.hpp>
 #include <util/csv_util.hpp>
+#include <util/logger.hpp>
 #include <index/cltj_index_spo_lite.hpp>
 #include <trie/cltj_compact_trie.hpp>
 
@@ -83,23 +84,23 @@ struct Args {
 // Check and print root degrees from a CLTJ index
 int check_index_roots(const std::string& index_path) {
     try {
-        std::cout << "Loading index from " << index_path << "..." << std::endl;
+        LOG_INFO("Loading index from " << index_path << "...");
         cltj::cltj_index_spo_lite<cltj::compact_trie> index;
         sdsl::load_from_file(index, index_path);
-        std::cout << "Index loaded. Size: " << sdsl::size_in_bytes(index) << " bytes" << std::endl;
+        LOG_INFO("Index loaded. Size: " << sdsl::size_in_bytes(index) << " bytes");
 
         for (int i = 0; i < 6; ++i) {
             const auto* trie = index.get_trie(i);
             if (!trie) {
-                std::cout << "Trie " << i << ": null" << std::endl;
+                LOG_INFO("Trie " << i << ": null");
                 continue;
             }
             auto root_deg = trie->children(0);
-            std::cout << "Trie " << i << " root children: " << root_deg << std::endl;
+            LOG_INFO("Trie " << i << " root children: " << root_deg);
         }
         return 0;
     } catch (const std::exception& e) {
-        std::cerr << "Error loading index: " << e.what() << std::endl;
+        LOG_ERROR("Error loading index: " << e.what());
         return 1;
     }
 }
@@ -114,7 +115,7 @@ int count_distinct_spo(const Args& args) {
 
     std::ifstream in(args.dat_path);
     if (!in) {
-        std::cerr << "Error: cannot open input file: " << args.dat_path << "\n";
+        LOG_ERROR("Error: cannot open input file: " << args.dat_path);
         return 1;
     }
 
@@ -133,7 +134,7 @@ int count_distinct_spo(const Args& args) {
         if (args.max_lines && triples >= args.max_lines)
             break;
         if ((triples % 50000000ULL) == 0ULL) {
-            std::cout << "Processed " << triples << " lines..." << std::endl;
+            LOG_INFO("Processed " << triples << " lines...");
         }
     }
 
@@ -141,10 +142,10 @@ int count_distinct_spo(const Args& args) {
     double est_O = kmv_o.estimate();
     uint64_t distinct_P = static_cast<uint64_t>(distinct_p.size());
 
-    std::cout << "Triples: " << triples << "\n";
-    std::cout << "Distinct S (KMV k=" << args.kmv_k << "): ~" << static_cast<uint64_t>(est_S) << "\n";
-    std::cout << "Distinct P (exact): " << distinct_P << "\n";
-    std::cout << "Distinct O (KMV k=" << args.kmv_k << "): ~" << static_cast<uint64_t>(est_O) << "\n";
+    LOG_INFO("Triples: " << triples);
+    LOG_INFO("Distinct S (KMV k=" << args.kmv_k << "): ~" << static_cast<uint64_t>(est_S));
+    LOG_INFO("Distinct P (exact): " << distinct_P);
+    LOG_INFO("Distinct O (KMV k=" << args.kmv_k << "): ~" << static_cast<uint64_t>(est_O));
 
     // Write CSV via util::CSVWriter
     try {
@@ -162,7 +163,7 @@ int count_distinct_spo(const Args& args) {
         );
         writer.flush();
     } catch (...) {
-        std::cerr << "Warning: failed to write CSV via CSVWriter" << std::endl;
+        LOG_WARN("Warning: failed to write CSV via CSVWriter");
     }
 
     // Write JSON
@@ -208,7 +209,7 @@ int main(int argc, char** argv) {
 
     // Require input .dat when not using --check-index
     if (args.dat_path.empty()) {
-        std::cerr << "Error: input .dat required when --check-index is not used" << std::endl;
+        LOG_ERROR("Error: input .dat required when --check-index is not used");
         return 1;
     }
 
