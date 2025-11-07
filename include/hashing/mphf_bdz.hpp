@@ -207,6 +207,8 @@ class MPHF {
         if (n_ == 0)
             return false;
         uint32_t idx = query(key);
+        if (idx >= n_)
+            return false;
         return Q_[idx] == fingerprint(key);
     }
 
@@ -426,8 +428,10 @@ class MPHF {
 
         bool ok = (peeling_order.size() == triples.size());
         if (!ok) {
-            LOG_WARN("[MPHF::peeling] Failed: peeled " << peeling_order.size() << "/" << triples.size()
-                      << " edges (cycle remains)");
+            LOG_WARN(
+                "[MPHF::peeling] Failed: peeled " << peeling_order.size() << "/" << triples.size()
+                                                  << " edges (cycle remains)"
+            );
         } else {
             LOG_INFO("[MPHF::peeling] Success: peeled all " << triples.size() << " edges");
         }
