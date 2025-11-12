@@ -1,5 +1,4 @@
 #include <hashing/mphf_bdz.hpp>
-#include <util/logger.hpp>
 #include <iomanip>
 #include <sstream>
 #include <vector>
@@ -32,19 +31,14 @@ int main() {
             continue;
         }
 
-        // Break down the size components
         size_t g_bytes = sdsl::size_in_bytes(mphf.get_g());
         size_t used_pos_bytes = sdsl::size_in_bytes(mphf.get_used_positions());
         size_t rank_bytes = sdsl::size_in_bytes(mphf.get_rank_support());
         size_t q_bytes = sdsl::size_in_bytes(mphf.get_q());
-        size_t other_bytes = sizeof(mphf.m()) + sizeof(mphf.n()) + sizeof(mphf.get_primes()) +
-            sizeof(mphf.get_multipliers()) + sizeof(mphf.get_biases()) + sizeof(mphf.get_segment_starts());
 
-        size_t total_bytes = g_bytes + used_pos_bytes + rank_bytes + q_bytes + other_bytes;
+        size_t total_bytes = g_bytes + used_pos_bytes + rank_bytes + q_bytes;
+
         double bits_per_key = (total_bytes * 8.0) / n;
-        // Core sizes without fingerprints
-        size_t core_bytes = g_bytes + used_pos_bytes + rank_bytes + other_bytes;
-        double core_bpk = (core_bytes * 8.0) / n;
         size_t core_struct_bytes = g_bytes + used_pos_bytes + rank_bytes;
         double core_struct_bpk = (core_struct_bytes * 8.0) / n;
 
@@ -59,17 +53,12 @@ int main() {
                   << std::endl;
         std::cout << "  Fingerprints (Q array): " << q_bytes << " bytes (" << (q_bytes * 8.0 / n)
                   << " bits/key)" << std::endl;
-        std::cout << "  Other metadata: " << other_bytes << " bytes (" << (other_bytes * 8.0 / n)
-                  << " bits/key)" << std::endl;
         oss << bits_per_key;
         std::cout << "  TOTAL: " << total_bytes << " bytes (" << oss.str() << " bits/key)" << std::endl;
-        std::ostringstream o1, o2;
+        std::ostringstream o1;
         o1 << std::fixed << std::setprecision(2) << core_struct_bpk;
-        o2 << std::fixed << std::setprecision(2) << core_bpk;
         std::cout << "  TOTAL without fingerprints (G + B + rank): " << core_struct_bytes << " bytes ("
                   << o1.str() << " bits/key)" << std::endl;
-        std::cout << "  TOTAL without fingerprints (G + B + rank + metadata): " << core_bytes << " bytes ("
-                  << o2.str() << " bits/key)" << std::endl;
 
         std::cout << std::endl;
         std::cout << "Key insights:" << std::endl;
