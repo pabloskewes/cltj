@@ -63,16 +63,13 @@ int main() {
                   << " bits/key)" << std::endl;
         oss << bits_per_key;
         std::cout << "  TOTAL: " << total_bytes << " bytes (" << oss.str() << " bits/key)" << std::endl;
-        // Extra reports without fingerprints
-        {
-            std::ostringstream o1, o2;
-            o1 << std::fixed << std::setprecision(2) << core_struct_bpk;
-            o2 << std::fixed << std::setprecision(2) << core_bpk;
-            std::cout << "  TOTAL without fingerprints (G + B + rank): " << core_struct_bytes << " bytes ("
-                      << o1.str() << " bits/key)" << std::endl;
-            std::cout << "  TOTAL without fingerprints (G + B + rank + metadata): " << core_bytes
-                      << " bytes (" << o2.str() << " bits/key)" << std::endl;
-        }
+        std::ostringstream o1, o2;
+        o1 << std::fixed << std::setprecision(2) << core_struct_bpk;
+        o2 << std::fixed << std::setprecision(2) << core_bpk;
+        std::cout << "  TOTAL without fingerprints (G + B + rank): " << core_struct_bytes << " bytes ("
+                  << o1.str() << " bits/key)" << std::endl;
+        std::cout << "  TOTAL without fingerprints (G + B + rank + metadata): " << core_bytes << " bytes ("
+                  << o2.str() << " bits/key)" << std::endl;
 
         std::cout << std::endl;
         std::cout << "Key insights:" << std::endl;
