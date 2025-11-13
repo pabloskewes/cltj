@@ -15,13 +15,25 @@
 #include <sdsl/util.hpp>
 #include <stack>
 #include <vector>
+#include <tuple>
+#include <type_traits>
 
 namespace cltj {
 namespace hashing {
 
-// A constant for the number of bits in our fingerprints. 8 bits gives a 1/256
-// chance of a random collision (false positive).
-static constexpr int FINGERPRINT_BITS = 8;
+namespace policies {
+
+struct WithFingerprints {
+    static constexpr bool enabled = true;
+    static constexpr int bits = 8;
+};
+
+struct NoFingerprints {
+    static constexpr bool enabled = false;
+    static constexpr int bits = 0;
+};
+
+}  // namespace policies
 
 /**
  * @brief Triple structure representing a hyperedge in the 3-uniform hypergraph
@@ -61,13 +73,17 @@ struct Triple {
  * vertex
  * 4. Use a bitvector to compact the hash function to minimal range [0,n)
  */
+template <typename FingerprintPolicy = policies::NoFingerprints>
 class MPHF {
   private:
+    using fingerprint_type =
+        typename std::conditional<FingerprintPolicy::enabled, sdsl::int_vector<>, std::tuple<>>::type;
+
     // Core data structures
     sdsl::int_vector<2> G_;  // Assignment array, values in {0,1,2,3}
     sdsl::bit_vector used_positions_;  // Bitvector marking used positions
     sdsl::rank_support_v<1> rank_support_;  // For O(1) rank queries
-    sdsl::int_vector<> Q_;  // Fingerprints for membership queries
+    fingerprint_type Q_;  // Fingerprints for membership queries
     uint32_t m_;  // Size of G array (~1.23 * n)
     uint32_t n_;  // Number of keys
 
@@ -134,7 +150,7 @@ class MPHF {
     const sdsl::int_vector<2>& get_g() const { return G_; }
     const sdsl::bit_vector& get_used_positions() const { return used_positions_; }
     const sdsl::rank_support_v<1>& get_rank_support() const { return rank_support_; }
-    const sdsl::int_vector<>& get_q() const { return Q_; }
+    const fingerprint_type& get_q() const { return Q_; }
     const std::array<uint64_t, 3>& get_primes() const { return primes_; }
     const std::array<uint64_t, 3>& get_multipliers() const { return multipliers_; }
     const std::array<uint64_t, 3>& get_biases() const { return biases_; }
@@ -157,7 +173,9 @@ class MPHF {
         written_bytes += sdsl::write_member(G_, out, child, "G_");
         written_bytes += used_positions_.serialize(out, child, "used_positions_");
         written_bytes += rank_support_.serialize(out, child, "rank_support_");
-        written_bytes += sdsl::write_member(Q_, out, child, "Q_");
+        if constexpr (FingerprintPolicy::enabled) {
+            written_bytes += sdsl::write_member(Q_, out, child, "Q_");
+        }
         written_bytes += sdsl::write_member(m_, out, child, "m_");
         written_bytes += sdsl::write_member(n_, out, child, "n_");
 
@@ -183,7 +201,9 @@ class MPHF {
         used_positions_.load(in);
         rank_support_.load(in);
         rank_support_.set_vector(&used_positions_);  // Re-link rank support
-        sdsl::read_member(Q_, in);
+        if constexpr (FingerprintPolicy::enabled) {
+            sdsl::read_member(Q_, in);
+        }
         sdsl::read_member(m_, in);
         sdsl::read_member(n_, in);
 
@@ -204,12 +224,21 @@ class MPHF {
      * @return true if the key is likely in the set, false otherwise.
      */
     bool contains(uint64_t key) const {
-        if (n_ == 0)
+        if constexpr (FingerprintPolicy::enabled) {
+            if (n_ == 0)
+                return false;
+            uint32_t idx = query(key);
+            if (idx >= n_)
+                return false;
+            return Q_[idx] == fingerprint(key);
+        } else {
+            static_assert(
+                FingerprintPolicy::enabled,
+                "contains() requires WithFingerprints policy. "
+                "Use MPHF<policies::WithFingerprints>"
+            );
             return false;
-        uint32_t idx = query(key);
-        if (idx >= n_)
-            return false;
-        return Q_[idx] == fingerprint(key);
+        }
     }
 
     /**
@@ -506,12 +535,14 @@ class MPHF {
      * @brief Build the fingerprint array for membership queries.
      */
     void build_fingerprints(const std::vector<uint64_t>& keys) {
-        if (n_ == 0)
-            return;
-        Q_ = sdsl::int_vector<>(n_, 0, FINGERPRINT_BITS);
-        for (const auto& key : keys) {
-            uint32_t idx = query(key);
-            Q_[idx] = fingerprint(key);
+        if constexpr (FingerprintPolicy::enabled) {
+            if (n_ == 0)
+                return;
+            Q_ = sdsl::int_vector<>(n_, 0, FingerprintPolicy::bits);
+            for (const auto& key : keys) {
+                uint32_t idx = query(key);
+                Q_[idx] = fingerprint(key);
+            }
         }
     }
 
@@ -552,7 +583,7 @@ class MPHF {
      */
     uint8_t fingerprint(uint64_t key) const {
         // A simple fingerprint. Can be replaced with something more robust.
-        return static_cast<uint8_t>(key & ((1 << FINGERPRINT_BITS) - 1));
+        return static_cast<uint8_t>(key & ((1 << FingerprintPolicy::bits) - 1));
     }
 };
 

@@ -196,8 +196,10 @@ add_cltj_executable(test-alternation-complexity src/test/test-alternation-comple
 add_cltj_executable(test-mphf-utils src/test/hashing/test_mphf_utils.cpp test)
 
 add_cltj_executable(test-mphf src/test/hashing/test_mphf.cpp test)
+set_target_properties(test-mphf PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
 add_cltj_executable(test-mphf-size-breakdown src/test/hashing/test_mphf_size_breakdown.cpp test)
+set_target_properties(test-mphf-size-breakdown PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
 add_cltj_executable(analyze-trie-structure src/test/hashing/analyze_trie_structure.cpp analysis)
 
