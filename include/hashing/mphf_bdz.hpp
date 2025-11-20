@@ -47,9 +47,7 @@ struct SizeBreakdown {
     size_t q_bytes = 0;
     size_t other_bytes = 0;
 
-    size_t total_bytes() const {
-        return g_bytes + used_pos_bytes + rank_bytes + q_bytes + other_bytes;
-    }
+    size_t total_bytes() const { return g_bytes + used_pos_bytes + rank_bytes + q_bytes + other_bytes; }
 };
 
 /**
@@ -150,8 +148,8 @@ class MPHF {
         if constexpr (FingerprintPolicy::enabled) {
             breakdown.q_bytes = sdsl::size_in_bytes(Q_);
         }
-        breakdown.other_bytes = sizeof(m_) + sizeof(n_) + sizeof(primes_) +
-                                   sizeof(multipliers_) + sizeof(biases_) + sizeof(segment_starts_);
+        breakdown.other_bytes = sizeof(m_) + sizeof(n_) + sizeof(primes_) + sizeof(multipliers_) +
+            sizeof(biases_) + sizeof(segment_starts_);
         return breakdown;
     }
 
@@ -159,9 +157,7 @@ class MPHF {
      * @brief Get total size in bytes (SDSL compatible)
      * @return Total size in bytes of all MPHF components
      */
-    size_t size_in_bytes() const {
-        return get_size_breakdown().total_bytes();
-    }
+    size_t size_in_bytes() const { return get_size_breakdown().total_bytes(); }
 
     // --- Getters for manual size calculation ---
     const sdsl::bit_vector& get_used_positions() const { return used_positions_; }
