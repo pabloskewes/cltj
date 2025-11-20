@@ -125,9 +125,6 @@ class FullArrayStorage : public GStorage<FullArrayStorage> {
     }
 
     size_t size_in_bytes() const { return sdsl::size_in_bytes(G_) + sizeof(m_); }
-
-    const sdsl::int_vector<2>& get_g() const { return G_; }
-    uint32_t m() const { return m_; }
 };
 
 }  // namespace hashing
