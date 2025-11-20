@@ -1,6 +1,7 @@
 #pragma once
 #include "mphf_utils.hpp"
 #include "mphf_types.hpp"
+#include "mphf_g_storage.hpp"
 #include <util/logger.hpp>
 #include <algorithm>
 #include <array>
@@ -37,6 +38,21 @@ struct NoFingerprints {
 }  // namespace policies
 
 /**
+ * @brief Size breakdown structure for MPHF components
+ */
+struct SizeBreakdown {
+    size_t g_bytes = 0;
+    size_t used_pos_bytes = 0;
+    size_t rank_bytes = 0;
+    size_t q_bytes = 0;
+    size_t other_bytes = 0;
+
+    size_t total_bytes() const {
+        return g_bytes + used_pos_bytes + rank_bytes + q_bytes + other_bytes;
+    }
+};
+
+/**
  * @brief Minimal Perfect Hash Function (MPHF) Builder using MWHC/BDZ algorithm
  *
  * Algorithm overview:
@@ -47,14 +63,16 @@ struct NoFingerprints {
  * vertex
  * 4. Use a bitvector to compact the hash function to minimal range [0,n)
  */
-template <typename FingerprintPolicy = policies::NoFingerprints>
+template <typename GStorageStrategy = FullArrayStorage, typename FingerprintPolicy = policies::NoFingerprints>
 class MPHF {
   private:
     using fingerprint_type =
         typename std::conditional<FingerprintPolicy::enabled, sdsl::int_vector<>, std::tuple<>>::type;
 
     // Core data structures
-    sdsl::int_vector<2> G_;  // Assignment array, values in {0,1,2,3}
+
+    // G array: assignment values {0,1,2,3} per vertex for triple winner selection
+    GStorageStrategy g_storage_;
     sdsl::bit_vector used_positions_;  // Bitvector marking used positions
     sdsl::rank_support_v<1> rank_support_;  // For O(1) rank queries
     fingerprint_type Q_;  // Fingerprints for membership queries
@@ -120,8 +138,32 @@ class MPHF {
     uint32_t m() const { return m_; }
     int retry_count() const { return retry_count_; }
 
+    /**
+     * @brief Get detailed size breakdown of all MPHF components
+     * @return SizeBreakdown struct with individual component sizes
+     */
+    SizeBreakdown get_size_breakdown() const {
+        SizeBreakdown breakdown;
+        breakdown.g_bytes = g_storage_.size_in_bytes();
+        breakdown.used_pos_bytes = sdsl::size_in_bytes(used_positions_);
+        breakdown.rank_bytes = sdsl::size_in_bytes(rank_support_);
+        if constexpr (FingerprintPolicy::enabled) {
+            breakdown.q_bytes = sdsl::size_in_bytes(Q_);
+        }
+        breakdown.other_bytes = sizeof(m_) + sizeof(n_) + sizeof(primes_) +
+                                   sizeof(multipliers_) + sizeof(biases_) + sizeof(segment_starts_);
+        return breakdown;
+    }
+
+    /**
+     * @brief Get total size in bytes (SDSL compatible)
+     * @return Total size in bytes of all MPHF components
+     */
+    size_t size_in_bytes() const {
+        return get_size_breakdown().total_bytes();
+    }
+
     // --- Getters for manual size calculation ---
-    const sdsl::int_vector<2>& get_g() const { return G_; }
     const sdsl::bit_vector& get_used_positions() const { return used_positions_; }
     const sdsl::rank_support_v<1>& get_rank_support() const { return rank_support_; }
     const fingerprint_type& get_q() const { return Q_; }
@@ -144,7 +186,7 @@ class MPHF {
         size_t written_bytes = 0;
 
         // Core data structures (essential for queries)
-        written_bytes += sdsl::write_member(G_, out, child, "G_");
+        written_bytes += g_storage_.serialize(out, child, "g_storage_");
         written_bytes += used_positions_.serialize(out, child, "used_positions_");
         written_bytes += rank_support_.serialize(out, child, "rank_support_");
         if constexpr (FingerprintPolicy::enabled) {
@@ -171,7 +213,7 @@ class MPHF {
      */
     void load(std::istream& in) {
         // Core data structures
-        sdsl::read_member(G_, in);
+        g_storage_.load(in);
         used_positions_.load(in);
         rank_support_.load(in);
         rank_support_.set_vector(&used_positions_);  // Re-link rank support
@@ -260,14 +302,14 @@ class MPHF {
      * @return Hash value in range [0, n)
      */
     uint32_t query(uint64_t key) const {
-        if (m_ == 0 || G_.empty()) {
+        if (g_storage_.m() == 0) {
             return 0;
         }
 
         auto triple = compute_triple(key);
 
         // Compute j = (G[v0] + G[v1] + G[v2]) mod 3
-        uint32_t j = (G_[triple.v0] + G_[triple.v1] + G_[triple.v2]) % 3;
+        uint32_t j = (g_storage_.get(triple.v0) + g_storage_.get(triple.v1) + g_storage_.get(triple.v2)) % 3;
 
         // Select v_j
         uint32_t selected_vertex = triple.v(static_cast<int>(j));
@@ -327,7 +369,7 @@ class MPHF {
         }
 
         // Initialize G with sentinel value 3 (acts as 0 mod 3 but marks unassigned)
-        G_ = sdsl::int_vector<2>(m_, 3);
+        g_storage_.initialize(m_);
 
         // std::cout << "[MPHF::initialize] n=" << n_ << " target_m=" << target_m << " primes(r): {"
         //           << primes_[0] << ", " << primes_[1] << ", " << primes_[2] << "}"
@@ -475,11 +517,11 @@ class MPHF {
             }
 
             // Sum of current G values modulo 3
-            uint32_t s = (G_[t.v0] + G_[t.v1] + G_[t.v2]) % 3;
+            uint32_t s = (g_storage_.get(t.v0) + g_storage_.get(t.v1) + g_storage_.get(t.v2)) % 3;
 
             // Need (G[v0] + G[v1] + G[v2]) % 3 == j
             uint32_t need = static_cast<uint32_t>((3 + j - static_cast<int>(s)) % 3);
-            G_[t.v(j)] = need;
+            g_storage_.set(t.v(j), need);
 
             // Mark all as visited (only one was newly assigned, but the others are effectively fixed now)
             visited[t.v0] = visited[t.v1] = visited[t.v2] = 1;
@@ -496,7 +538,9 @@ class MPHF {
     void build_compactification(const std::vector<Triple>& triples) {
         used_positions_ = sdsl::bit_vector(m_, 0);
         for (const auto& t : triples) {
-            uint32_t j = static_cast<uint32_t>((G_[t.v0] + G_[t.v1] + G_[t.v2]) % 3);
+            uint32_t j = static_cast<uint32_t>(
+                (g_storage_.get(t.v0) + g_storage_.get(t.v1) + g_storage_.get(t.v2)) % 3
+            );
             uint32_t pos = (j == 0 ? t.v0 : (j == 1 ? t.v1 : t.v2));
             used_positions_[pos] = 1;
         }

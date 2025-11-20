@@ -10,6 +10,7 @@
 #include <vector>
 #include <iostream>
 
+using cltj::hashing::FullArrayStorage;
 using cltj::hashing::MPHF;
 using cltj::hashing::policies::WithFingerprints;
 
@@ -49,7 +50,7 @@ TestResult run_test_case(size_t n) {
     }
     auto keys = generate_reasonable_keys(n, 42 + n);
 
-    MPHF<WithFingerprints> mphf;
+    MPHF<FullArrayStorage, WithFingerprints> mphf;
 
     // 1. Measure Build Time
     auto start = std::chrono::high_resolution_clock::now();
@@ -100,14 +101,9 @@ TestResult run_test_case(size_t n) {
         result.false_positive_rate = (double)false_positives / negative_sample_size;
     }
 
-    // 4. Manually calculate the true size by summing the components.
-    size_t g_bytes = sdsl::size_in_bytes(mphf.get_g());
-    size_t used_pos_bytes = sdsl::size_in_bytes(mphf.get_used_positions());
-    size_t rank_bytes = sdsl::size_in_bytes(mphf.get_rank_support());
-    size_t q_bytes = sdsl::size_in_bytes(mphf.get_q());
-    size_t other_bytes = sizeof(mphf.m()) + sizeof(mphf.n()) + sizeof(mphf.get_primes()) +
-        sizeof(mphf.get_multipliers()) + sizeof(mphf.get_biases()) + sizeof(mphf.get_segment_starts());
-    result.size_bytes = g_bytes + used_pos_bytes + rank_bytes + q_bytes + other_bytes;
+    // 4. Calculate size using breakdown
+    auto breakdown = mphf.get_size_breakdown();
+    result.size_bytes = breakdown.total_bytes();
 
     result.bits_per_key = (result.size_bytes * 8.0) / n;
     result.m = mphf.m();

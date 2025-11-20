@@ -5,6 +5,7 @@
 #include <random>
 #include <iostream>
 
+using cltj::hashing::FullArrayStorage;
 using cltj::hashing::MPHF;
 using cltj::hashing::policies::NoFingerprints;
 
@@ -24,7 +25,7 @@ int main() {
             keys.push_back(rng());
         }
 
-        MPHF<NoFingerprints> mphf;
+        MPHF<FullArrayStorage, NoFingerprints> mphf;
         bool success = mphf.build(keys);
 
         if (!success) {
@@ -32,25 +33,22 @@ int main() {
             continue;
         }
 
-        size_t g_bytes = sdsl::size_in_bytes(mphf.get_g());
-        size_t used_pos_bytes = sdsl::size_in_bytes(mphf.get_used_positions());
-        size_t rank_bytes = sdsl::size_in_bytes(mphf.get_rank_support());
+        auto breakdown = mphf.get_size_breakdown();
 
-        size_t total_bytes = g_bytes + used_pos_bytes + rank_bytes;
-
-        double bits_per_key = (total_bytes * 8.0) / n;
+        double bits_per_key = (breakdown.total_bytes() * 8.0) / n;
 
         std::cout << "Size breakdown:" << std::endl;
         std::ostringstream oss;
         oss << std::fixed << std::setprecision(2);
-        std::cout << "  G array (2-bit values): " << g_bytes << " bytes (" << (g_bytes * 8.0 / n)
-                  << " bits/key)" << std::endl;
-        std::cout << "  Used positions bitvector: " << used_pos_bytes << " bytes ("
-                  << (used_pos_bytes * 8.0 / n) << " bits/key)" << std::endl;
-        std::cout << "  Rank support: " << rank_bytes << " bytes (" << (rank_bytes * 8.0 / n) << " bits/key)"
-                  << std::endl;
+        std::cout << "  G array (2-bit values): " << breakdown.g_bytes << " bytes ("
+                  << (breakdown.g_bytes * 8.0 / n) << " bits/key)" << std::endl;
+        std::cout << "  Used positions bitvector: " << breakdown.used_pos_bytes << " bytes ("
+                  << (breakdown.used_pos_bytes * 8.0 / n) << " bits/key)" << std::endl;
+        std::cout << "  Rank support: " << breakdown.rank_bytes << " bytes ("
+                  << (breakdown.rank_bytes * 8.0 / n) << " bits/key)" << std::endl;
         oss << bits_per_key;
-        std::cout << "  TOTAL: " << total_bytes << " bytes (" << oss.str() << " bits/key)" << std::endl;
+        std::cout << "  TOTAL: " << breakdown.total_bytes() << " bytes (" << oss.str() << " bits/key)"
+                  << std::endl;
 
         std::cout << std::endl;
         std::cout << "Key insights:" << std::endl;
