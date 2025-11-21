@@ -10,7 +10,7 @@
 #include <vector>
 #include <iostream>
 
-using cltj::hashing::FullArrayStorage;
+using cltj::hashing::BaselineStorage;
 using cltj::hashing::MPHF;
 using cltj::hashing::policies::WithFingerprints;
 
@@ -50,7 +50,7 @@ TestResult run_test_case(size_t n) {
     }
     auto keys = generate_reasonable_keys(n, 42 + n);
 
-    MPHF<FullArrayStorage, WithFingerprints> mphf;
+    MPHF<BaselineStorage, WithFingerprints> mphf;
 
     // 1. Measure Build Time
     auto start = std::chrono::high_resolution_clock::now();

@@ -85,6 +85,14 @@ class BaselineStorage : public StorageStrategy<BaselineStorage> {
         return sdsl::size_in_bytes(G_) + sdsl::size_in_bytes(used_positions_) +
             sdsl::size_in_bytes(rank_support_);
     }
+
+    StorageSizeBreakdown get_size_breakdown() const {
+        StorageSizeBreakdown breakdown;
+        breakdown.g_bytes = sdsl::size_in_bytes(G_);
+        breakdown.used_pos_bytes = sdsl::size_in_bytes(used_positions_);
+        breakdown.rank_bytes = sdsl::size_in_bytes(rank_support_);
+        return breakdown;
+    }
 };
 
 }  // namespace hashing

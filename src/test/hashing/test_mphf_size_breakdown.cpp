@@ -5,7 +5,7 @@
 #include <random>
 #include <iostream>
 
-using cltj::hashing::FullArrayStorage;
+using cltj::hashing::BaselineStorage;
 using cltj::hashing::MPHF;
 using cltj::hashing::policies::NoFingerprints;
 
@@ -25,7 +25,7 @@ int main() {
             keys.push_back(rng());
         }
 
-        MPHF<FullArrayStorage, NoFingerprints> mphf;
+        MPHF<BaselineStorage, NoFingerprints> mphf;
         bool success = mphf.build(keys);
 
         if (!success) {

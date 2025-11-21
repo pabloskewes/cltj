@@ -11,6 +11,17 @@ namespace cltj {
 namespace hashing {
 
 /**
+ * @brief Size breakdown structure for storage components
+ */
+struct StorageSizeBreakdown {
+    size_t g_bytes = 0;  // G array bytes
+    size_t used_pos_bytes = 0;  // Bitvector B bytes
+    size_t rank_bytes = 0;  // Rank support bytes
+
+    size_t total_bytes() const { return g_bytes + used_pos_bytes + rank_bytes; }
+};
+
+/**
  * @brief CRTP base class for storage strategies
  *
  * Provides unified interface for G array storage and rank/compactification.
@@ -106,6 +117,12 @@ class StorageStrategy {
      * @return Size in bytes (used for bits-per-key calculations)
      */
     size_t size_in_bytes() const { return derived().size_in_bytes(); }
+
+    /**
+     * @brief Get detailed size breakdown of storage components
+     * @return StorageSizeBreakdown with individual component sizes
+     */
+    StorageSizeBreakdown get_size_breakdown() const { return derived().get_size_breakdown(); }
 };
 
 }  // namespace hashing

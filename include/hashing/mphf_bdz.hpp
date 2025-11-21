@@ -1,7 +1,7 @@
 #pragma once
 #include "mphf_utils.hpp"
 #include "mphf_types.hpp"
-#include "mphf_g_storage.hpp"
+#include "storage/baseline.hpp"
 #include <util/logger.hpp>
 #include <algorithm>
 #include <array>
@@ -61,7 +61,7 @@ struct SizeBreakdown {
  * vertex
  * 4. Use a bitvector to compact the hash function to minimal range [0,n)
  */
-template <typename GStorageStrategy = FullArrayStorage, typename FingerprintPolicy = policies::NoFingerprints>
+template <typename StorageStrategy = BaselineStorage, typename FingerprintPolicy = policies::NoFingerprints>
 class MPHF {
   private:
     using fingerprint_type =
@@ -69,10 +69,7 @@ class MPHF {
 
     // Core data structures
 
-    // G array: assignment values {0,1,2,3} per vertex for triple winner selection
-    GStorageStrategy g_storage_;
-    sdsl::bit_vector used_positions_;  // Bitvector marking used positions
-    sdsl::rank_support_v<1> rank_support_;  // For O(1) rank queries
+    StorageStrategy storage_;  // Unified storage for G array, bitvector B, and rank support
     fingerprint_type Q_;  // Fingerprints for membership queries
     uint32_t m_;  // Size of G array (~1.23 * n)
     uint32_t n_;  // Number of keys
@@ -100,9 +97,8 @@ class MPHF {
           biases_{0, 0, 0},
           segment_starts_{0, 0, 0} {}
 
-    // Disabling copy and move because this class has a complex resource
-    // management like the pointer relationship between rank_support_ and its vector.
-    // TODO: Understand why this is necessary and try to make it cleaner
+    // Disabling copy and move because storage strategy may have complex resource
+    // management (e.g., rank support with pointer relationships to bitvectors).
     MPHF(const MPHF&) = delete;
     MPHF& operator=(const MPHF&) = delete;
     MPHF(MPHF&&) = delete;
@@ -141,10 +137,11 @@ class MPHF {
      * @return SizeBreakdown struct with individual component sizes
      */
     SizeBreakdown get_size_breakdown() const {
+        auto storage_breakdown = storage_.get_size_breakdown();
         SizeBreakdown breakdown;
-        breakdown.g_bytes = g_storage_.size_in_bytes();
-        breakdown.used_pos_bytes = sdsl::size_in_bytes(used_positions_);
-        breakdown.rank_bytes = sdsl::size_in_bytes(rank_support_);
+        breakdown.g_bytes = storage_breakdown.g_bytes;
+        breakdown.used_pos_bytes = storage_breakdown.used_pos_bytes;
+        breakdown.rank_bytes = storage_breakdown.rank_bytes;
         if constexpr (FingerprintPolicy::enabled) {
             breakdown.q_bytes = sdsl::size_in_bytes(Q_);
         }
@@ -159,9 +156,6 @@ class MPHF {
      */
     size_t size_in_bytes() const { return get_size_breakdown().total_bytes(); }
 
-    // --- Getters for manual size calculation ---
-    const sdsl::bit_vector& get_used_positions() const { return used_positions_; }
-    const sdsl::rank_support_v<1>& get_rank_support() const { return rank_support_; }
     const fingerprint_type& get_q() const { return Q_; }
     const std::array<uint64_t, 3>& get_primes() const { return primes_; }
     const std::array<uint64_t, 3>& get_multipliers() const { return multipliers_; }
@@ -182,9 +176,7 @@ class MPHF {
         size_t written_bytes = 0;
 
         // Core data structures (essential for queries)
-        written_bytes += g_storage_.serialize(out, child, "g_storage_");
-        written_bytes += used_positions_.serialize(out, child, "used_positions_");
-        written_bytes += rank_support_.serialize(out, child, "rank_support_");
+        written_bytes += storage_.serialize(out, child, "storage_");
         if constexpr (FingerprintPolicy::enabled) {
             written_bytes += sdsl::write_member(Q_, out, child, "Q_");
         }
@@ -209,10 +201,7 @@ class MPHF {
      */
     void load(std::istream& in) {
         // Core data structures
-        g_storage_.load(in);
-        used_positions_.load(in);
-        rank_support_.load(in);
-        rank_support_.set_vector(&used_positions_);  // Re-link rank support
+        storage_.load(in);
         if constexpr (FingerprintPolicy::enabled) {
             sdsl::read_member(Q_, in);
         }
@@ -280,7 +269,7 @@ class MPHF {
 
         assign_g_values(peeling_order);
 
-        build_compactification(triples);
+        storage_.build_rank(triples);
 
         build_fingerprints(keys);
 
@@ -298,25 +287,23 @@ class MPHF {
      * @return Hash value in range [0, n)
      */
     uint32_t query(uint64_t key) const {
-        if (g_storage_.m() == 0) {
+        if (storage_.m() == 0) {
             return 0;
         }
 
         auto triple = compute_triple(key);
 
         // Compute j = (G[v0] + G[v1] + G[v2]) mod 3
-        uint32_t j = (g_storage_.get(triple.v0) + g_storage_.get(triple.v1) + g_storage_.get(triple.v2)) % 3;
+        uint32_t j = (storage_.g_get(triple.v0) + storage_.g_get(triple.v1) + storage_.g_get(triple.v2)) % 3;
 
         // Select v_j
         uint32_t selected_vertex = triple.v(static_cast<int>(j));
 
         // Apply rank operation for compactification
-        uint32_t res = compact_position(selected_vertex);
+        uint32_t res = storage_.rank(selected_vertex);
 
         // std::cout << "[MPHF::query] key=" << key << " triple=(" << triple.v0 << ", " << triple.v1 << ", "
         //           << triple.v2 << ") j=" << j << " sel=" << selected_vertex
-        //           << " used=" << (used_positions_.size() ? (int)used_positions_[selected_vertex] : -1)
-        //           << " rank=" << (used_positions_.size() ? (uint64_t)rank_support_(selected_vertex) : 0)
         //           << " -> res=" << res << "\n";
         return res;
     }
@@ -365,7 +352,7 @@ class MPHF {
         }
 
         // Initialize G with sentinel value 3 (acts as 0 mod 3 but marks unassigned)
-        g_storage_.initialize(m_);
+        storage_.initialize(m_);
 
         // std::cout << "[MPHF::initialize] n=" << n_ << " target_m=" << target_m << " primes(r): {"
         //           << primes_[0] << ", " << primes_[1] << ", " << primes_[2] << "}"
@@ -513,11 +500,11 @@ class MPHF {
             }
 
             // Sum of current G values modulo 3
-            uint32_t s = (g_storage_.get(t.v0) + g_storage_.get(t.v1) + g_storage_.get(t.v2)) % 3;
+            uint32_t s = (storage_.g_get(t.v0) + storage_.g_get(t.v1) + storage_.g_get(t.v2)) % 3;
 
             // Need (G[v0] + G[v1] + G[v2]) % 3 == j
             uint32_t need = static_cast<uint32_t>((3 + j - static_cast<int>(s)) % 3);
-            g_storage_.set(t.v(j), need);
+            storage_.g_set(t.v(j), need);
 
             // Mark all as visited (only one was newly assigned, but the others are effectively fixed now)
             visited[t.v0] = visited[t.v1] = visited[t.v2] = 1;
@@ -527,24 +514,7 @@ class MPHF {
         }
     }
 
-    // ========== STEP 5: Compactification ==========
-    /**
-     * @brief Build structures for compacting hash function to [0,n)
-     */
-    void build_compactification(const std::vector<Triple>& triples) {
-        used_positions_ = sdsl::bit_vector(m_, 0);
-        for (const auto& t : triples) {
-            uint32_t j = static_cast<uint32_t>(
-                (g_storage_.get(t.v0) + g_storage_.get(t.v1) + g_storage_.get(t.v2)) % 3
-            );
-            uint32_t pos = (j == 0 ? t.v0 : (j == 1 ? t.v1 : t.v2));
-            used_positions_[pos] = 1;
-        }
-        sdsl::util::init_support(rank_support_, &used_positions_);
-        // std::cout << "[MPHF::compact] built bitvector with " << triples.size() << " used positions\n";
-    }
-
-    // ========== STEP 6: Fingerprint Generation ==========
+    // ========== STEP 5: Fingerprint Generation ==========
     /**
      * @brief Build the fingerprint array for membership queries.
      */
@@ -582,14 +552,6 @@ class MPHF {
      */
     Triple compute_triple(uint64_t key) const {
         return Triple(key, hash_function(key, 0), hash_function(key, 1), hash_function(key, 2));
-    }
-
-    /**
-     * @brief Convert position in [0,m) to compact position in [0,n)
-     */
-    uint32_t compact_position(uint32_t position) const {
-        // rank before position in [0, position)
-        return static_cast<uint32_t>(rank_support_(position));
     }
 
     /**
