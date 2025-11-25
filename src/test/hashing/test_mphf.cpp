@@ -68,19 +68,35 @@ TestResult run_test_case(size_t n) {
     bool distinct = true;
     bool in_range = true;
     bool contains_all_positives = true;
+    uint32_t min_val = UINT32_MAX;
+    uint32_t max_val = 0;
     for (auto k : keys) {
         uint32_t h = mphf.query(k);
         if (h >= n) {
             in_range = false;
+            std::cerr << "ERROR: query returned " << h << " >= n=" << n << " for key " << k << std::endl;
         }
+        if (h < min_val)
+            min_val = h;
+        if (h > max_val)
+            max_val = h;
         if (!seen.insert(h).second) {
             distinct = false;
+            std::cerr << "ERROR: duplicate hash value " << h << " for key " << k << std::endl;
         }
         if (!mphf.contains(k)) {
             contains_all_positives = false;
         }
     }
-    result.is_permutation = distinct && in_range && contains_all_positives;
+    // Verify it's a perfect permutation: covers exactly [0, n-1]
+    bool perfect_permutation =
+        distinct && in_range && (min_val == 0) && (max_val == n - 1) && (seen.size() == n);
+    result.is_permutation = perfect_permutation && contains_all_positives;
+
+    if (!perfect_permutation && distinct && in_range) {
+        std::cerr << "WARNING: Not a perfect permutation - min=" << min_val << " max=" << max_val
+                  << " size=" << seen.size() << " expected n=" << n << std::endl;
+    }
 
     // 3. Check for False Positives
     if (result.is_permutation) {
