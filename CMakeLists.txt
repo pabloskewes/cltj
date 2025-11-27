@@ -201,6 +201,9 @@ set_target_properties(test-mphf PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED
 add_cltj_executable(test-mphf-size-breakdown src/test/hashing/test_mphf_size_breakdown.cpp test)
 set_target_properties(test-mphf-size-breakdown PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
+add_cltj_executable(test-trit-packed-array src/test/hashing/test_trit_packed_array.cpp test)
+set_target_properties(test-trit-packed-array PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+
 add_cltj_executable(analyze-trie-structure src/test/hashing/analyze_trie_structure.cpp analysis)
 
 add_cltj_executable(count-distinct-spo src/analysis/count_distinct_spo.cpp analysis)
