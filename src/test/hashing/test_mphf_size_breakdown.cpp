@@ -1,5 +1,6 @@
 #include <hashing/mphf_bdz.hpp>
 #include <hashing/storage/packed_trit.hpp>
+#include <hashing/storage/glgh.hpp>
 #include <iomanip>
 #include <sstream>
 #include <vector>
@@ -8,6 +9,7 @@
 
 using cltj::hashing::BaselineStorage;
 using cltj::hashing::CompressedBitvector;
+using cltj::hashing::GlGhStorage;
 using cltj::hashing::MPHF;
 using cltj::hashing::PackedTritStorage;
 using cltj::hashing::policies::NoFingerprints;
@@ -78,6 +80,34 @@ int main() {
             std::cout << "  Used positions bitvector: " << breakdown.used_pos_bytes << " bytes ("
                       << (breakdown.used_pos_bytes * 8.0 / n) << " bits/key)" << std::endl;
             std::cout << "  Rank support: " << breakdown.rank_bytes << " bytes ("
+                      << (breakdown.rank_bytes * 8.0 / n) << " bits/key)" << std::endl;
+            oss << bits_per_key;
+            std::cout << "  TOTAL: " << breakdown.total_bytes() << " bytes (" << oss.str() << " bits/key)"
+                      << std::endl;
+        }
+
+        // Test GlGhStorage (Gl/Gh on-the-fly B)
+        {
+            std::cout << "\n[GlGhStorage (Gl/Gh on-the-fly B)]" << std::endl;
+            MPHF<GlGhStorage, NoFingerprints> mphf;
+            bool success = mphf.build(keys);
+
+            if (!success) {
+                std::cout << "Build failed!" << std::endl;
+                continue;
+            }
+
+            auto breakdown = mphf.get_size_breakdown();
+            double bits_per_key = (breakdown.total_bytes() * 8.0) / n;
+
+            std::cout << "Size breakdown:" << std::endl;
+            std::ostringstream oss;
+            oss << std::fixed << std::setprecision(2);
+            std::cout << "  Gl + Gh bitvectors: " << breakdown.g_bytes << " bytes ("
+                      << (breakdown.g_bytes * 8.0 / n) << " bits/key)" << std::endl;
+            std::cout << "  B stored explicitly: " << breakdown.used_pos_bytes << " bytes ("
+                      << (breakdown.used_pos_bytes * 8.0 / n) << " bits/key)" << std::endl;
+            std::cout << "  Rank metadata (on-the-fly B): " << breakdown.rank_bytes << " bytes ("
                       << (breakdown.rank_bytes * 8.0 / n) << " bits/key)" << std::endl;
             oss << bits_per_key;
             std::cout << "  TOTAL: " << breakdown.total_bytes() << " bytes (" << oss.str() << " bits/key)"

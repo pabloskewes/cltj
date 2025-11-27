@@ -1,6 +1,7 @@
 // A unified and robust test suite for MPHF correctness, performance, and size.
 #include <hashing/mphf_bdz.hpp>
 #include <hashing/storage/packed_trit.hpp>
+#include <hashing/storage/glgh.hpp>
 #include <util/logger.hpp>
 #include <chrono>
 #include <iomanip>
@@ -12,6 +13,7 @@
 
 using cltj::hashing::BaselineStorage;
 using cltj::hashing::CompressedBitvector;
+using cltj::hashing::GlGhStorage;
 using cltj::hashing::MPHF;
 using cltj::hashing::PackedTritStorage;
 using cltj::hashing::policies::WithFingerprints;
@@ -168,7 +170,7 @@ void print_results(const TestResult& result, const std::string& strategy_name = 
 int main() {
     std::cout << "========== Unified MPHF Test Suite ==========" << std::endl;
     std::cout << "Correctness, Performance, and Size Analysis" << std::endl;
-    std::cout << "Comparing BaselineStorage vs PackedTritStorage" << std::endl;
+    std::cout << "Comparing BaselineStorage vs PackedTritStorage vs GlGhStorage" << std::endl;
 
     std::vector<size_t> test_sizes = {100, 1000, 10000, 100000, 1000000, 2000000, 5000000, 10000000};
     int failures = 0;
@@ -190,9 +192,16 @@ int main() {
             failures++;
         }
 
+        // Test GlGhStorage (on-the-fly B via Gl/Gh)
+        TestResult glgh = run_test_case<GlGhStorage>(n);
+        print_results(glgh, "GlGhStorage (Gl/Gh on-the-fly B)");
+        if (!glgh.build_success || !glgh.is_permutation) {
+            failures++;
+        }
+
         // Comparison
-        if (baseline.build_success && packed.build_success && baseline.is_permutation &&
-            packed.is_permutation) {
+        if (baseline.build_success && packed.build_success && glgh.build_success && baseline.is_permutation &&
+            packed.is_permutation && glgh.is_permutation) {
             std::cout << "\n  Comparison:" << std::endl;
             double speedup = (double)baseline.build_time_us / packed.build_time_us;
             double space_saving = baseline.bits_per_key - packed.bits_per_key;
@@ -205,7 +214,7 @@ int main() {
     }
 
     std::cout << "\n========== Test Summary ==========" << std::endl;
-    std::cout << "Total test cases: " << (test_sizes.size() * 2) << " (2 strategies × " << test_sizes.size()
+    std::cout << "Total test cases: " << (test_sizes.size() * 3) << " (3 strategies × " << test_sizes.size()
               << " sizes)" << std::endl;
     std::cout << "Failures: " << failures << std::endl;
     std::cout << "Final Result: " << (failures == 0 ? "ALL PASSED" : "SOME FAILED") << std::endl;
