@@ -79,6 +79,10 @@ class rank_support_glgh : public rank_support
         // Pointers to Gl and Gh bitvectors from which B is computed on-the-fly.
         const bit_vector* m_gl = nullptr;
         const bit_vector* m_gh = nullptr;
+
+        static inline uint64_t compute_b_word(uint64_t gl_word, uint64_t gh_word) {
+            return ~(gl_word & gh_word);
+        }
     public:
         explicit rank_support_glgh(const bit_vector* gl = nullptr,
                                    const bit_vector* gh = nullptr) {
@@ -105,13 +109,13 @@ class rank_support_glgh : public rank_support
             // First word of B: B_word = ~(Gl_word & Gh_word).
             uint64_t first_gl = *gl_data;
             uint64_t first_gh = *gh_data;
-            uint64_t b_word   = ~(first_gl & first_gh);
+            uint64_t b_word   = compute_b_word(first_gl, first_gh);
             uint64_t sum      = sdsl::bits::cnt(b_word);
             uint64_t second_level_cnt = 0;
             for (i = 1; i < (m_gl->capacity()>>6) ; ++i) {
                 uint64_t word_gl = gl_data[i];
                 uint64_t word_gh = gh_data[i];
-                b_word = ~(word_gl & word_gh);
+                b_word = compute_b_word(word_gl, word_gh);
                 if (!(i&0x7)) {// if i%8==0
                     j += 2;
                     m_basic_block[j-1] = second_level_cnt;
@@ -151,7 +155,7 @@ class rank_support_glgh : public rank_support
                 uint8_t  offset    = idx & 0x3F;
                 const uint64_t* gl_data = m_gl->data();
                 const uint64_t* gh_data = m_gh->data();
-                uint64_t b_word = ~(gl_data[word_idx] & gh_data[word_idx]);
+                uint64_t b_word = compute_b_word(gl_data[word_idx], gh_data[word_idx]);
                 uint64_t mask   = sdsl::bits::lo_set[offset];
                 result += sdsl::bits::cnt(b_word & mask);
             }
