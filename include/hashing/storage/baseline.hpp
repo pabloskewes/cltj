@@ -44,7 +44,7 @@ class BaselineStorage : public StorageStrategy<BaselineStorage> {
      *
      * Constructs B marking all positions where G[v] != 3 and initializes rank support.
      */
-    void build_rank(const std::vector<Triple>& triples) {
+    void build_rank() {
         // B[v] = 0 iff G[v] = 3
         used_positions_ = sdsl::bit_vector(m(), 0);
         for (uint32_t v = 0; v < m(); v++) {

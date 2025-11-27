@@ -72,12 +72,12 @@ class PackedTritStorage : public StorageStrategy<PackedTritStorage> {
     uint32_t m() const { return m_; }
 
     /**
-     * @brief Build bitvector B and pack G' from triples
+     * @brief Build bitvector B and pack G'
      *
-     * Constructs B marking used positions, then packs only non-3 values
+     * Constructs B marking all positions where G[v] != 3, then packs only non-3 values
      * into G' using trit packing.
      */
-    void build_rank(const std::vector<Triple>& triples) {
+    void build_rank() {
         // B[v] = 0 iff G[v] = 3
         used_positions_ = sdsl::bit_vector(m_, 0);
         for (uint32_t v = 0; v < m_; v++) {

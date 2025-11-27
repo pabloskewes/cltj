@@ -269,7 +269,7 @@ class MPHF {
 
         assign_g_values(peeling_order);
 
-        storage_.build_rank(triples);
+        storage_.build_rank();
 
         build_fingerprints(keys);
 

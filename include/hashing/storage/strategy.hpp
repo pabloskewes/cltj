@@ -72,18 +72,16 @@ class StorageStrategy {
     uint32_t m() const { return derived().m(); }
 
     /**
-     * @brief Build rank support from triples
+     * @brief Build rank support
      *
      * Prepares rank/compactification structures after G values have been assigned.
-     * For each triple (v0, v1, v2), computes j = (G[v0] + G[v1] + G[v2]) mod 3
-     * to determine the winning vertex position.
+     * Constructs bitvector B marking all positions where G[v] != 3, and initializes
+     * rank support for O(1) compactification queries.
      *
      * Specific behavior depends on the storage strategy: may construct explicit
      * or compressed bitvectors, rank metadata, or additional structures like G'.
-     *
-     * @param triples Vector of triples representing hyperedges
      */
-    void build_rank(const std::vector<Triple>& triples) { derived().build_rank(triples); }
+    void build_rank() { derived().build_rank(); }
 
     /**
      * @brief Compute rank query for compactification
