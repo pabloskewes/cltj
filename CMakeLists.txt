@@ -210,3 +210,5 @@ set_target_properties(test-rank-support-glgh PROPERTIES CXX_STANDARD 17 CXX_STAN
 add_cltj_executable(analyze-trie-structure src/test/hashing/analyze_trie_structure.cpp analysis)
 
 add_cltj_executable(count-distinct-spo src/analysis/count_distinct_spo.cpp analysis)
+
+add_cltj_executable(bench-mphf-hashing src/bench/bench_mphf_hashing.cpp analysis)
