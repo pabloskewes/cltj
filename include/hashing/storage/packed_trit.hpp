@@ -52,11 +52,13 @@ class PackedTritStorage : public StorageStrategy<PackedTritStorage> {
 
         // After construction: read from packed G' using B and rank
         if (used_positions_[vertex] == 0) {
+            // B[v] = 0 => G[v] = 3
             return 3;
         }
 
-        uint32_t idx = rank(vertex);
-        assert(idx > 0 && "rank should be >= 1 if bit is set");
+        // rank(i) counts 1s in [0, i), so rank(vertex+1) counts 1s in [0, vertex] (inclusive)
+        // This gives us the index in G' (1-based), convert to 0-based
+        uint32_t idx = rank(vertex + 1);
         return G_prime_.get(idx - 1);
     }
 
