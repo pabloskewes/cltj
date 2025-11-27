@@ -26,15 +26,16 @@ class PackedTritStorage : public StorageStrategy<PackedTritStorage> {
     sdsl::rank_support_v<1> rank_support_;  // Rank support for O(1) compactification queries
     uint32_t m_;  // Size of G array (number of vertices, approximately 1.23n)
     uint32_t n_;  // Number of non-3 values (size of G')
+    bool construction_complete_;  // Flag: true after build_rank(), false during construction
 
   public:
-    PackedTritStorage() : m_(0), n_(0) {}
+    PackedTritStorage() : m_(0), n_(0), construction_complete_(false) {}
 
     /**
      * @brief Get G value for a vertex
      * 
-     * If B[vertex] == 0, returns 3 (unused). Otherwise, retrieves the value
-     * from G' using rank(vertex) to map from [0, m) to [0, n).
+     * During construction: reads from temp_G_.
+     * After build_rank(): reads from G' using B and rank.
      * 
      * @param vertex Vertex index in [0, m-1]
      * @return G[vertex] value in {0, 1, 2, 3}
@@ -44,6 +45,12 @@ class PackedTritStorage : public StorageStrategy<PackedTritStorage> {
             return 3;
         }
 
+        // During construction: read from temporary array
+        if (!construction_complete_) {
+            return temp_G_[vertex];
+        }
+
+        // After construction: read from packed G' using B and rank
         if (used_positions_[vertex] == 0) {
             return 3;
         }
@@ -99,7 +106,8 @@ class PackedTritStorage : public StorageStrategy<PackedTritStorage> {
             }
         }
 
-        // Clean up: temp_G_ no longer needed
+        // Mark construction as complete and clean up temp_G_
+        construction_complete_ = true;
         temp_G_.clear();
         temp_G_.shrink_to_fit();
     }
