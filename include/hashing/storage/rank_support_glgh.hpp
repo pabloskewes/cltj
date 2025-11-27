@@ -143,7 +143,7 @@ class rank_support_glgh : public rank_support
         rank_support_glgh& operator=(rank_support_glgh&&) = default;
 
 
-        size_type rank(size_type idx) const {
+        size_type rank(size_type idx) const override {
             assert(m_gl != nullptr && m_gh != nullptr);
             assert(idx <= m_gl->size());
             const uint64_t* p = m_basic_block.data()
@@ -170,6 +170,10 @@ class rank_support_glgh : public rank_support
             return m_gl ? m_gl->size() : 0;
         }
 
+        size_type size_in_bytes() const {
+            return sdsl::size_in_bytes(m_basic_block);
+        }
+
         size_type serialize(std::ostream& out, structure_tree_node* v=nullptr,
                             std::string name="")const {
             size_type written_bytes = 0;
@@ -190,6 +194,10 @@ class rank_support_glgh : public rank_support
             // For compatibility with the base interface, treat v as Gl.
             m_gl = v;
             m_v  = v;
+        }
+
+        void set_gh(const bit_vector* gh=nullptr) {
+            m_gh = gh;
         }
 
         void swap(rank_support_glgh& rs) {

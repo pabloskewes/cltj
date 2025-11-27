@@ -1,10 +1,10 @@
 #pragma once
 #include "strategy.hpp"
+#include "rank_support_glgh.hpp"
 #include <sdsl/bit_vectors.hpp>
 #include <sdsl/int_vector.hpp>
 #include <sdsl/structure_tree.hpp>
 #include <sdsl/util.hpp>
-#include <sdsl/bits.hpp>
 
 namespace cltj {
 namespace hashing {
@@ -24,7 +24,7 @@ class GlGhStorage : public StorageStrategy<GlGhStorage> {
   private:
     sdsl::bit_vector Gl_;  // Lower bit of G: G[v] mod 2
     sdsl::bit_vector Gh_;  // Higher bit of G: (G[v] >> 1) & 1
-    sdsl::int_vector<64> rank_metadata_;  // Rank metadata: superblocks and blocks (similar to rank_support_v)
+    rank_support_glgh<> rank_B_;  // Rank support for B, computed on-the-fly from Gl_ and Gh_
     uint32_t m_;  // Size of G array (number of vertices, approximately 1.23n)
 
   public:
@@ -81,15 +81,10 @@ class GlGhStorage : public StorageStrategy<GlGhStorage> {
      * Computes rank metadata (superblocks/blocks) for B computed on-the-fly.
      * B[v] = ~(Gl[v] & Gh[v]) is computed dynamically during rank queries.
      * 
-     * TODO: Implement rank metadata construction
      */
     void build_rank() {
-        // TODO: Build rank metadata similar to rank_support_v
-        // But compute B on-the-fly: W[i] = ~(Wl[i] & Wh[i])
-        // Then build superblocks/blocks based on computed B
-        size_t basic_block_size = ((m_ >> 9) + 1) << 1;  // Similar to rank_support_v
-        rank_metadata_.resize(basic_block_size);
-        // TODO: Fill rank_metadata_ with computed B values
+        // Build rank support for B[v] = ~(Gl[v] & Gh[v]) using the helper structure.
+        rank_B_ = rank_support_glgh<>(&Gl_, &Gh_);
     }
 
     /**
@@ -101,14 +96,12 @@ class GlGhStorage : public StorageStrategy<GlGhStorage> {
      * @param position Position in [0, m)
      * @return Compact position in [0, n)
      * 
-     * TODO: Implement rank on-the-fly computation
      */
     uint32_t rank(uint32_t position) const {
-        // TODO: Implement rank on-the-fly
-        // 1. Use rank_metadata_ for superblock/block counts
-        // 2. For final word, compute B word: W = ~(Wl & Wh)
-        // 3. Count 1s in computed B word up to position
-        return 0;  // Stub
+        if (position > m_) {
+            position = m_;
+        }
+        return static_cast<uint32_t>(rank_B_.rank(position));
     }
 
     size_t serialize(std::ostream& out, sdsl::structure_tree_node* v, const std::string& name) const {
@@ -117,7 +110,7 @@ class GlGhStorage : public StorageStrategy<GlGhStorage> {
         size_t written_bytes = 0;
         written_bytes += Gl_.serialize(out, child, "Gl_");
         written_bytes += Gh_.serialize(out, child, "Gh_");
-        written_bytes += rank_metadata_.serialize(out, child, "rank_metadata_");
+        written_bytes += rank_B_.serialize(out, child, "rank_B_");
         written_bytes += sdsl::write_member(m_, out, child, "m_");
         sdsl::structure_tree::add_size(child, written_bytes);
         return written_bytes;
@@ -126,19 +119,20 @@ class GlGhStorage : public StorageStrategy<GlGhStorage> {
     void load(std::istream& in) {
         Gl_.load(in);
         Gh_.load(in);
-        rank_metadata_.load(in);
+        rank_B_.load(in, &Gl_);
+        rank_B_.set_gh(&Gh_);
         sdsl::read_member(m_, in);
     }
 
     size_t size_in_bytes() const {
-        return sdsl::size_in_bytes(Gl_) + sdsl::size_in_bytes(Gh_) + sdsl::size_in_bytes(rank_metadata_);
+        return sdsl::size_in_bytes(Gl_) + sdsl::size_in_bytes(Gh_) + rank_B_.size_in_bytes();
     }
 
     StorageSizeBreakdown get_size_breakdown() const {
         StorageSizeBreakdown breakdown;
         breakdown.g_bytes = sdsl::size_in_bytes(Gl_) + sdsl::size_in_bytes(Gh_);
         breakdown.used_pos_bytes = 0;  // B is not stored explicitly
-        breakdown.rank_bytes = sdsl::size_in_bytes(rank_metadata_);
+        breakdown.rank_bytes = rank_B_.size_in_bytes();
         return breakdown;
     }
 };
