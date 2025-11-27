@@ -55,7 +55,9 @@ class PackedTritStorage : public StorageStrategy<PackedTritStorage> {
             return 3;
         }
 
-        return G_prime_.get(rank(vertex) - 1);
+        uint32_t idx = rank(vertex);
+        assert(idx > 0 && "rank should be >= 1 if bit is set");
+        return G_prime_.get(idx - 1);
     }
 
     void g_set(uint32_t vertex, uint32_t value) {
@@ -74,8 +76,13 @@ class PackedTritStorage : public StorageStrategy<PackedTritStorage> {
     /**
      * @brief Build bitvector B and pack G'
      *
-     * Constructs B marking all positions where G[v] != 3, then packs only non-3 values
-     * into G' using trit packing.
+     * Steps:
+     * 1. Mark all positions where G[v] != 3 in bitvector B
+     * 2. Initialize rank support on B
+     * 3. Pack only non-3 values into G' (dense array of n trits)
+     * 4. Clean up temporary G array
+     *
+     * After this, g_get(v) uses: B[v] ? G'[rank(v)-1] : 3
      */
     void build_rank() {
         // B[v] = 0 iff G[v] = 3
@@ -88,13 +95,8 @@ class PackedTritStorage : public StorageStrategy<PackedTritStorage> {
 
         sdsl::util::init_support(rank_support_, &used_positions_);
 
-        // Count how many non-3 values we have (this is n_)
-        n_ = 0;
-        for (uint32_t v = 0; v < m_; v++) {
-            if (temp_G_[v] != 3) {
-                n_++;
-            }
-        }
+        // Count total number of 1s in B (this is n_)
+        n_ = sdsl::util::cnt_one_bits(used_positions_);
 
         // Pack only non-3 values into G_prime_
         G_prime_.initialize(n_);
@@ -105,6 +107,9 @@ class PackedTritStorage : public StorageStrategy<PackedTritStorage> {
                 g_prime_idx++;
             }
         }
+
+        // Sanity check: g_prime_idx should equal n_
+        assert(g_prime_idx == n_ && "Mismatch between counted and packed trits");
 
         // Mark construction as complete and clean up temp_G_
         construction_complete_ = true;
