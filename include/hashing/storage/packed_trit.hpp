@@ -1,8 +1,8 @@
 #pragma once
 #include "strategy.hpp"
 #include "trit_packed_array.hpp"
+#include "b_strategy.hpp"
 #include <sdsl/bit_vectors.hpp>
-#include <sdsl/rank_support_v.hpp>
 #include <sdsl/structure_tree.hpp>
 #include <sdsl/util.hpp>
 #include <vector>
@@ -14,16 +14,19 @@ namespace hashing {
  * @brief Packed trit storage strategy
  *
  * Stores only non-3 values from G as packed trits in G'[0..n-1] instead of
- * full G[0..m-1]. Uses explicit bitvector B and rank support for indexing.
+ * full G[0..m-1]. Uses configurable bitvector B strategy (explicit or compressed)
+ * and rank support for indexing.
  *
  * Theoretically reduces G storage from 2.5n to 1.6n bits.
+ *
+ * @tparam BStrategy Bitvector strategy (ExplicitBitvector or CompressedBitvector)
  */
-class PackedTritStorage : public StorageStrategy<PackedTritStorage> {
+template <typename BStrategy = ExplicitBitvector>
+class PackedTritStorage : public StorageStrategy<PackedTritStorage<BStrategy>> {
   private:
     TritPackedArray G_prime_;  // G' array: packed trits storing only non-3 values [0..n-1]
     std::vector<uint32_t> temp_G_;  // Temporary storage during construction [0..m-1]
-    sdsl::bit_vector used_positions_;  // Bitvector B: marks positions where G[v] != 3
-    sdsl::rank_support_v<1> rank_support_;  // Rank support for O(1) compactification queries
+    BStrategy B_;  // Bitvector B strategy: marks positions where G[v] != 3
     uint32_t m_;  // Size of G array (number of vertices, approximately 1.23n)
     uint32_t n_;  // Number of non-3 values (size of G')
     bool construction_complete_;  // Flag: true after build_rank(), false during construction
@@ -51,14 +54,14 @@ class PackedTritStorage : public StorageStrategy<PackedTritStorage> {
         }
 
         // After construction: read from packed G' using B and rank
-        if (used_positions_[vertex] == 0) {
+        if (B_[vertex] == 0) {
             // B[v] = 0 => G[v] = 3
             return 3;
         }
 
         // rank(i) counts 1s in [0, i), so rank(vertex+1) counts 1s in [0, vertex] (inclusive)
         // This gives us the index in G' (1-based), convert to 0-based
-        uint32_t idx = rank(vertex + 1);
+        uint32_t idx = B_.rank(vertex + 1);
         return G_prime_.get(idx - 1);
     }
 
@@ -79,8 +82,8 @@ class PackedTritStorage : public StorageStrategy<PackedTritStorage> {
      * @brief Build bitvector B and pack G'
      *
      * Steps:
-     * 1. Mark all positions where G[v] != 3 in bitvector B
-     * 2. Initialize rank support on B
+     * 1. Mark all positions where G[v] != 3 in temporary bitvector
+     * 2. Build B strategy (explicit or compressed) from temporary bitvector
      * 3. Pack only non-3 values into G' (dense array of n trits)
      * 4. Clean up temporary G array
      *
@@ -88,17 +91,19 @@ class PackedTritStorage : public StorageStrategy<PackedTritStorage> {
      */
     void build_rank() {
         // B[v] = 0 iff G[v] = 3
-        used_positions_ = sdsl::bit_vector(m_, 0);
+        // Build temporary bitvector first
+        sdsl::bit_vector temp_bv(m_, 0);
         for (uint32_t v = 0; v < m_; v++) {
             if (temp_G_[v] != 3) {
-                used_positions_[v] = 1;
+                temp_bv[v] = 1;
             }
         }
 
-        sdsl::util::init_support(rank_support_, &used_positions_);
+        // Build B strategy from temporary bitvector
+        B_.build(temp_bv);
 
         // Count total number of 1s in B (this is n_)
-        n_ = sdsl::util::cnt_one_bits(used_positions_);
+        n_ = sdsl::util::cnt_one_bits(temp_bv);
 
         // Pack only non-3 values into G_prime_
         G_prime_.initialize(n_);
@@ -125,15 +130,14 @@ class PackedTritStorage : public StorageStrategy<PackedTritStorage> {
      * Converts position from [0, m) to compact position in [0, n) using
      * rank support on bitvector B.
      */
-    uint32_t rank(uint32_t position) const { return static_cast<uint32_t>(rank_support_(position)); }
+    uint32_t rank(uint32_t position) const { return B_.rank(position); }
 
     size_t serialize(std::ostream& out, sdsl::structure_tree_node* v, const std::string& name) const {
         sdsl::structure_tree_node* child =
             sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
         size_t written_bytes = 0;
         written_bytes += G_prime_.serialize(out, child, "G_prime_");
-        written_bytes += used_positions_.serialize(out, child, "used_positions_");
-        written_bytes += rank_support_.serialize(out, child, "rank_support_");
+        written_bytes += B_.serialize(out, child, "B_");
         written_bytes += sdsl::write_member(m_, out, child, "m_");
         written_bytes += sdsl::write_member(n_, out, child, "n_");
         sdsl::structure_tree::add_size(child, written_bytes);
@@ -142,23 +146,23 @@ class PackedTritStorage : public StorageStrategy<PackedTritStorage> {
 
     void load(std::istream& in) {
         G_prime_.load(in);
-        used_positions_.load(in);
-        rank_support_.load(in);
+        B_.load(in);
         sdsl::read_member(m_, in);
         sdsl::read_member(n_, in);
-        rank_support_.set_vector(&used_positions_);
     }
 
     size_t size_in_bytes() const {
-        return G_prime_.size_in_bytes() + sdsl::size_in_bytes(used_positions_) +
-            sdsl::size_in_bytes(rank_support_);
+        return G_prime_.size_in_bytes() + B_.size_in_bytes();
     }
 
     StorageSizeBreakdown get_size_breakdown() const {
         StorageSizeBreakdown breakdown;
         breakdown.g_bytes = G_prime_.size_in_bytes();
-        breakdown.used_pos_bytes = sdsl::size_in_bytes(used_positions_);
-        breakdown.rank_bytes = sdsl::size_in_bytes(rank_support_);
+        // B strategy includes both bitvector and rank support
+        size_t b_total = B_.size_in_bytes();
+        // Approximate split: bitvector ~75%, rank ~25% (rough estimate)
+        breakdown.used_pos_bytes = (b_total * 3) / 4;
+        breakdown.rank_bytes = b_total / 4;
         return breakdown;
     }
 };

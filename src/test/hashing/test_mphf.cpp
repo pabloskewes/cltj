@@ -11,6 +11,7 @@
 #include <iostream>
 
 using cltj::hashing::BaselineStorage;
+using cltj::hashing::CompressedBitvector;
 using cltj::hashing::MPHF;
 using cltj::hashing::PackedTritStorage;
 using cltj::hashing::policies::WithFingerprints;
@@ -182,9 +183,9 @@ int main() {
             failures++;
         }
 
-        // Test PackedTritStorage
-        TestResult packed = run_test_case<PackedTritStorage>(n);
-        print_results(packed, "PackedTritStorage");
+        // Test PackedTritStorage with compressed B
+        TestResult packed = run_test_case<PackedTritStorage<CompressedBitvector>>(n);
+        print_results(packed, "PackedTritStorage (Compressed B)");
         if (!packed.build_success || !packed.is_permutation) {
             failures++;
         }

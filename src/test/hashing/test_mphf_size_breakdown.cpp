@@ -7,6 +7,7 @@
 #include <iostream>
 
 using cltj::hashing::BaselineStorage;
+using cltj::hashing::CompressedBitvector;
 using cltj::hashing::MPHF;
 using cltj::hashing::PackedTritStorage;
 using cltj::hashing::policies::NoFingerprints;
@@ -55,10 +56,10 @@ int main() {
                       << std::endl;
         }
 
-        // Test PackedTritStorage
+        // Test PackedTritStorage with compressed B
         {
-            std::cout << "\n[PackedTritStorage]" << std::endl;
-            MPHF<PackedTritStorage, NoFingerprints> mphf;
+            std::cout << "\n[PackedTritStorage (Compressed B)]" << std::endl;
+            MPHF<PackedTritStorage<CompressedBitvector>, NoFingerprints> mphf;
             bool success = mphf.build(keys);
 
             if (!success) {
