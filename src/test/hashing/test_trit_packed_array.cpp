@@ -157,6 +157,88 @@ void test_size_in_bytes() {
     std::cout << "PASSED\n";
 }
 
+/**
+ * Test: edge case n=0
+ */
+void test_edge_case_zero() {
+    std::cout << "Testing edge case n=0... ";
+    TritPackedArray arr;
+    arr.initialize(0);
+
+    assert(arr.size() == 0 && "Size should be 0");
+    // Should not crash on get/set with empty array
+    std::cout << "PASSED\n";
+}
+
+/**
+ * Test: edge case n=1
+ */
+void test_edge_case_one() {
+    std::cout << "Testing edge case n=1... ";
+    TritPackedArray arr;
+    arr.initialize(1);
+
+    assert(arr.size() == 1 && "Size should be 1");
+    assert(arr.get(0) == 0 && "Initial value should be 0");
+
+    arr.set(0, 2);
+    assert(arr.get(0) == 2 && "Should be able to set and get");
+
+    arr.set(0, 1);
+    assert(arr.get(0) == 1 && "Should be able to modify");
+    std::cout << "PASSED\n";
+}
+
+/**
+ * Test: edge case n=20 (exactly one word)
+ */
+void test_edge_case_exact_word() {
+    std::cout << "Testing edge case n=20 (exact word)... ";
+    TritPackedArray arr;
+    arr.initialize(20);  // Exactly 1 word
+
+    // Fill all positions
+    for (uint32_t i = 0; i < 20; i++) {
+        arr.set(i, i % 3);
+    }
+
+    // Verify all positions
+    for (uint32_t i = 0; i < 20; i++) {
+        assert(arr.get(i) == (i % 3) && "Pattern verification failed at exact word boundary");
+    }
+
+    // Test boundaries: first and last
+    arr.set(0, 2);
+    arr.set(19, 1);
+    assert(arr.get(0) == 2 && "First position should work");
+    assert(arr.get(19) == 1 && "Last position should work");
+    std::cout << "PASSED\n";
+}
+
+/**
+ * Test: edge case n=21 (just crosses word boundary)
+ */
+void test_edge_case_cross_boundary() {
+    std::cout << "Testing edge case n=21 (crosses boundary)... ";
+    TritPackedArray arr;
+    arr.initialize(21);  // 2 words (20 + 1)
+
+    // Fill all positions
+    for (uint32_t i = 0; i < 21; i++) {
+        arr.set(i, (i * 2) % 3);
+    }
+
+    // Verify all positions
+    for (uint32_t i = 0; i < 21; i++) {
+        assert(arr.get(i) == ((i * 2) % 3) && "Pattern verification failed");
+    }
+
+    // Test the boundary position
+    arr.set(20, 2);
+    assert(arr.get(20) == 2 && "First trit of second word should work");
+    std::cout << "PASSED\n";
+}
+
 int main() {
     std::cout << "=== TritPackedArray Tests ===\n\n";
 
@@ -168,6 +250,10 @@ int main() {
         test_word_boundaries();
         test_serialization();
         test_size_in_bytes();
+        test_edge_case_zero();
+        test_edge_case_one();
+        test_edge_case_exact_word();
+        test_edge_case_cross_boundary();
 
         std::cout << "\n✅ All tests passed!\n";
         return 0;
