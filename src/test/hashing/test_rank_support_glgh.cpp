@@ -9,22 +9,36 @@ using namespace sdsl;
 int main() {
     std::cout << "Testing rank_support_glgh (boilerplate test)...\n";
     
-    // Create a simple bitvector: 1010101010...
-    bit_vector bv(20, 0);
-    bv[0] = 1;
-    bv[2] = 1;
-    bv[4] = 1;
-    bv[6] = 1;
-    bv[8] = 1;
-    bv[10] = 1;
-    bv[12] = 1;
-    bv[14] = 1;
-    bv[16] = 1;
-    bv[18] = 1;
-    // Pattern: 10101010101010101010 (10 ones)
+    // Target bitvector B: 10101010101010101010 (10 ones)
+    bit_vector B(20, 0);
+    B[0]  = 1;
+    B[2]  = 1;
+    B[4]  = 1;
+    B[6]  = 1;
+    B[8]  = 1;
+    B[10] = 1;
+    B[12] = 1;
+    B[14] = 1;
+    B[16] = 1;
+    B[18] = 1;
+
+    // Build Gl and Gh so that B[v] = ~(Gl[v] & Gh[v])
+    bit_vector Gl(20, 0);
+    bit_vector Gh(20, 0);
+    for (size_t i = 0; i < 20; ++i) {
+        if (B[i] == 1) {
+            // We want B[i] = 1 => ~(Gl[i] & Gh[i]) = 1 => Gl[i] & Gh[i] = 0.
+            Gl[i] = 0;
+            Gh[i] = 0;
+        } else {
+            // We want B[i] = 0 => ~(Gl[i] & Gh[i]) = 0 => Gl[i] & Gh[i] = 1.
+            Gl[i] = 1;
+            Gh[i] = 1;
+        }
+    }
     
-    // Create rank support
-    rank_support_glgh<1> rs(&bv);
+    // Create rank support using Gl and Gh
+    rank_support_glgh<1> rs(&Gl, &Gh);
     
     // Test rank queries
     assert(rs.rank(0) == 0);   // rank(0) = 0 (no 1s before position 0)

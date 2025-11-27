@@ -30,6 +30,7 @@
 #include <sdsl/rank_support.hpp>
 #include <sdsl/bit_vectors.hpp>
 #include <sdsl/int_vector.hpp>
+#include <sdsl/bits.hpp>
 
 using namespace sdsl;
 
@@ -64,8 +65,9 @@ template<uint8_t t_b=1, uint8_t t_pat_len=1>
 class rank_support_glgh : public rank_support
 {
     private:
-        static_assert(t_b == 1u or t_b == 0u or t_b == 10u or t_b == 11, "rank_support_glgh: bit pattern must be `0`,`1`,`10` or `01`");
-        static_assert(t_pat_len == 1u or t_pat_len == 2u , "rank_support_glgh: bit pattern length must be 1 or 2");
+        // For the GlGh MPHF storage we only need rank1 support.
+        static_assert(t_b == 1u && t_pat_len == 1u,
+                      "rank_support_glgh only supports rank1 (t_b=1, t_pat_len=1)");
     public:
         typedef bit_vector                          bit_vector_type;
         typedef rank_support_trait<t_b, t_pat_len>  trait_type;
@@ -74,27 +76,42 @@ class rank_support_glgh : public rank_support
     private:
         // basic block for interleaved storage of superblockrank and blockrank
         int_vector<64> m_basic_block;
+        // Pointers to Gl and Gh bitvectors from which B is computed on-the-fly.
+        const bit_vector* m_gl = nullptr;
+        const bit_vector* m_gh = nullptr;
     public:
-        explicit rank_support_glgh(const bit_vector* v = nullptr) {
-            set_vector(v);
-            if (v == nullptr) {
+        explicit rank_support_glgh(const bit_vector* gl = nullptr,
+                                   const bit_vector* gh = nullptr) {
+            // m_v (from base) will point to Gl; we never store B explicitly.
+            m_gl = gl;
+            m_gh = gh;
+            m_v  = gl;
+
+            if (gl == nullptr || gh == nullptr) {
                 return;
-            } else if (v->empty()) {
+            } else if (gl->empty()) {
                 m_basic_block = int_vector<64>(2,0);   // resize structure for basic_blocks
                 return;
             }
-            size_type basic_block_size = ((v->capacity() >> 9)+1)<<1;
+            size_type basic_block_size = ((gl->capacity() >> 9)+1)<<1;
             m_basic_block.resize(basic_block_size);   // resize structure for basic_blocks
             if (m_basic_block.empty())
                 return;
-            const uint64_t* data = m_v->data();
+            const uint64_t* gl_data = m_gl->data();
+            const uint64_t* gh_data = m_gh->data();
             size_type i, j=0;
             m_basic_block[0] = m_basic_block[1] = 0;
 
-            uint64_t carry = trait_type::init_carry();
-            uint64_t sum   = trait_type::args_in_the_word(*data, carry);
+            // First word of B: B_word = ~(Gl_word & Gh_word).
+            uint64_t first_gl = *gl_data;
+            uint64_t first_gh = *gh_data;
+            uint64_t b_word   = ~(first_gl & first_gh);
+            uint64_t sum      = sdsl::bits::cnt(b_word);
             uint64_t second_level_cnt = 0;
-            for (i = 1; i < (m_v->capacity()>>6) ; ++i) {
+            for (i = 1; i < (m_gl->capacity()>>6) ; ++i) {
+                uint64_t word_gl = gl_data[i];
+                uint64_t word_gh = gh_data[i];
+                b_word = ~(word_gl & word_gh);
                 if (!(i&0x7)) {// if i%8==0
                     j += 2;
                     m_basic_block[j-1] = second_level_cnt;
@@ -103,7 +120,7 @@ class rank_support_glgh : public rank_support
                 } else {
                     second_level_cnt |= sum<<(63-9*(i&0x7));//  54, 45, 36, 27, 18, 9, 0
                 }
-                sum += trait_type::args_in_the_word(*(++data), carry);
+                sum += sdsl::bits::cnt(b_word);
             }
             if (i&0x7) { // if i%8 != 0
                 second_level_cnt |= sum << (63-9*(i&0x7));
@@ -123,15 +140,22 @@ class rank_support_glgh : public rank_support
 
 
         size_type rank(size_type idx) const {
-            assert(m_v != nullptr);
-            assert(idx <= m_v->size());
+            assert(m_gl != nullptr && m_gh != nullptr);
+            assert(idx <= m_gl->size());
             const uint64_t* p = m_basic_block.data()
                                 + ((idx>>8)&0xFFFFFFFFFFFFFFFEULL); // (idx/512)*2
-            if (idx&0x3F)  // if (idx%64)!=0
-                return  *p + ((*(p+1)>>(63 - 9*((idx&0x1FF)>>6)))&0x1FF) +
-                        trait_type::word_rank(m_v->data(), idx);
-            else
-                return  *p + ((*(p+1)>>(63 - 9*((idx&0x1FF)>>6)))&0x1FF);
+            size_type result = *p + ((*(p+1)>>(63 - 9*((idx&0x1FF)>>6)))&0x1FF);
+            if (idx&0x3F) { // if (idx%64)!=0
+                // Add contribution of the remaining bits in the current 64-bit word.
+                size_type word_idx = idx >> 6;
+                uint8_t  offset    = idx & 0x3F;
+                const uint64_t* gl_data = m_gl->data();
+                const uint64_t* gh_data = m_gh->data();
+                uint64_t b_word = ~(gl_data[word_idx] & gh_data[word_idx]);
+                uint64_t mask   = sdsl::bits::lo_set[offset];
+                result += sdsl::bits::cnt(b_word & mask);
+            }
+            return result;
         }
 
         inline size_type operator()(size_type idx)const {
@@ -139,7 +163,7 @@ class rank_support_glgh : public rank_support
         }
 
         size_type size()const {
-            return m_v->size();
+            return m_gl ? m_gl->size() : 0;
         }
 
         size_type serialize(std::ostream& out, structure_tree_node* v=nullptr,
@@ -158,8 +182,10 @@ class rank_support_glgh : public rank_support
             m_basic_block.load(in);
         }
 
-        void set_vector(const bit_vector* v=nullptr) {
-            m_v = v;
+        void set_vector(const bit_vector* v=nullptr) override {
+            // For compatibility with the base interface, treat v as Gl.
+            m_gl = v;
+            m_v  = v;
         }
 
         void swap(rank_support_glgh& rs) {
