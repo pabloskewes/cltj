@@ -1,10 +1,10 @@
 // A unified and robust test suite for MPHF correctness, performance, and size.
 #include <hashing/mphf_bdz.hpp>
+#include <hashing/storage/packed_trit.hpp>
 #include <util/logger.hpp>
 #include <chrono>
 #include <iomanip>
 #include <sstream>
-#include <numeric>
 #include <random>
 #include <unordered_set>
 #include <vector>
@@ -12,6 +12,7 @@
 
 using cltj::hashing::BaselineStorage;
 using cltj::hashing::MPHF;
+using cltj::hashing::PackedTritStorage;
 using cltj::hashing::policies::WithFingerprints;
 
 // Helper to generate a vector of unique random keys in a reasonable range.
@@ -41,6 +42,7 @@ struct TestResult {
 };
 
 // Runs a full test case for a given n, checking correctness, performance, and size.
+template <typename StorageStrategy>
 TestResult run_test_case(size_t n) {
     TestResult result;
     result.n = n;
@@ -50,7 +52,7 @@ TestResult run_test_case(size_t n) {
     }
     auto keys = generate_reasonable_keys(n, 42 + n);
 
-    MPHF<BaselineStorage, WithFingerprints> mphf;
+    MPHF<StorageStrategy, WithFingerprints> mphf;
 
     // 1. Measure Build Time
     auto start = std::chrono::high_resolution_clock::now();
@@ -129,8 +131,12 @@ TestResult run_test_case(size_t n) {
     return result;
 }
 
-void print_results(const TestResult& result) {
-    std::cout << "--- Test Case: n = " << result.n << " ---" << std::endl;
+void print_results(const TestResult& result, const std::string& strategy_name = "") {
+    std::cout << "--- Test Case: n = " << result.n;
+    if (!strategy_name.empty()) {
+        std::cout << " [" << strategy_name << "]";
+    }
+    std::cout << " ---" << std::endl;
     if (!result.build_success) {
         std::cout << "  STATUS: BUILD FAILED after " << result.retries << " retries." << std::endl;
         return;
@@ -161,20 +167,45 @@ void print_results(const TestResult& result) {
 int main() {
     std::cout << "========== Unified MPHF Test Suite ==========" << std::endl;
     std::cout << "Correctness, Performance, and Size Analysis" << std::endl;
+    std::cout << "Comparing BaselineStorage vs PackedTritStorage" << std::endl;
 
     std::vector<size_t> test_sizes = {100, 1000, 10000, 100000, 1000000, 2000000, 5000000, 10000000};
     int failures = 0;
 
     for (size_t n : test_sizes) {
-        TestResult result = run_test_case(n);
-        print_results(result);
-        if (!result.build_success || !result.is_permutation) {
+        std::cout << "\n========== Analysis for n = " << n << " ==========" << std::endl;
+
+        // Test BaselineStorage
+        TestResult baseline = run_test_case<BaselineStorage>(n);
+        print_results(baseline, "BaselineStorage");
+        if (!baseline.build_success || !baseline.is_permutation) {
             failures++;
+        }
+
+        // Test PackedTritStorage
+        TestResult packed = run_test_case<PackedTritStorage>(n);
+        print_results(packed, "PackedTritStorage");
+        if (!packed.build_success || !packed.is_permutation) {
+            failures++;
+        }
+
+        // Comparison
+        if (baseline.build_success && packed.build_success && baseline.is_permutation &&
+            packed.is_permutation) {
+            std::cout << "\n  Comparison:" << std::endl;
+            double speedup = (double)baseline.build_time_us / packed.build_time_us;
+            double space_saving = baseline.bits_per_key - packed.bits_per_key;
+            std::ostringstream oss_speedup, oss_saving;
+            oss_speedup << std::fixed << std::setprecision(2) << speedup;
+            oss_saving << std::fixed << std::setprecision(2) << space_saving;
+            std::cout << "    Build time ratio (baseline/packed): " << oss_speedup.str() << "x" << std::endl;
+            std::cout << "    Space saving: " << oss_saving.str() << " bits/key" << std::endl;
         }
     }
 
-    std::cout << "========== Test Summary ==========" << std::endl;
-    std::cout << "Total test cases: " << test_sizes.size() << std::endl;
+    std::cout << "\n========== Test Summary ==========" << std::endl;
+    std::cout << "Total test cases: " << (test_sizes.size() * 2) << " (2 strategies × " << test_sizes.size()
+              << " sizes)" << std::endl;
     std::cout << "Failures: " << failures << std::endl;
     std::cout << "Final Result: " << (failures == 0 ? "ALL PASSED" : "SOME FAILED") << std::endl;
 
