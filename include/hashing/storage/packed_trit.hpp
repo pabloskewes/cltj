@@ -78,12 +78,12 @@ class PackedTritStorage : public StorageStrategy<PackedTritStorage> {
      * into G' using trit packing.
      */
     void build_rank(const std::vector<Triple>& triples) {
-        // Build B marking used positions (same as baseline) and initialize rank support
+        // B[v] = 0 iff G[v] = 3
         used_positions_ = sdsl::bit_vector(m_, 0);
-        for (const auto& t : triples) {
-            uint32_t j = static_cast<uint32_t>((temp_G_[t.v0] + temp_G_[t.v1] + temp_G_[t.v2]) % 3);
-            uint32_t pos = (j == 0 ? t.v0 : (j == 1 ? t.v1 : t.v2));
-            used_positions_[pos] = 1;
+        for (uint32_t v = 0; v < m_; v++) {
+            if (temp_G_[v] != 3) {
+                used_positions_[v] = 1;
+            }
         }
 
         sdsl::util::init_support(rank_support_, &used_positions_);

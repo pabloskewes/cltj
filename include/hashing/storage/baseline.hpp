@@ -40,17 +40,17 @@ class BaselineStorage : public StorageStrategy<BaselineStorage> {
     uint32_t m() const { return static_cast<uint32_t>(G_.size()); }
 
     /**
-     * @brief Build bitvector B and rank support from triples
+     * @brief Build bitvector B and rank support
      *
-     * Constructs B marking used positions (where G[v] != 3) and initializes
-     * rank support for O(1) compactification queries.
+     * Constructs B marking all positions where G[v] != 3 and initializes rank support.
      */
     void build_rank(const std::vector<Triple>& triples) {
+        // B[v] = 0 iff G[v] = 3
         used_positions_ = sdsl::bit_vector(m(), 0);
-        for (const auto& t : triples) {
-            uint32_t j = static_cast<uint32_t>((g_get(t.v0) + g_get(t.v1) + g_get(t.v2)) % 3);
-            uint32_t pos = (j == 0 ? t.v0 : (j == 1 ? t.v1 : t.v2));
-            used_positions_[pos] = 1;
+        for (uint32_t v = 0; v < m(); v++) {
+            if (g_get(v) != 3) {
+                used_positions_[v] = 1;
+            }
         }
         sdsl::util::init_support(rank_support_, &used_positions_);
     }
