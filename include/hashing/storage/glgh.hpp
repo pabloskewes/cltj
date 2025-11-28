@@ -82,7 +82,9 @@ class GlGhStorage : public StorageStrategy<GlGhStorage> {
      * B[v] = ~(Gl[v] & Gh[v]) is computed dynamically during rank queries.
      * 
      */
-    void build_rank() { rank_B_ = rank_support_glgh<>(&Gl_, &Gh_); }
+    void build_rank() {
+        rank_B_ = rank_support_glgh<>(&Gl_, &Gh_);
+    }
 
     /**
      * @brief Compute rank query for compactification
