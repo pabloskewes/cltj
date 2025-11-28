@@ -18,7 +18,8 @@ int main() {
     std::cout << "=== MPHF Size Breakdown Analysis ===" << std::endl;
 
     // Test with different sizes
-    std::vector<size_t> test_sizes = {1000, 10000, 100000};
+    // std::vector<size_t> test_sizes = {1000, 10000, 100000};
+    std::vector<size_t> test_sizes = {10000000};
 
     for (size_t n : test_sizes) {
         std::cout << "--- Analysis for n = " << n << " ---" << std::endl;

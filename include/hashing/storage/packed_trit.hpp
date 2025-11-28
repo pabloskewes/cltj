@@ -151,9 +151,7 @@ class PackedTritStorage : public StorageStrategy<PackedTritStorage<BStrategy>> {
         sdsl::read_member(n_, in);
     }
 
-    size_t size_in_bytes() const {
-        return G_prime_.size_in_bytes() + B_.size_in_bytes();
-    }
+    size_t size_in_bytes() const { return G_prime_.size_in_bytes() + B_.size_in_bytes(); }
 
     StorageSizeBreakdown get_size_breakdown() const {
         StorageSizeBreakdown breakdown;
