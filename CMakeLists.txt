@@ -192,3 +192,23 @@ add_cltj_executable(test-dyn src/test/test-dyn.cpp test hybridbv_gn)
 add_cltj_executable(cltj-louds src/test/cltj_louds.cpp test hybridbv_gn)
 
 add_cltj_executable(test-alternation-complexity src/test/test-alternation-complexity.cpp test hybridbv_gn)
+
+add_cltj_executable(test-mphf-utils src/test/hashing/test_mphf_utils.cpp test)
+
+add_cltj_executable(test-mphf src/test/hashing/test_mphf.cpp test)
+set_target_properties(test-mphf PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+
+add_cltj_executable(test-mphf-size-breakdown src/test/hashing/test_mphf_size_breakdown.cpp test)
+set_target_properties(test-mphf-size-breakdown PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+
+add_cltj_executable(test-trit-packed-array src/test/hashing/test_trit_packed_array.cpp test)
+set_target_properties(test-trit-packed-array PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+
+add_cltj_executable(test-rank-support-glgh src/test/hashing/test_rank_support_glgh.cpp test)
+set_target_properties(test-rank-support-glgh PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+
+add_cltj_executable(analyze-trie-structure src/test/hashing/analyze_trie_structure.cpp analysis)
+
+add_cltj_executable(count-distinct-spo src/analysis/count_distinct_spo.cpp analysis)
+
+add_cltj_executable(bench-mphf-hashing src/bench/bench_mphf_hashing.cpp analysis)
