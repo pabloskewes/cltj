@@ -315,14 +315,10 @@ class MPHF {
      * Uses separate primes for each hash function
      */
     bool initialize_hash_functions(const std::vector<uint64_t>& keys, int retry_count) {
-        // Determine target sizes
         const uint64_t target_m = static_cast<uint64_t>(std::ceil(1.25 * static_cast<double>(n_)));
         const uint64_t target_segment = std::max<uint64_t>(3, (target_m + 2) / 3);  // ceil(target_m/3)
 
-        // On retries, increase m by a moderate linear factor.
-        // A 10% stride is a balance between guaranteeing success and keeping overhead low.
-        uint64_t stride = std::max<uint64_t>(3, target_segment / 10);  // 10% stride
-        uint64_t base = target_segment + static_cast<uint64_t>(retry_count) * stride;
+        uint64_t base = target_segment;
         uint64_t p0 = next_prime(base);
         uint64_t p1 = next_prime(p0 + 1);
         uint64_t p2 = next_prime(p1 + 1);
@@ -353,15 +349,6 @@ class MPHF {
 
         // Initialize G with sentinel value 3 (acts as 0 mod 3 but marks unassigned)
         storage_.initialize(m_);
-
-        // std::cout << "[MPHF::initialize] n=" << n_ << " target_m=" << target_m << " primes(r): {"
-        //           << primes_[0] << ", " << primes_[1] << ", " << primes_[2] << "}"
-        //           << " segment_starts(d): {" << segment_starts_[0] << ", " << segment_starts_[1] << ", "
-        //           << segment_starts_[2] << "}"
-        //           << " multipliers(a): {" << multipliers_[0] << ", " << multipliers_[1] << ", "
-        //           << multipliers_[2] << "}"
-        //           << " biases(b): {" << biases_[0] << ", " << biases_[1] << ", " << biases_[2] << "}"
-        //           << " m=" << m_ << "\n";
 
         return true;
     }
