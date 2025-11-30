@@ -145,14 +145,24 @@ BenchResult run_pthash_case(const std::string& strategy_name, size_t n, uint64_t
 
     PTHashType f;
 
-    // 1. Measure build time
+    // 1. Measure build time (handle possible runtime errors for small n / bad config)
     auto start_build = std::chrono::high_resolution_clock::now();
-    f.build_in_internal_memory(keys.begin(), keys.size(), config);
-    auto end_build = std::chrono::high_resolution_clock::now();
-    result.build_time_us =
-        std::chrono::duration_cast<std::chrono::microseconds>(end_build - start_build).count();
-    result.build_success = true;
-    result.retries = 0;
+    try {
+        f.build_in_internal_memory(keys.begin(), keys.size(), config);
+        auto end_build = std::chrono::high_resolution_clock::now();
+        result.build_time_us =
+            std::chrono::duration_cast<std::chrono::microseconds>(end_build - start_build).count();
+        result.build_success = true;
+        result.retries = 0;
+    } catch (const std::runtime_error&) {
+        // For example: n too small for dense mode; mark as failed and return.
+        auto end_build = std::chrono::high_resolution_clock::now();
+        result.build_time_us =
+            std::chrono::duration_cast<std::chrono::microseconds>(end_build - start_build).count();
+        result.build_success = false;
+        result.retries = 0;
+        return result;
+    }
 
     // 2. Measure query time
     volatile uint64_t sink = 0;
