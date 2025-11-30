@@ -67,6 +67,7 @@ include_directories(~/include
 
 link_directories(~/lib)
 add_subdirectory(lib/hybridBV)
+add_subdirectory(lib/pthash)
 
 # Function to add executables with common linking and output dir
 function(add_cltj_executable name source_file output_dir)
@@ -206,6 +207,10 @@ set_target_properties(test-trit-packed-array PROPERTIES CXX_STANDARD 17 CXX_STAN
 
 add_cltj_executable(test-rank-support-glgh src/test/hashing/test_rank_support_glgh.cpp test)
 set_target_properties(test-rank-support-glgh PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+
+add_cltj_executable(test-pthash-simple src/test/hashing/test_pthash_simple.cpp test)
+target_link_libraries(test-pthash-simple PRIVATE PTHASH)
+set_target_properties(test-pthash-simple PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
 add_cltj_executable(analyze-trie-structure src/test/hashing/analyze_trie_structure.cpp analysis)
 
