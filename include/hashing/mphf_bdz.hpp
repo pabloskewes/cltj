@@ -350,6 +350,14 @@ class MPHF {
         // Initialize G with sentinel value 3 (acts as 0 mod 3 but marks unassigned)
         storage_.initialize(m_);
 
+        LOG_INFO(
+            "[MPHF::init_hash] retry=" << retry_count << " m=" << m_ << " primes={" << primes_[0] << ", "
+                                       << primes_[1] << ", " << primes_[2] << "} multipliers={"
+                                       << multipliers_[0] << ", " << multipliers_[1] << ", "
+                                       << multipliers_[2] << "} biases={" << biases_[0] << ", " << biases_[1]
+                                       << ", " << biases_[2] << "}"
+        );
+
         return true;
     }
 
