@@ -32,8 +32,6 @@
 #include <sdsl/int_vector.hpp>
 #include <sdsl/bits.hpp>
 
-using namespace sdsl;
-
 //! Namespace for the compactLTJ library.
 namespace cltj {
 namespace hashing {
@@ -62,30 +60,30 @@ namespace hashing {
  *    WEA 2008: 154-168
  */
 template<uint8_t t_b=1, uint8_t t_pat_len=1>
-class rank_support_glgh : public rank_support
+class rank_support_glgh : public sdsl::rank_support
 {
     private:
         // For the GlGh MPHF storage we only need rank1 support.
         static_assert(t_b == 1u && t_pat_len == 1u,
                       "rank_support_glgh only supports rank1 (t_b=1, t_pat_len=1)");
     public:
-        typedef bit_vector                          bit_vector_type;
-        typedef rank_support_trait<t_b, t_pat_len>  trait_type;
+        typedef sdsl::bit_vector                          bit_vector_type;
+        typedef sdsl::rank_support_trait<t_b, t_pat_len>  trait_type;
         enum { bit_pat = t_b };
         enum { bit_pat_len = t_pat_len };
     private:
         // basic block for interleaved storage of superblockrank and blockrank
-        int_vector<64> m_basic_block;
+        sdsl::int_vector<64> m_basic_block;
         // Pointers to Gl and Gh bitvectors from which B is computed on-the-fly.
-        const bit_vector* m_gl = nullptr;
-        const bit_vector* m_gh = nullptr;
+        const bit_vector_type* m_gl = nullptr;
+        const bit_vector_type* m_gh = nullptr;
 
         static inline uint64_t compute_b_word(uint64_t gl_word, uint64_t gh_word) {
             return ~(gl_word & gh_word);
         }
     public:
-        explicit rank_support_glgh(const bit_vector* gl = nullptr,
-                                   const bit_vector* gh = nullptr) {
+        explicit rank_support_glgh(const bit_vector_type* gl = nullptr,
+                                   const bit_vector_type* gh = nullptr) {
             // m_v (from base) will point to Gl; we never store B explicitly.
             m_gl = gl;
             m_gh = gh;
@@ -94,7 +92,7 @@ class rank_support_glgh : public rank_support
             if (gl == nullptr || gh == nullptr) {
                 return;
             } else if (gl->empty()) {
-                m_basic_block = int_vector<64>(2,0);   // resize structure for basic_blocks
+                m_basic_block = sdsl::int_vector<64>(2,0);   // resize structure for basic_blocks
                 return;
             }
             size_type basic_block_size = ((gl->capacity() >> 9)+1)<<1;
@@ -174,29 +172,30 @@ class rank_support_glgh : public rank_support
             return sdsl::size_in_bytes(m_basic_block);
         }
 
-        size_type serialize(std::ostream& out, structure_tree_node* v=nullptr,
+        size_type serialize(std::ostream& out, sdsl::structure_tree_node* v=nullptr,
                             std::string name="")const {
             size_type written_bytes = 0;
-            structure_tree_node* child = structure_tree::add_child(v, name,
-                                         util::class_name(*this));
+            sdsl::structure_tree_node* child = sdsl::structure_tree::add_child(
+                v, name, sdsl::util::class_name(*this)
+            );
             written_bytes += m_basic_block.serialize(out, child,
                              "cumulative_counts");
-            structure_tree::add_size(child, written_bytes);
+            sdsl::structure_tree::add_size(child, written_bytes);
             return written_bytes;
         }
 
-        void load(std::istream& in, const int_vector<1>* v=nullptr) {
+        void load(std::istream& in, const sdsl::int_vector<1>* v=nullptr) {
             set_vector(v);
             m_basic_block.load(in);
         }
 
-        void set_vector(const bit_vector* v=nullptr) override {
+        void set_vector(const bit_vector_type* v=nullptr) override {
             // For compatibility with the base interface, treat v as Gl.
             m_gl = v;
             m_v  = v;
         }
 
-        void set_gh(const bit_vector* gh=nullptr) {
+        void set_gh(const bit_vector_type* gh=nullptr) {
             m_gh = gh;
         }
 
