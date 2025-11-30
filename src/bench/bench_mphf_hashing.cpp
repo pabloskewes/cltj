@@ -48,6 +48,10 @@ struct BenchConfig {
     };
     uint64_t base_seed = 42;
     size_t query_reps = 5;  // how many times to repeat the full query loop
+    // Which strategies to run; by default run all internal ones
+    std::vector<std::string> strategies = {
+        "BaselineStorage", "PackedTritStorage_ExplicitB", "PackedTritStorage_CompressedB", "GlGhStorage"
+    };
 };
 
 struct BenchResult {
@@ -124,23 +128,6 @@ int run_bench(const BenchConfig& cfg) {
         // For reproducibility, vary seed per n but in a deterministic way.
         uint64_t seed = cfg.base_seed + n;
 
-        // 4 storage combinations (no fingerprints):
-        // 1) BaselineStorage
-        auto r_baseline = run_bench_case<BaselineStorage>("BaselineStorage", n, seed, cfg.query_reps);
-
-        // 2) PackedTritStorage with explicit B (ExplicitBitvector)
-        auto r_packed_explicit = run_bench_case<PackedTritStorage<ExplicitBitvector>>(
-            "PackedTritStorage_ExplicitB", n, seed, cfg.query_reps
-        );
-
-        // 3) PackedTritStorage with compressed B (CompressedBitvector)
-        auto r_packed_compressed = run_bench_case<PackedTritStorage<CompressedBitvector>>(
-            "PackedTritStorage_CompressedB", n, seed, cfg.query_reps
-        );
-
-        // 4) GlGhStorage (Gl/Gh on-the-fly B)
-        auto r_glgh = run_bench_case<GlGhStorage>("GlGhStorage", n, seed, cfg.query_reps);
-
         auto write_row = [&](const BenchResult& r) {
             double query_time_ns_per_key = (static_cast<double>(r.query_time_us) * 1000.0) /
                 static_cast<double>(r.n * std::max<size_t>(1, cfg.query_reps));
@@ -150,10 +137,38 @@ int run_bench(const BenchConfig& cfg) {
                 << (r.build_success ? 1 : 0) << "\n";
         };
 
-        write_row(r_baseline);
-        write_row(r_packed_explicit);
-        write_row(r_packed_compressed);
-        write_row(r_glgh);
+        auto should_run = [&](const std::string& name) {
+            return std::find(cfg.strategies.begin(), cfg.strategies.end(), name) != cfg.strategies.end();
+        };
+
+        // 4 storage combinations (no fingerprints):
+        // 1) BaselineStorage
+        if (should_run("BaselineStorage")) {
+            auto r_baseline = run_bench_case<BaselineStorage>("BaselineStorage", n, seed, cfg.query_reps);
+            write_row(r_baseline);
+        }
+
+        // 2) PackedTritStorage with explicit B (ExplicitBitvector)
+        if (should_run("PackedTritStorage_ExplicitB")) {
+            auto r_packed_explicit = run_bench_case<PackedTritStorage<ExplicitBitvector>>(
+                "PackedTritStorage_ExplicitB", n, seed, cfg.query_reps
+            );
+            write_row(r_packed_explicit);
+        }
+
+        // 3) PackedTritStorage with compressed B (CompressedBitvector)
+        if (should_run("PackedTritStorage_CompressedB")) {
+            auto r_packed_compressed = run_bench_case<PackedTritStorage<CompressedBitvector>>(
+                "PackedTritStorage_CompressedB", n, seed, cfg.query_reps
+            );
+            write_row(r_packed_compressed);
+        }
+
+        // 4) GlGhStorage (Gl/Gh on-the-fly B)
+        if (should_run("GlGhStorage")) {
+            auto r_glgh = run_bench_case<GlGhStorage>("GlGhStorage", n, seed, cfg.query_reps);
+            write_row(r_glgh);
+        }
     }
 
     return 0;
@@ -171,6 +186,13 @@ int main(int argc, char** argv) {
     app.add_option("--query-reps", cfg.query_reps, "Number of times to repeat the full query loop")
         ->capture_default_str();
     app.add_option("--seed", cfg.base_seed, "Base seed for key generation")->capture_default_str();
+    app.add_option(
+           "--strategies",
+           cfg.strategies,
+           "Strategies to run (any of: BaselineStorage, PackedTritStorage_ExplicitB, "
+           "PackedTritStorage_CompressedB, GlGhStorage)"
+    )
+        ->capture_default_str();
 
     CLI11_PARSE(app, argc, argv);
 
