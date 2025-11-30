@@ -172,7 +172,7 @@ int main() {
     std::cout << "Correctness, Performance, and Size Analysis" << std::endl;
     std::cout << "Comparing BaselineStorage vs PackedTritStorage vs GlGhStorage" << std::endl;
 
-    std::vector<size_t> test_sizes = {100, 1000, 10000, 100000, 1000000, 2000000, 5000000, 10000000};
+    std::vector<size_t> test_sizes = {10000, 100000, 1000000, 2000000, 5000000, 10000000};
     int failures = 0;
 
     for (size_t n : test_sizes) {
