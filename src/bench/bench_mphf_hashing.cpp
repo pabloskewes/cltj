@@ -17,6 +17,8 @@
 #include <unordered_set>
 #include <vector>
 
+#include <pthash.hpp>
+
 using cltj::hashing::BaselineStorage;
 using cltj::hashing::CompressedBitvector;
 using cltj::hashing::ExplicitBitvector;
@@ -24,6 +26,8 @@ using cltj::hashing::GlGhStorage;
 using cltj::hashing::MPHF;
 using cltj::hashing::PackedTritStorage;
 using cltj::hashing::policies::NoFingerprints;
+
+namespace ph = pthash;
 
 namespace {
 
@@ -48,9 +52,15 @@ struct BenchConfig {
     };
     uint64_t base_seed = 42;
     size_t query_reps = 5;  // how many times to repeat the full query loop
-    // Which strategies to run; by default run all internal ones
+    // Which strategies to run; by default run all internal ones (including PTHash variants)
     std::vector<std::string> strategies = {
-        "BaselineStorage", "PackedTritStorage_ExplicitB", "PackedTritStorage_CompressedB", "GlGhStorage"
+        "BaselineStorage",
+        "PackedTritStorage_ExplicitB",
+        "PackedTritStorage_CompressedB",
+        "GlGhStorage",
+        "PTHash_single",
+        "PTHash_partitioned",
+        "PTHash_dense"
     };
 };
 
@@ -117,6 +127,57 @@ BenchResult run_bench_case(const std::string& strategy_name, size_t n, uint64_t 
     return result;
 }
 
+template <typename PTHashType>
+BenchResult run_pthash_case(const std::string& strategy_name, size_t n, uint64_t seed, size_t query_reps) {
+    BenchResult result;
+    result.strategy = strategy_name;
+    result.n = n;
+    result.seed = seed;
+
+    auto keys = generate_unique_keys(n, seed);
+
+    ph::build_configuration config;
+    config.seed = seed;
+    config.lambda = 4.0;
+    config.alpha = 0.99;
+    config.verbose = false;
+    config.num_threads = 1;
+
+    PTHashType f;
+
+    // 1. Measure build time
+    auto start_build = std::chrono::high_resolution_clock::now();
+    f.build_in_internal_memory(keys.begin(), keys.size(), config);
+    auto end_build = std::chrono::high_resolution_clock::now();
+    result.build_time_us =
+        std::chrono::duration_cast<std::chrono::microseconds>(end_build - start_build).count();
+    result.build_success = true;
+    result.retries = 0;
+
+    // 2. Measure query time
+    volatile uint64_t sink = 0;
+    auto start_query = std::chrono::high_resolution_clock::now();
+    for (size_t rep = 0; rep < query_reps; ++rep) {
+        for (uint64_t k : keys) {
+            uint64_t h = f(k);
+            sink ^= h;
+        }
+    }
+    auto end_query = std::chrono::high_resolution_clock::now();
+    (void)sink;
+    result.query_time_us =
+        std::chrono::duration_cast<std::chrono::microseconds>(end_query - start_query).count();
+
+    // 3. Space usage
+    uint64_t num_bits = f.num_bits();
+    result.size_bytes = static_cast<size_t>((num_bits + 7) / 8);
+    result.bits_per_key = static_cast<double>(num_bits) / static_cast<double>(n);
+    result.m = static_cast<uint32_t>(n);  // image is [0..n)
+    result.overhead_m_over_n = 1.0;
+
+    return result;
+}
+
 int run_bench(const BenchConfig& cfg) {
     std::ofstream out(cfg.csv_path);
     out << "strategy,n,seed,build_time_us,query_time_us,query_time_ns_per_key,"
@@ -169,6 +230,27 @@ int run_bench(const BenchConfig& cfg) {
             auto r_glgh = run_bench_case<GlGhStorage>("GlGhStorage", n, seed, cfg.query_reps);
             write_row(r_glgh);
         }
+
+        // PTHash variants (single, partitioned, dense)
+        if (should_run("PTHash_single")) {
+            using PTHashSingle =
+                ph::single_phf<ph::xxhash_128, ph::skew_bucketer, ph::dictionary_dictionary, true>;
+            auto r_pth_single = run_pthash_case<PTHashSingle>("PTHash_single", n, seed, cfg.query_reps);
+            write_row(r_pth_single);
+        }
+
+        if (should_run("PTHash_partitioned")) {
+            using PTHashPart =
+                ph::partitioned_phf<ph::xxhash_128, ph::skew_bucketer, ph::dictionary_dictionary, true>;
+            auto r_pth_part = run_pthash_case<PTHashPart>("PTHash_partitioned", n, seed, cfg.query_reps);
+            write_row(r_pth_part);
+        }
+
+        if (should_run("PTHash_dense")) {
+            using PTHashDense = ph::phobic<ph::xxhash_128>;
+            auto r_pth_dense = run_pthash_case<PTHashDense>("PTHash_dense", n, seed, cfg.query_reps);
+            write_row(r_pth_dense);
+        }
     }
 
     return 0;
@@ -190,7 +272,8 @@ int main(int argc, char** argv) {
            "--strategies",
            cfg.strategies,
            "Strategies to run (any of: BaselineStorage, PackedTritStorage_ExplicitB, "
-           "PackedTritStorage_CompressedB, GlGhStorage)"
+           "PackedTritStorage_CompressedB, GlGhStorage, PTHash_single, "
+           "PTHash_partitioned, PTHash_dense)"
     )
         ->capture_default_str();
 

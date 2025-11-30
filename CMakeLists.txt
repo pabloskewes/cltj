@@ -217,3 +217,4 @@ add_cltj_executable(analyze-trie-structure src/test/hashing/analyze_trie_structu
 add_cltj_executable(count-distinct-spo src/analysis/count_distinct_spo.cpp analysis)
 
 add_cltj_executable(bench-mphf-hashing src/bench/bench_mphf_hashing.cpp analysis)
+target_link_libraries(bench-mphf-hashing PRIVATE PTHASH)
