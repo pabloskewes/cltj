@@ -561,7 +561,7 @@ class MPHF {
      * @brief Computes a fingerprint for a key.
      */
     uint8_t fingerprint(uint64_t key) const {
-        // A simple fingerprint. Can be replaced with something more robust.
+        // Simple fingerprint using the lowest bits of the key. TODO: replace?
         return static_cast<uint8_t>(key & ((1 << FingerprintPolicy::bits) - 1));
     }
 };
