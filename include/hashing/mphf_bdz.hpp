@@ -312,23 +312,27 @@ class MPHF {
     // ========== STEP 1: Hash Function Initialization ==========
     /**
      * @brief Initialize the three hash functions h0, h1, h2
-     * Uses separate primes for each hash function
+     * Uses separate primes for each hash function; retry 0 picks three consecutive
+     * primes near m/3, later retries bump one prime at a time and resample a_k, b_k
+     * to vary the hypergraph while keeping m essentially constant.
      */
     bool initialize_hash_functions(const std::vector<uint64_t>& keys, int retry_count) {
-        // Determine target sizes
         const uint64_t target_m = static_cast<uint64_t>(std::ceil(1.25 * static_cast<double>(n_)));
         const uint64_t target_segment = std::max<uint64_t>(3, (target_m + 2) / 3);  // ceil(target_m/3)
 
-        // On retries, increase m by a moderate linear factor.
-        // A 10% stride is a balance between guaranteeing success and keeping overhead low.
-        uint64_t stride = std::max<uint64_t>(3, target_segment / 10);  // 10% stride
-        uint64_t base = target_segment + static_cast<uint64_t>(retry_count) * stride;
-        uint64_t p0 = next_prime(base);
-        uint64_t p1 = next_prime(p0 + 1);
-        uint64_t p2 = next_prime(p1 + 1);
-        primes_[0] = p0;
-        primes_[1] = p1;
-        primes_[2] = p2;
+        if (retry_count == 0) {
+            uint64_t base = target_segment;
+            uint64_t p0 = next_prime(base);
+            uint64_t p1 = next_prime(p0 + 1);
+            uint64_t p2 = next_prime(p1 + 1);
+            primes_[0] = p0;
+            primes_[1] = p1;
+            primes_[2] = p2;
+        } else {
+            int order[3] = {2, 1, 0};
+            int idx = order[(retry_count - 1) % 3];
+            primes_[static_cast<size_t>(idx)] = next_prime(primes_[static_cast<size_t>(idx)] + 1);
+        }
 
         // Compute segment starts and total m
         segment_starts_[0] = 0;
@@ -354,14 +358,13 @@ class MPHF {
         // Initialize G with sentinel value 3 (acts as 0 mod 3 but marks unassigned)
         storage_.initialize(m_);
 
-        // std::cout << "[MPHF::initialize] n=" << n_ << " target_m=" << target_m << " primes(r): {"
-        //           << primes_[0] << ", " << primes_[1] << ", " << primes_[2] << "}"
-        //           << " segment_starts(d): {" << segment_starts_[0] << ", " << segment_starts_[1] << ", "
-        //           << segment_starts_[2] << "}"
-        //           << " multipliers(a): {" << multipliers_[0] << ", " << multipliers_[1] << ", "
-        //           << multipliers_[2] << "}"
-        //           << " biases(b): {" << biases_[0] << ", " << biases_[1] << ", " << biases_[2] << "}"
-        //           << " m=" << m_ << "\n";
+        LOG_INFO(
+            "[MPHF::init_hash] retry=" << retry_count << " m=" << m_ << " primes={" << primes_[0] << ", "
+                                       << primes_[1] << ", " << primes_[2] << "} multipliers={"
+                                       << multipliers_[0] << ", " << multipliers_[1] << ", "
+                                       << multipliers_[2] << "} biases={" << biases_[0] << ", " << biases_[1]
+                                       << ", " << biases_[2] << "}"
+        );
 
         return true;
     }
@@ -558,7 +561,7 @@ class MPHF {
      * @brief Computes a fingerprint for a key.
      */
     uint8_t fingerprint(uint64_t key) const {
-        // A simple fingerprint. Can be replaced with something more robust.
+        // Simple fingerprint using the lowest bits of the key. TODO: replace?
         return static_cast<uint8_t>(key & ((1 << FingerprintPolicy::bits) - 1));
     }
 };
