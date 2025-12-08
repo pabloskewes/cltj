@@ -12,7 +12,7 @@ using cltj::hashing::CompressedBitvector;
 using cltj::hashing::GlGhStorage;
 using cltj::hashing::MPHF;
 using cltj::hashing::PackedTritStorage;
-using cltj::hashing::policies::NoFingerprints;
+using cltj::hashing::policies::NoKey;
 
 int main() {
     std::cout << "=== MPHF Size Breakdown Analysis ===" << std::endl;
@@ -34,7 +34,7 @@ int main() {
         // Test BaselineStorage
         {
             std::cout << "\n[BaselineStorage]" << std::endl;
-            MPHF<BaselineStorage, NoFingerprints> mphf;
+            MPHF<BaselineStorage, NoKey> mphf;
             bool success = mphf.build(keys);
 
             if (!success) {
@@ -62,7 +62,7 @@ int main() {
         // Test PackedTritStorage with compressed B
         {
             std::cout << "\n[PackedTritStorage (Compressed B)]" << std::endl;
-            MPHF<PackedTritStorage<CompressedBitvector>, NoFingerprints> mphf;
+            MPHF<PackedTritStorage<CompressedBitvector>, NoKey> mphf;
             bool success = mphf.build(keys);
 
             if (!success) {
@@ -90,7 +90,7 @@ int main() {
         // Test GlGhStorage (Gl/Gh on-the-fly B)
         {
             std::cout << "\n[GlGhStorage (Gl/Gh on-the-fly B)]" << std::endl;
-            MPHF<GlGhStorage, NoFingerprints> mphf;
+            MPHF<GlGhStorage, NoKey> mphf;
             bool success = mphf.build(keys);
 
             if (!success) {

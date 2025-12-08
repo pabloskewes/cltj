@@ -2,6 +2,7 @@
 #include "mphf_utils.hpp"
 #include "mphf_types.hpp"
 #include "storage/baseline.hpp"
+#include "key_policies.hpp"
 #include <util/logger.hpp>
 #include <algorithm>
 #include <array>
@@ -22,20 +23,6 @@
 
 namespace cltj {
 namespace hashing {
-
-namespace policies {
-
-struct WithFingerprints {
-    static constexpr bool enabled = true;
-    static constexpr int bits = 8;
-};
-
-struct NoFingerprints {
-    static constexpr bool enabled = false;
-    static constexpr int bits = 0;
-};
-
-}  // namespace policies
 
 /**
  * @brief Size breakdown structure for MPHF components
@@ -61,16 +48,13 @@ struct SizeBreakdown {
  * vertex
  * 4. Use a bitvector to compact the hash function to minimal range [0,n)
  */
-template <typename StorageStrategy = BaselineStorage, typename FingerprintPolicy = policies::NoFingerprints>
+template <typename StorageStrategy = BaselineStorage, typename KeyPolicy = policies::NoKey>
 class MPHF {
   private:
-    using fingerprint_type =
-        typename std::conditional<FingerprintPolicy::enabled, sdsl::int_vector<>, std::tuple<>>::type;
-
     // Core data structures
 
     StorageStrategy storage_;  // Unified storage for G array, bitvector B, and rank support
-    fingerprint_type Q_;  // Fingerprints for membership queries
+    KeyPolicy key_policy_;  // Policy for key-based payloads (membership, reconstruction)
     uint32_t m_;  // Size of G array (~1.23 * n)
     uint32_t n_;  // Number of keys
 
@@ -142,9 +126,7 @@ class MPHF {
         breakdown.g_bytes = storage_breakdown.g_bytes;
         breakdown.used_pos_bytes = storage_breakdown.used_pos_bytes;
         breakdown.rank_bytes = storage_breakdown.rank_bytes;
-        if constexpr (FingerprintPolicy::enabled) {
-            breakdown.q_bytes = sdsl::size_in_bytes(Q_);
-        }
+        breakdown.q_bytes = 0;
         breakdown.other_bytes = sizeof(m_) + sizeof(n_) + sizeof(primes_) + sizeof(multipliers_) +
             sizeof(biases_) + sizeof(segment_starts_);
         return breakdown;
@@ -156,7 +138,6 @@ class MPHF {
      */
     size_t size_in_bytes() const { return get_size_breakdown().total_bytes(); }
 
-    const fingerprint_type& get_q() const { return Q_; }
     const std::array<uint64_t, 3>& get_primes() const { return primes_; }
     const std::array<uint64_t, 3>& get_multipliers() const { return multipliers_; }
     const std::array<uint64_t, 3>& get_biases() const { return biases_; }
@@ -177,9 +158,6 @@ class MPHF {
 
         // Core data structures (essential for queries)
         written_bytes += storage_.serialize(out, child, "storage_");
-        if constexpr (FingerprintPolicy::enabled) {
-            written_bytes += sdsl::write_member(Q_, out, child, "Q_");
-        }
         written_bytes += sdsl::write_member(m_, out, child, "m_");
         written_bytes += sdsl::write_member(n_, out, child, "n_");
 
@@ -202,9 +180,6 @@ class MPHF {
     void load(std::istream& in) {
         // Core data structures
         storage_.load(in);
-        if constexpr (FingerprintPolicy::enabled) {
-            sdsl::read_member(Q_, in);
-        }
         sdsl::read_member(m_, in);
         sdsl::read_member(n_, in);
 
@@ -216,30 +191,6 @@ class MPHF {
 
         // Reset retry_count since it's not serialized
         retry_count_ = 0;
-    }
-
-    /**
-     * @brief Check if a key is in the set.
-     * This query can have false positives, but no false negatives.
-     * @param key The key to check.
-     * @return true if the key is likely in the set, false otherwise.
-     */
-    bool contains(uint64_t key) const {
-        if constexpr (FingerprintPolicy::enabled) {
-            if (n_ == 0)
-                return false;
-            uint32_t idx = query(key);
-            if (idx >= n_)
-                return false;
-            return Q_[idx] == fingerprint(key);
-        } else {
-            static_assert(
-                FingerprintPolicy::enabled,
-                "contains() requires WithFingerprints policy. "
-                "Use MPHF<policies::WithFingerprints>"
-            );
-            return false;
-        }
     }
 
     /**
@@ -271,7 +222,15 @@ class MPHF {
 
         storage_.build_rank();
 
-        build_fingerprints(keys);
+        // Initialize key policy and store per-key payloads
+        policies::KeyInitContext ctx{n_, primes_, multipliers_, biases_, segment_starts_};
+        key_policy_.init(ctx);
+        for (auto key : keys) {
+            auto triple = compute_triple(key);
+            int which_h = determine_which_h(triple.v0, triple.v1, triple.v2);
+            uint32_t idx = query(key);
+            key_policy_.store(idx, key, triple, which_h);
+        }
 
         return true;
     }
@@ -306,6 +265,22 @@ class MPHF {
         //           << triple.v2 << ") j=" << j << " sel=" << selected_vertex
         //           << " -> res=" << res << "\n";
         return res;
+    }
+
+    /**
+     * @brief Check if a key is in the set (only enabled if KeyPolicy supports it).
+     */
+    template <typename K = KeyPolicy>
+    std::enable_if_t<K::supports_contains, bool> contains(uint64_t key) const {
+        if (n_ == 0)
+            return false;
+        uint32_t idx = query(key);
+        if (idx >= n_)
+            return false;
+
+        auto triple = compute_triple(key);
+        int which_h = determine_which_h(triple.v0, triple.v1, triple.v2);
+        return key_policy_.verify(idx, key, triple, which_h);
     }
 
   private:
@@ -517,22 +492,6 @@ class MPHF {
         }
     }
 
-    // ========== STEP 5: Fingerprint Generation ==========
-    /**
-     * @brief Build the fingerprint array for membership queries.
-     */
-    void build_fingerprints(const std::vector<uint64_t>& keys) {
-        if constexpr (FingerprintPolicy::enabled) {
-            if (n_ == 0)
-                return;
-            Q_ = sdsl::int_vector<>(n_, 0, FingerprintPolicy::bits);
-            for (const auto& key : keys) {
-                uint32_t idx = query(key);
-                Q_[idx] = fingerprint(key);
-            }
-        }
-    }
-
     // ========== HELPER FUNCTIONS ==========
     /**
      * @brief Compute hash function h_k(x) for k ∈ {0,1,2}
@@ -558,11 +517,11 @@ class MPHF {
     }
 
     /**
-     * @brief Computes a fingerprint for a key.
+     * @brief Determine which hash function index j ∈ {0,1,2} was used.
+     * j = (G[v0] + G[v1] + G[v2]) % 3
      */
-    uint8_t fingerprint(uint64_t key) const {
-        // Simple fingerprint using the lowest bits of the key. TODO: replace?
-        return static_cast<uint8_t>(key & ((1 << FingerprintPolicy::bits) - 1));
+    int determine_which_h(uint32_t v0, uint32_t v1, uint32_t v2) const {
+        return static_cast<int>((storage_.g_get(v0) + storage_.g_get(v1) + storage_.g_get(v2)) % 3);
     }
 };
 

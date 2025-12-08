@@ -16,7 +16,7 @@ using cltj::hashing::CompressedBitvector;
 using cltj::hashing::GlGhStorage;
 using cltj::hashing::MPHF;
 using cltj::hashing::PackedTritStorage;
-using cltj::hashing::policies::WithFingerprints;
+using cltj::hashing::policies::FullKey;
 
 // Helper to generate a vector of unique random keys in a reasonable range.
 static std::vector<uint64_t> generate_reasonable_keys(size_t n, uint64_t seed) {
@@ -55,7 +55,7 @@ TestResult run_test_case(size_t n) {
     }
     auto keys = generate_reasonable_keys(n, 42 + n);
 
-    MPHF<StorageStrategy, WithFingerprints> mphf;
+    MPHF<StorageStrategy, FullKey> mphf;
 
     // 1. Measure Build Time
     auto start = std::chrono::high_resolution_clock::now();
