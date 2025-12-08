@@ -54,6 +54,10 @@ int main() {
                       << (breakdown.used_pos_bytes * 8.0 / n) << " bits/key)" << std::endl;
             std::cout << "  Rank support: " << breakdown.rank_bytes << " bytes ("
                       << (breakdown.rank_bytes * 8.0 / n) << " bits/key)" << std::endl;
+            if (breakdown.q_bytes > 0) {
+                std::cout << "  Key payload: " << breakdown.q_bytes << " bytes ("
+                          << (breakdown.q_bytes * 8.0 / n) << " bits/key)" << std::endl;
+            }
             oss << bits_per_key;
             std::cout << "  TOTAL: " << breakdown.total_bytes() << " bytes (" << oss.str() << " bits/key)"
                       << std::endl;
@@ -82,6 +86,10 @@ int main() {
                       << (breakdown.used_pos_bytes * 8.0 / n) << " bits/key)" << std::endl;
             std::cout << "  Rank support: " << breakdown.rank_bytes << " bytes ("
                       << (breakdown.rank_bytes * 8.0 / n) << " bits/key)" << std::endl;
+            if (breakdown.q_bytes > 0) {
+                std::cout << "  Key payload: " << breakdown.q_bytes << " bytes ("
+                          << (breakdown.q_bytes * 8.0 / n) << " bits/key)" << std::endl;
+            }
             oss << bits_per_key;
             std::cout << "  TOTAL: " << breakdown.total_bytes() << " bytes (" << oss.str() << " bits/key)"
                       << std::endl;
@@ -110,6 +118,10 @@ int main() {
                       << (breakdown.used_pos_bytes * 8.0 / n) << " bits/key)" << std::endl;
             std::cout << "  Rank metadata (on-the-fly B): " << breakdown.rank_bytes << " bytes ("
                       << (breakdown.rank_bytes * 8.0 / n) << " bits/key)" << std::endl;
+            if (breakdown.q_bytes > 0) {
+                std::cout << "  Key payload: " << breakdown.q_bytes << " bytes ("
+                          << (breakdown.q_bytes * 8.0 / n) << " bits/key)" << std::endl;
+            }
             oss << bits_per_key;
             std::cout << "  TOTAL: " << breakdown.total_bytes() << " bytes (" << oss.str() << " bits/key)"
                       << std::endl;

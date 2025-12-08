@@ -24,6 +24,8 @@ struct NoKey {
     void init(const KeyInitContext&) {}
 
     void store(size_t, uint64_t, const Triple&, int) {}
+
+    size_t size_in_bytes() const { return 0; }
 };
 
 struct FullKey {
@@ -36,6 +38,8 @@ struct FullKey {
     void store(size_t idx, uint64_t key, const Triple&, int) { keys_[idx] = key; }
 
     bool verify(size_t idx, uint64_t key, const Triple&, int) const { return keys_[idx] == key; }
+
+    size_t size_in_bytes() const { return sizeof(uint64_t) * keys_.size(); }
 };
 
 }  // namespace policies

@@ -126,7 +126,7 @@ class MPHF {
         breakdown.g_bytes = storage_breakdown.g_bytes;
         breakdown.used_pos_bytes = storage_breakdown.used_pos_bytes;
         breakdown.rank_bytes = storage_breakdown.rank_bytes;
-        breakdown.q_bytes = 0;
+        breakdown.q_bytes = key_policy_.size_in_bytes();
         breakdown.other_bytes = sizeof(m_) + sizeof(n_) + sizeof(primes_) + sizeof(multipliers_) +
             sizeof(biases_) + sizeof(segment_starts_);
         return breakdown;
