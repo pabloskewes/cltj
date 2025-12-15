@@ -60,21 +60,46 @@ struct QuotientKey {
         primes_ = ctx.primes;
         multipliers_ = ctx.multipliers;
         biases_ = ctx.biases;
-        // Allocate quotients_ with a placeholder bit width for now.
-        if (ctx.n > 0) {
-            quotients_ = sdsl::int_vector<>(ctx.n, 0, 16);  // TODO: refine bit width once m_j is fixed.
-        } else {
-            quotients_ = sdsl::int_vector<>();
-        }
+        // We allocate enough bits to store the full quotient
+        // q_j(x) = floor(H_j(x) / p_j), where H_j behaves like a 64-bit value and
+        // p_j is around 2^25, so ~39–40 bits are sufficient.
+        constexpr uint8_t quotient_width = 40;
+        quotients_ = (ctx.n > 0) ? sdsl::int_vector<>(ctx.n, 0, quotient_width) : sdsl::int_vector<>();
     }
 
-    void store(size_t, uint64_t, const Triple&, int) {
-        // TODO: implement quotient computation and storage.
+    void store(size_t idx, uint64_t key, const Triple&, int which_h) {
+        assert(idx < quotients_.size());
+        assert(which_h >= 0 && which_h <= 2);
+
+        const size_t j = static_cast<size_t>(which_h);
+        const uint64_t p = primes_[j];
+        const uint64_t a = multipliers_[j];
+        const uint64_t b = biases_[j];
+
+        // Compute H_j(x) = a_j * key + b_j in extended precision (conceptually 64-bit hash).
+        const __uint128_t H =
+            static_cast<__uint128_t>(a) * static_cast<__uint128_t>(key) + static_cast<__uint128_t>(b);
+        const uint64_t q = static_cast<uint64_t>(H / p);
+
+        quotients_[idx] = q;
     }
 
-    bool verify(size_t, uint64_t, const Triple&, int) const {
-        // TODO: implement quotient-based membership check.
-        return true;
+    bool verify(size_t idx, uint64_t key, const Triple&, int which_h) const {
+        if (idx >= quotients_.size())
+            return false;
+        if (which_h < 0 || which_h > 2)
+            return false;
+
+        const size_t j = static_cast<size_t>(which_h);
+        const uint64_t p = primes_[j];
+        const uint64_t a = multipliers_[j];
+        const uint64_t b = biases_[j];
+
+        const __uint128_t H =
+            static_cast<__uint128_t>(a) * static_cast<__uint128_t>(key) + static_cast<__uint128_t>(b);
+        const uint64_t expected_q = static_cast<uint64_t>(H / p);
+
+        return quotients_[idx] == expected_q;
     }
 
     size_t size_in_bytes() const { return sdsl::size_in_bytes(quotients_); }
