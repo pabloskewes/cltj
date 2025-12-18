@@ -7,6 +7,7 @@
 #include <sdsl/int_vector.hpp>
 
 #include "mphf_types.hpp"
+#include "mphf_utils.hpp"
 
 namespace cltj {
 namespace hashing {
@@ -47,19 +48,29 @@ struct FullKey {
 struct QuotientKey {
     static constexpr bool supports_contains = true;
 
-    sdsl::int_vector<> quotients_;
+    sdsl::int_vector<> quotients_;  // q_j(x) = floor(H_j(x) / p_j) for each key x
+    std::array<uint64_t, 3> inv_multipliers_{};  // (a_j^{-1} mod p_j) for each hash family j
 
     // Cached parameters (copied from KeyInitContext in init()).
     std::array<uint64_t, 3> primes_{};
     std::array<uint64_t, 3> multipliers_{};
     std::array<uint64_t, 3> biases_{};
-    std::array<uint64_t, 3> a_inv_{};
+    std::array<uint64_t, 3> segment_starts_{};
 
     void init(const KeyInitContext& ctx) {
         // Cache parameters; the quotienting logic defines how they are used.
         primes_ = ctx.primes;
         multipliers_ = ctx.multipliers;
         biases_ = ctx.biases;
+        segment_starts_ = ctx.segment_starts;
+
+        // Precompute modular inverses a_j^{-1} modulo p_j for each hash family j.
+        for (size_t j = 0; j < 3; ++j) {
+            const uint64_t p = primes_[j];
+            const uint64_t a = multipliers_[j] % p;
+            inv_multipliers_[j] = mod_inverse(a, p);
+        }
+
         // We allocate enough bits to store the full quotient
         // q_j(x) = floor(H_j(x) / p_j), where H_j behaves like a 64-bit value and
         // p_j is around 2^25, so ~39–40 bits are sufficient.
