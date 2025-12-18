@@ -98,12 +98,35 @@ void test_all_coprime() {
     LOG_INFO("all_coprime tests passed!");
 }
 
+void test_mod_inverse() {
+    LOG_INFO("Testing mod_inverse...");
+
+    // Small prime: check all non-zero residues
+    uint64_t p = 7;
+    for (uint64_t a = 1; a < p; ++a) {
+        uint64_t inv = mod_inverse(a, p);
+        assert(mod_mul(a, inv, p) == 1);
+    }
+
+    // Larger prime
+    uint64_t big_p = 1000000007ULL;
+    uint64_t a = 123456789ULL;
+    uint64_t inv = mod_inverse(a, big_p);
+    assert(mod_mul(a, inv, big_p) == 1);
+
+    // Edge case: a == 1
+    assert(mod_inverse(1, big_p) == 1);
+
+    LOG_INFO("mod_inverse tests passed!");
+}
+
 int main() {
     test_mod_mul();
     test_mod_pow();
     test_is_prime();
     test_next_prime();
     test_all_coprime();
+    test_mod_inverse();
 
     LOG_INFO("All mphf_utils tests passed successfully!");
     return 0;

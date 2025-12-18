@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <vector>
+#include <cassert>
 
 namespace cltj {
 namespace hashing {
@@ -108,6 +109,24 @@ inline bool all_coprime(const std::vector<uint64_t>& keys, uint64_t mod) {
         }
     }
     return true;
+}
+
+/**
+ * @brief Modular multiplicative inverse using Fermat's little theorem.
+ *
+ * For a prime modulus p and a not divisible by p, Fermat's little theorem states
+ * that a^(p-1) ≡ 1 (mod p). Therefore a * a^(p-2) ≡ 1 (mod p), so a^(p-2) is the
+ * modular inverse of a modulo p.
+ *
+ * Preconditions:
+ *  - p is prime
+ *  - a and p are coprime (a % p != 0)
+ */
+inline uint64_t mod_inverse(uint64_t a, uint64_t p) {
+    a %= p;
+    assert(is_prime(p));
+    assert(a != 0);
+    return mod_pow(a, p - 2, p);
 }
 
 }  // namespace hashing
