@@ -3,7 +3,9 @@
 #include <array>
 #include <cstdint>
 #include <vector>
+#include <limits>
 
+#include <sdsl/bits.hpp>
 #include <sdsl/int_vector.hpp>
 
 #include "mphf_types.hpp"
@@ -84,18 +86,12 @@ struct QuotientKey {
 
         const size_t j = static_cast<size_t>(which_h);
         const uint64_t p = primes_[j];
-        const uint64_t a = multipliers_[j];
-        const uint64_t b = biases_[j];
-
-        // Compute H_j(x) = a_j * key + b_j in extended precision (conceptually 64-bit hash).
-        const __uint128_t H =
-            static_cast<__uint128_t>(a) * static_cast<__uint128_t>(key) + static_cast<__uint128_t>(b);
-        const uint64_t q = static_cast<uint64_t>(H / p);
+        const uint64_t q = key / p;  // q_j(x) = floor(x / p_j)
 
         quotients_[idx] = q;
     }
 
-    bool verify(size_t idx, uint64_t key, const Triple&, int which_h) const {
+    bool verify(size_t idx, uint64_t key, const Triple& triple, int which_h) const {
         if (idx >= quotients_.size())
             return false;
         if (which_h < 0 || which_h > 2)
@@ -103,14 +99,32 @@ struct QuotientKey {
 
         const size_t j = static_cast<size_t>(which_h);
         const uint64_t p = primes_[j];
-        const uint64_t a = multipliers_[j];
+        const uint64_t a_inv = inv_multipliers_[j];
         const uint64_t b = biases_[j];
 
-        const __uint128_t H =
-            static_cast<__uint128_t>(a) * static_cast<__uint128_t>(key) + static_cast<__uint128_t>(b);
-        const uint64_t expected_q = static_cast<uint64_t>(H / p);
+        // First filter: quotient must match exactly.
+        const uint64_t q_stored = quotients_[idx];
+        const uint64_t q_query = key / p;
+        if (q_query != q_stored)
+            return false;
 
-        return quotients_[idx] == expected_q;
+        // Second filter: reconstructed remainder r_rec must match key % p.
+        const uint64_t v_global = triple.v(which_h);
+        const uint64_t d = segment_starts_[j];
+        assert(v_global >= d);
+        const uint64_t v_local = v_global - d;
+
+        // Compute r_rec = a_j^{-1} * (v_local - b_j) mod p_j.
+        uint64_t diff;
+        if (v_local >= b) {
+            diff = v_local - b;
+        } else {
+            diff = v_local + p - b;
+        }
+        const uint64_t r_rec = mod_mul(diff % p, a_inv, p);
+        const uint64_t r_query = key % p;
+
+        return r_query == r_rec;
     }
 
     size_t size_in_bytes() const { return sdsl::size_in_bytes(quotients_); }
