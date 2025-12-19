@@ -167,6 +167,9 @@ class MPHF {
         written_bytes += sdsl::write_member(biases_, out, child, "biases_");
         written_bytes += sdsl::write_member(segment_starts_, out, child, "segment_starts_");
 
+        // Key policy payload (e.g., QuotientKey or FullKey data)
+        written_bytes += key_policy_.serialize(out, child, "key_policy_");
+
         // Note: retry_count_ is NOT serialized as it's only needed during construction
 
         sdsl::structure_tree::add_size(child, written_bytes);
@@ -188,6 +191,11 @@ class MPHF {
         sdsl::read_member(multipliers_, in);
         sdsl::read_member(biases_, in);
         sdsl::read_member(segment_starts_, in);
+
+        // Rebind context for key policy and load its payload (if any).
+        policies::KeyInitContext ctx{n_, primes_, multipliers_, biases_, segment_starts_};
+        key_policy_.bind_context(ctx);
+        key_policy_.load(in);
 
         // Reset retry_count since it's not serialized
         retry_count_ = 0;
