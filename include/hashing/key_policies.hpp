@@ -73,11 +73,11 @@ struct QuotientKey {
             inv_multipliers_[j] = mod_inverse(a, p);
         }
 
-        // We allocate enough bits to store the full quotient
-        // q_j(x) = floor(H_j(x) / p_j), where H_j behaves like a 64-bit value and
-        // p_j is around 2^25, so ~39–40 bits are sufficient.
-        constexpr uint8_t quotient_width = 40;
-        quotients_ = (ctx.n > 0) ? sdsl::int_vector<>(ctx.n, 0, quotient_width) : sdsl::int_vector<>();
+        // p_min it's the worst case scenario for the quotient, so we use it to compute the width.
+        uint64_t p_min = std::min({primes_[0], primes_[1], primes_[2]});
+        uint64_t q_max = std::numeric_limits<uint64_t>::max() / p_min;  // 2^64 / p_min
+        uint8_t quotient_width = static_cast<uint8_t>(sdsl::bits::hi(q_max) + 1);
+        quotients_ = sdsl::int_vector<>(ctx.n, 0, quotient_width);
     }
 
     void store(size_t idx, uint64_t key, const Triple&, int which_h) {
