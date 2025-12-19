@@ -56,6 +56,13 @@ class StorageStrategy {
     void g_set(uint32_t vertex, uint32_t value) { derived().g_set(vertex, value); }
 
     /**
+     * @brief Check if a vertex is marked as used in the compacted structure (B[v] = 1)
+     * @param vertex Vertex index in [0, m-1]
+     * @return true if the vertex participates in the compacted structure
+     */
+    bool is_vertex_occupied(uint32_t vertex) const { return derived().is_vertex_occupied(vertex); }
+
+    /**
      * @brief Initialize storage for m vertices
      *
      * Prepares storage structures for m vertices. Specific initialization

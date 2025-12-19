@@ -71,6 +71,19 @@ class PackedTritStorage : public StorageStrategy<PackedTritStorage<BStrategy>> {
         }
     }
 
+    bool is_vertex_occupied(uint32_t vertex) const {
+        if (vertex >= m_) {
+            return false;
+        }
+        if (!construction_complete_) {
+            return temp_G_[vertex] != 3;
+        }
+        if (B_.size() == 0) {
+            return false;
+        }
+        return B_[vertex] != 0;
+    }
+
     void initialize(uint32_t m) {
         m_ = m;
         temp_G_.resize(m, 3);  // Initialize temporary G array with all 3s (unassigned)

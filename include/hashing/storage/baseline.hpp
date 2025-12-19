@@ -35,6 +35,16 @@ class BaselineStorage : public StorageStrategy<BaselineStorage> {
         }
     }
 
+    bool is_vertex_occupied(uint32_t vertex) const {
+        if (vertex >= m()) {
+            return false;
+        }
+        if (used_positions_.empty()) {
+            return G_[vertex] != 3;
+        }
+        return used_positions_[vertex] != 0;
+    }
+
     void initialize(uint32_t m) { G_ = sdsl::int_vector<2>(m, 3); }
 
     uint32_t m() const { return static_cast<uint32_t>(G_.size()); }
