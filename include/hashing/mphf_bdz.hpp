@@ -274,12 +274,16 @@ class MPHF {
     std::enable_if_t<K::supports_contains, bool> contains(uint64_t key) const {
         if (n_ == 0)
             return false;
-        uint32_t idx = query(key);
-        if (idx >= n_)
-            return false;
 
         auto triple = compute_triple(key);
         int which_h = determine_which_h(triple.v0, triple.v1, triple.v2);
+        uint32_t selected_vertex = triple.v(which_h);
+        if (!storage_.is_vertex_occupied(selected_vertex)) {
+            return false;
+        }
+        uint32_t idx = storage_.rank(selected_vertex);
+        if (idx >= n_)
+            return false;
         return key_policy_.verify(idx, key, triple, which_h);
     }
 
