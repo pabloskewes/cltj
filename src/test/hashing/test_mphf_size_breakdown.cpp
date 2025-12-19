@@ -1,11 +1,15 @@
 #include <hashing/mphf_bdz.hpp>
 #include <hashing/storage/packed_trit.hpp>
 #include <hashing/storage/glgh.hpp>
+#include <hashing/key_policies.hpp>
 #include <iomanip>
 #include <sstream>
 #include <vector>
 #include <random>
 #include <iostream>
+#include <string>
+#include <algorithm>
+#include <unordered_set>
 
 using cltj::hashing::BaselineStorage;
 using cltj::hashing::CompressedBitvector;
@@ -13,6 +17,49 @@ using cltj::hashing::GlGhStorage;
 using cltj::hashing::MPHF;
 using cltj::hashing::PackedTritStorage;
 using cltj::hashing::policies::NoKey;
+using cltj::hashing::policies::QuotientKey;
+
+namespace {
+
+template <typename Storage, typename Policy>
+void analyze_strategy(
+    const std::string& header,
+    const std::vector<uint64_t>& keys,
+    const std::string& g_label,
+    const std::string& used_label,
+    const std::string& rank_label
+) {
+    std::cout << "\n" << header << std::endl;
+    MPHF<Storage, Policy> mphf;
+    bool success = mphf.build(keys);
+    if (!success) {
+        std::cout << "Build failed!" << std::endl;
+        return;
+    }
+
+    auto breakdown = mphf.get_size_breakdown();
+    double bits_per_key = (breakdown.total_bytes() * 8.0) / keys.size();
+
+    std::cout << "Size breakdown:" << std::endl;
+    auto print_component = [&](const std::string& label, size_t bytes) {
+        if (bytes == 0)
+            return;
+        std::cout << "  " << label << ": " << bytes << " bytes ("
+                  << (bytes * 8.0 / keys.size()) << " bits/key)" << std::endl;
+    };
+    print_component(g_label, breakdown.g_bytes);
+    print_component(used_label, breakdown.used_pos_bytes);
+    print_component(rank_label, breakdown.rank_bytes);
+    if (breakdown.q_bytes > 0) {
+        print_component("Key payload", breakdown.q_bytes);
+    }
+    std::ostringstream oss;
+    oss << std::fixed << std::setprecision(2) << bits_per_key;
+    std::cout << "  TOTAL: " << breakdown.total_bytes() << " bytes (" << oss.str() << " bits/key)"
+              << std::endl;
+}
+
+}  // namespace
 
 int main() {
     std::cout << "=== MPHF Size Breakdown Analysis ===" << std::endl;
@@ -31,101 +78,37 @@ int main() {
             keys.push_back(rng());
         }
 
-        // Test BaselineStorage
-        {
-            std::cout << "\n[BaselineStorage]" << std::endl;
-            MPHF<BaselineStorage, NoKey> mphf;
-            bool success = mphf.build(keys);
+        analyze_strategy<BaselineStorage, NoKey>(
+            "[BaselineStorage]",
+            keys,
+            "G array (2-bit values)",
+            "Used positions bitvector",
+            "Rank support"
+        );
 
-            if (!success) {
-                std::cout << "Build failed!" << std::endl;
-                continue;
-            }
+        analyze_strategy<PackedTritStorage<CompressedBitvector>, NoKey>(
+            "[PackedTritStorage (Compressed B)]",
+            keys,
+            "G' array (packed trits)",
+            "Used positions bitvector",
+            "Rank support"
+        );
 
-            auto breakdown = mphf.get_size_breakdown();
-            double bits_per_key = (breakdown.total_bytes() * 8.0) / n;
+        analyze_strategy<GlGhStorage, NoKey>(
+            "[GlGhStorage (Gl/Gh on-the-fly B)]",
+            keys,
+            "Gl + Gh bitvectors",
+            "B stored explicitly",
+            "Rank metadata (on-the-fly B)"
+        );
 
-            std::cout << "Size breakdown:" << std::endl;
-            std::ostringstream oss;
-            oss << std::fixed << std::setprecision(2);
-            std::cout << "  G array (2-bit values): " << breakdown.g_bytes << " bytes ("
-                      << (breakdown.g_bytes * 8.0 / n) << " bits/key)" << std::endl;
-            std::cout << "  Used positions bitvector: " << breakdown.used_pos_bytes << " bytes ("
-                      << (breakdown.used_pos_bytes * 8.0 / n) << " bits/key)" << std::endl;
-            std::cout << "  Rank support: " << breakdown.rank_bytes << " bytes ("
-                      << (breakdown.rank_bytes * 8.0 / n) << " bits/key)" << std::endl;
-            if (breakdown.q_bytes > 0) {
-                std::cout << "  Key payload: " << breakdown.q_bytes << " bytes ("
-                          << (breakdown.q_bytes * 8.0 / n) << " bits/key)" << std::endl;
-            }
-            oss << bits_per_key;
-            std::cout << "  TOTAL: " << breakdown.total_bytes() << " bytes (" << oss.str() << " bits/key)"
-                      << std::endl;
-        }
-
-        // Test PackedTritStorage with compressed B
-        {
-            std::cout << "\n[PackedTritStorage (Compressed B)]" << std::endl;
-            MPHF<PackedTritStorage<CompressedBitvector>, NoKey> mphf;
-            bool success = mphf.build(keys);
-
-            if (!success) {
-                std::cout << "Build failed!" << std::endl;
-                continue;
-            }
-
-            auto breakdown = mphf.get_size_breakdown();
-            double bits_per_key = (breakdown.total_bytes() * 8.0) / n;
-
-            std::cout << "Size breakdown:" << std::endl;
-            std::ostringstream oss;
-            oss << std::fixed << std::setprecision(2);
-            std::cout << "  G' array (packed trits): " << breakdown.g_bytes << " bytes ("
-                      << (breakdown.g_bytes * 8.0 / n) << " bits/key)" << std::endl;
-            std::cout << "  Used positions bitvector: " << breakdown.used_pos_bytes << " bytes ("
-                      << (breakdown.used_pos_bytes * 8.0 / n) << " bits/key)" << std::endl;
-            std::cout << "  Rank support: " << breakdown.rank_bytes << " bytes ("
-                      << (breakdown.rank_bytes * 8.0 / n) << " bits/key)" << std::endl;
-            if (breakdown.q_bytes > 0) {
-                std::cout << "  Key payload: " << breakdown.q_bytes << " bytes ("
-                          << (breakdown.q_bytes * 8.0 / n) << " bits/key)" << std::endl;
-            }
-            oss << bits_per_key;
-            std::cout << "  TOTAL: " << breakdown.total_bytes() << " bytes (" << oss.str() << " bits/key)"
-                      << std::endl;
-        }
-
-        // Test GlGhStorage (Gl/Gh on-the-fly B)
-        {
-            std::cout << "\n[GlGhStorage (Gl/Gh on-the-fly B)]" << std::endl;
-            MPHF<GlGhStorage, NoKey> mphf;
-            bool success = mphf.build(keys);
-
-            if (!success) {
-                std::cout << "Build failed!" << std::endl;
-                continue;
-            }
-
-            auto breakdown = mphf.get_size_breakdown();
-            double bits_per_key = (breakdown.total_bytes() * 8.0) / n;
-
-            std::cout << "Size breakdown:" << std::endl;
-            std::ostringstream oss;
-            oss << std::fixed << std::setprecision(2);
-            std::cout << "  Gl + Gh bitvectors: " << breakdown.g_bytes << " bytes ("
-                      << (breakdown.g_bytes * 8.0 / n) << " bits/key)" << std::endl;
-            std::cout << "  B stored explicitly: " << breakdown.used_pos_bytes << " bytes ("
-                      << (breakdown.used_pos_bytes * 8.0 / n) << " bits/key)" << std::endl;
-            std::cout << "  Rank metadata (on-the-fly B): " << breakdown.rank_bytes << " bytes ("
-                      << (breakdown.rank_bytes * 8.0 / n) << " bits/key)" << std::endl;
-            if (breakdown.q_bytes > 0) {
-                std::cout << "  Key payload: " << breakdown.q_bytes << " bytes ("
-                          << (breakdown.q_bytes * 8.0 / n) << " bits/key)" << std::endl;
-            }
-            oss << bits_per_key;
-            std::cout << "  TOTAL: " << breakdown.total_bytes() << " bytes (" << oss.str() << " bits/key)"
-                      << std::endl;
-        }
+        analyze_strategy<GlGhStorage, QuotientKey>(
+            "[GlGhStorage + QuotientKey payload]",
+            keys,
+            "Gl + Gh bitvectors",
+            "B stored explicitly",
+            "Rank metadata (on-the-fly B)"
+        );
 
         std::cout << std::endl;
     }
