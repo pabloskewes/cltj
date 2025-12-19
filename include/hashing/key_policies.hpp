@@ -92,7 +92,10 @@ struct FullKey {
 struct QuotientKey {
     static constexpr bool supports_contains = true;
 
+    // Persisted values
     sdsl::int_vector<> quotients_;  // q_j(x) = floor(x / p_j) for each key x
+
+    // Computed on the fly in bind_context()
     std::array<uint64_t, 3> inv_multipliers_{};  // (a_j^{-1} mod p_j) for each hash family j
 
     // Cached parameters (copied from KeyInitContext in init()).
