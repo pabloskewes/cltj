@@ -23,10 +23,12 @@ struct KeyInitContext {
     const std::array<uint64_t, 3>& multipliers;
     const std::array<uint64_t, 3>& biases;
     const std::array<uint64_t, 3>& segment_starts;
+    uint64_t max_key;
 };
 
 struct NoKey {
     static constexpr bool supports_contains = false;
+    static constexpr bool needs_input_stats = false;
 
     void init(const KeyInitContext&) {}
 
@@ -44,6 +46,7 @@ struct NoKey {
 
 struct FullKey {
     static constexpr bool supports_contains = true;
+    static constexpr bool needs_input_stats = false;
 
     std::vector<uint64_t> keys_;
 
@@ -91,6 +94,7 @@ struct FullKey {
 
 struct QuotientKey {
     static constexpr bool supports_contains = true;
+    static constexpr bool needs_input_stats = true;  // Needs max_key to compute optimal width
 
     // Persisted values
     sdsl::int_vector<> quotients_;  // q_j(x) = floor(x / p_j) for each key x
@@ -122,10 +126,15 @@ struct QuotientKey {
     void init(const KeyInitContext& ctx) {
         bind_context(ctx);
 
-        // p_min it's the worst case scenario for the quotient, so we use it to compute the width.
+        // p_min is the worst case scenario for the quotient, so we use it to compute the width.
         uint64_t p_min = std::min({primes_[0], primes_[1], primes_[2]});
-        uint64_t q_max = std::numeric_limits<uint64_t>::max() / p_min;  // 2^64 / p_min
-        uint8_t quotient_width = static_cast<uint8_t>(sdsl::bits::hi(q_max) + 1);
+        uint64_t q_max;
+        if (ctx.max_key > 0) {
+            q_max = ctx.max_key / p_min;
+        } else {
+            q_max = std::numeric_limits<uint64_t>::max() / p_min;
+        }
+        uint8_t quotient_width = (q_max == 0) ? 1 : static_cast<uint8_t>(sdsl::bits::hi(q_max) + 1);
         quotients_ = sdsl::int_vector<>(ctx.n, 0, quotient_width);
     }
 

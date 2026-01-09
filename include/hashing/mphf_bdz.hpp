@@ -193,7 +193,8 @@ class MPHF {
         sdsl::read_member(segment_starts_, in);
 
         // Rebind context for key policy and load its payload (if any).
-        policies::KeyInitContext ctx{n_, primes_, multipliers_, biases_, segment_starts_};
+        // Note: max_key is not needed in load() since init() is not called, only bind_context().
+        policies::KeyInitContext ctx{n_, primes_, multipliers_, biases_, segment_starts_, 0};
         key_policy_.bind_context(ctx);
         key_policy_.load(in);
 
@@ -230,8 +231,16 @@ class MPHF {
 
         storage_.build_rank();
 
+        // Calculate max_key if the policy needs it
+        uint64_t max_key = 0;
+        if constexpr (KeyPolicy::needs_input_stats) {
+            if (!keys.empty()) {
+                max_key = *std::max_element(keys.begin(), keys.end());
+            }
+        }
+
         // Initialize key policy and store per-key payloads
-        policies::KeyInitContext ctx{n_, primes_, multipliers_, biases_, segment_starts_};
+        policies::KeyInitContext ctx{n_, primes_, multipliers_, biases_, segment_starts_, max_key};
         key_policy_.init(ctx);
         for (auto key : keys) {
             auto triple = compute_triple(key);
