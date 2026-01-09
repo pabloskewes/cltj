@@ -75,10 +75,16 @@ int main() {
         constexpr uint64_t KEY_BITS = 30;
         constexpr uint64_t MAX_KEY_VALUE = (1ULL << KEY_BITS) - 1;
         std::mt19937_64 rng(42);
-        std::vector<uint64_t> keys;
-        for (size_t i = 0; i < n; ++i) {
-            keys.push_back(rng() & MAX_KEY_VALUE);
+
+        // Use set to ensure unique keys
+        std::unordered_set<uint64_t> unique_keys;
+        unique_keys.reserve(n);
+        while (unique_keys.size() < n) {
+            unique_keys.insert(rng() & MAX_KEY_VALUE);
         }
+
+        // Convert to vector for MPHF
+        std::vector<uint64_t> keys(unique_keys.begin(), unique_keys.end());
 
         analyze_strategy<BaselineStorage, NoKey>(
             "[BaselineStorage]", keys, "G array (2-bit values)", "Used positions bitvector", "Rank support"
