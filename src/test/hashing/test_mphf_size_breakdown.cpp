@@ -44,8 +44,8 @@ void analyze_strategy(
     auto print_component = [&](const std::string& label, size_t bytes) {
         if (bytes == 0)
             return;
-        std::cout << "  " << label << ": " << bytes << " bytes ("
-                  << (bytes * 8.0 / keys.size()) << " bits/key)" << std::endl;
+        std::cout << "  " << label << ": " << bytes << " bytes (" << (bytes * 8.0 / keys.size())
+                  << " bits/key)" << std::endl;
     };
     print_component(g_label, breakdown.g_bytes);
     print_component(used_label, breakdown.used_pos_bytes);
@@ -71,19 +71,17 @@ int main() {
     for (size_t n : test_sizes) {
         std::cout << "--- Analysis for n = " << n << " ---" << std::endl;
 
-        // Generate test keys
+        // Generate test keys (30-bit keys for testing quotient width optimization)
+        constexpr uint64_t KEY_BITS = 30;
+        constexpr uint64_t MAX_KEY_VALUE = (1ULL << KEY_BITS) - 1;
         std::mt19937_64 rng(42);
         std::vector<uint64_t> keys;
         for (size_t i = 0; i < n; ++i) {
-            keys.push_back(rng());
+            keys.push_back(rng() & MAX_KEY_VALUE);
         }
 
         analyze_strategy<BaselineStorage, NoKey>(
-            "[BaselineStorage]",
-            keys,
-            "G array (2-bit values)",
-            "Used positions bitvector",
-            "Rank support"
+            "[BaselineStorage]", keys, "G array (2-bit values)", "Used positions bitvector", "Rank support"
         );
 
         analyze_strategy<PackedTritStorage<CompressedBitvector>, NoKey>(
