@@ -149,7 +149,7 @@ struct QuotientKey {
         quotients_[idx] = q;
     }
 
-    bool verify(size_t idx, uint64_t key, const Triple& triple, int which_h) const {
+    bool verify(size_t idx, uint64_t key, const Triple&, int which_h) const {
         if (idx >= quotients_.size())
             return false;
         if (which_h < 0 || which_h > 2)
@@ -157,32 +157,12 @@ struct QuotientKey {
 
         const size_t j = static_cast<size_t>(which_h);
         const uint64_t p = primes_[j];
-        const uint64_t a_inv = inv_multipliers_[j];
-        const uint64_t b = biases_[j];
 
-        // First filter: quotient must match exactly.
+        // Check quotient: by biyectivity, B[v]=1 filter already guarantees rest matches.
         const uint64_t q_stored = quotients_[idx];
         const uint64_t q_query = key / p;
-        if (q_query != q_stored)
-            return false;
 
-        // Second filter: reconstructed remainder r_rec must match key % p.
-        const uint64_t v_global = triple.v(which_h);
-        const uint64_t d = segment_starts_[j];
-        assert(v_global >= d);
-        const uint64_t v_local = v_global - d;
-
-        // Compute r_rec = a_j^{-1} * (v_local - b_j) mod p_j.
-        uint64_t diff;
-        if (v_local >= b) {
-            diff = v_local - b;
-        } else {
-            diff = v_local + p - b;
-        }
-        const uint64_t r_rec = mod_mul(diff % p, a_inv, p);
-        const uint64_t r_query = key % p;
-
-        return r_query == r_rec;
+        return q_query == q_stored;
     }
 
     size_t size_in_bytes() const { return sdsl::size_in_bytes(quotients_); }
