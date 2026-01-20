@@ -214,6 +214,9 @@ set_target_properties(test-storage-strategies PROPERTIES CXX_STANDARD 17 CXX_STA
 add_cltj_executable(test-mphf-quotient src/test/hashing/test_mphf_quotient.cpp test)
 set_target_properties(test-mphf-quotient PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
+add_cltj_executable(test-mphf-adversarial src/test/hashing/test_mphf_adversarial.cpp test)
+set_target_properties(test-mphf-adversarial PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+
 add_cltj_executable(test-pthash-simple src/test/hashing/test_pthash_simple.cpp test)
 target_link_libraries(test-pthash-simple PRIVATE PTHASH)
 set_target_properties(test-pthash-simple PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
