@@ -120,7 +120,7 @@ class TestReport {
  * @param max_value Maximum value for keys (default: UINT64_MAX)
  * @param seed Random seed for reproducibility
  */
-std::vector<uint64_t> generate_random_keys(size_t n, uint64_t max_value = UINT64_MAX, uint64_t seed = 42) {
+std::vector<uint64_t> generate_random_keys(size_t n, uint64_t seed = 42, uint64_t max_value = UINT64_MAX) {
     std::vector<uint64_t> keys;
     keys.reserve(n);
 
@@ -587,25 +587,32 @@ TestResult test_quotient_vs_fullkey() {
 
         const size_t N = 50000;
         auto test_keys = generate_random_keys(N, 42);
+        std::cout << "[DEBUG] Generated " << N << " keys\n";
 
         // Build both MPHFs (they will get different random hash params)
         MPHF<GlGhStorage, policies::QuotientKey> mphf_quotient;
         MPHF<GlGhStorage, policies::FullKey> mphf_full;
 
+        std::cout << "[DEBUG] Building QuotientKey MPHF...\n";
         if (!mphf_quotient.build(test_keys)) {
             result.error_message = "Failed to build QuotientKey MPHF";
             return result;
         }
+        std::cout << "[DEBUG] QuotientKey MPHF built successfully\n";
 
+        std::cout << "[DEBUG] Building FullKey MPHF...\n";
         if (!mphf_full.build(test_keys)) {
             result.error_message = "Failed to build FullKey MPHF";
             return result;
         }
+        std::cout << "[DEBUG] FullKey MPHF built successfully\n";
 
         // Create unordered_set for O(1) lookup instead of O(n) linear search
         std::unordered_set<uint64_t> key_set(test_keys.begin(), test_keys.end());
+        std::cout << "[DEBUG] Created key_set with " << key_set.size() << " entries\n";
 
         // Verify all positives
+        std::cout << "[DEBUG] Verifying " << test_keys.size() << " positives...\n";
         for (uint64_t k : test_keys) {
             result.checks_run++;
             bool q = mphf_quotient.contains(k);
@@ -621,8 +628,10 @@ TestResult test_quotient_vs_fullkey() {
                 }
             }
         }
+        std::cout << "[DEBUG] Positives verified. FN=" << result.false_negatives << "\n";
 
         // Verify random non-keys
+        std::cout << "[DEBUG] Verifying 100K non-keys...\n";
         std::mt19937_64 rng(999);
         std::uniform_int_distribution<uint64_t> dist(0, UINT64_MAX);
 
@@ -638,6 +647,10 @@ TestResult test_quotient_vs_fullkey() {
             result.checks_run++;
             non_key_tests++;
 
+            if (non_key_tests % 10000 == 0) {
+                std::cout << "[DEBUG] Non-keys tested: " << non_key_tests << "/100000\n";
+            }
+
             bool q = mphf_quotient.contains(non_key);
             bool f = mphf_full.contains(non_key);
 
@@ -650,6 +663,7 @@ TestResult test_quotient_vs_fullkey() {
                 }
             }
         }
+        std::cout << "[DEBUG] Non-keys verified. Disagreements=" << result.false_positives << "\n";
 
         result.passed = (result.false_positives == 0 && result.false_negatives == 0);
 
