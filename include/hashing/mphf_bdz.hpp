@@ -301,7 +301,7 @@ class MPHF {
         uint32_t idx = storage_.rank(selected_vertex);
         if (idx >= n_)
             return false;
-        return key_policy_.verify(idx, key, triple, which_h);
+        return key_policy_.verify(idx, key, which_h);
     }
 
   private:
