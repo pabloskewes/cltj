@@ -824,25 +824,30 @@ TestResult test_cross_segment_collision() {
 int main(int argc, char** argv) {
     CLI::App app{"MPHF Adversarial Test Suite - Validates QuotientKey exactness"};
 
-    // Test selection flags
-    bool run_all = false;
-    bool run_tier1 = false;
-    bool run_tier2 = false;
-    bool run_tier3 = false;
-    std::vector<std::string> specific_tests;
+    // Individual test flags
+    bool run_dopplerganger = false;
+    bool run_zero_quotient = false;
+    bool run_dense_cluster = false;
+    bool run_64bit_boundary = false;
+    bool run_remainder_zero = false;
+    bool run_quotient_vs_fullkey = false;
+    bool run_determinism = false;
+    bool run_cross_segment = false;
 
-    app.add_flag("--all", run_all, "Run all tests (default if no flags specified)");
-    app.add_flag("--tier1", run_tier1, "Run Tier 1 tests (Critical)");
-    app.add_flag("--tier2", run_tier2, "Run Tier 2 tests (Important)");
-    app.add_flag("--tier3", run_tier3, "Run Tier 3 tests (Validation)");
-    app.add_option("--test", specific_tests, "Run specific test(s) by name");
+    app.add_flag("--dopplerganger", run_dopplerganger, "Dopplergänger Attack (Tier 1)");
+    app.add_flag("--zero-quotient", run_zero_quotient, "Zero-Quotient Edge Case (Tier 1)");
+    app.add_flag("--dense-cluster", run_dense_cluster, "Dense Cluster Attack (Tier 1)");
+    app.add_flag("--64bit-boundary", run_64bit_boundary, "64-bit Boundary Test (Tier 1)");
+    app.add_flag("--remainder-zero", run_remainder_zero, "Remainder-Zero Edge Case (Tier 2)");
+    app.add_flag("--quotient-vs-fullkey", run_quotient_vs_fullkey, "QuotientKey vs FullKey (Tier 2)");
+    app.add_flag("--determinism", run_determinism, "Determinism Test (Tier 3)");
+    app.add_flag("--cross-segment", run_cross_segment, "Cross-Segment Collision Test (Tier 3)");
 
     CLI11_PARSE(app, argc, argv);
 
     // Default to all if nothing specified
-    if (!run_tier1 && !run_tier2 && !run_tier3 && specific_tests.empty()) {
-        run_all = true;
-    }
+    bool run_all = !run_dopplerganger && !run_zero_quotient && !run_dense_cluster && !run_64bit_boundary &&
+        !run_remainder_zero && !run_quotient_vs_fullkey && !run_determinism && !run_cross_segment;
 
     // Print header
     std::cout << "\n";
@@ -856,34 +861,29 @@ int main(int argc, char** argv) {
     TestReport report;
 
     // Run selected tests
-    if (run_all || run_tier1) {
-        std::cout << "\n┌────────────────────────────────────────────────────────────┐\n";
-        std::cout << "│ TIER 1: CRITICAL TESTS (Must Pass)                        │\n";
-        std::cout << "└────────────────────────────────────────────────────────────┘\n";
-
+    if (run_all || run_dopplerganger)
         report.add_result(test_dopplerganger_attack());
+
+    if (run_all || run_zero_quotient)
         report.add_result(test_zero_quotient_edge_case());
+
+    if (run_all || run_dense_cluster)
         report.add_result(test_dense_cluster_attack());
+
+    if (run_all || run_64bit_boundary)
         report.add_result(test_64bit_boundary());
-    }
 
-    if (run_all || run_tier2) {
-        std::cout << "\n┌────────────────────────────────────────────────────────────┐\n";
-        std::cout << "│ TIER 2: IMPORTANT TESTS (High Priority)                   │\n";
-        std::cout << "└────────────────────────────────────────────────────────────┘\n";
-
+    if (run_all || run_remainder_zero)
         report.add_result(test_remainder_zero_edge_case());
+
+    if (run_all || run_quotient_vs_fullkey)
         report.add_result(test_quotient_vs_fullkey());
-    }
 
-    if (run_all || run_tier3) {
-        std::cout << "\n┌────────────────────────────────────────────────────────────┐\n";
-        std::cout << "│ TIER 3: VALIDATION TESTS (Optional)                       │\n";
-        std::cout << "└────────────────────────────────────────────────────────────┘\n";
-
+    if (run_all || run_determinism)
         report.add_result(test_determinism());
+
+    if (run_all || run_cross_segment)
         report.add_result(test_cross_segment_collision());
-    }
 
     // Print summary
     report.print_summary();
