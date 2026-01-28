@@ -99,9 +99,6 @@ struct QuotientKey {
     // Persisted values
     sdsl::int_vector<> quotients_;  // q_j(x) = floor(x / p_j) for each key x
 
-    // Computed on the fly in bind_context()
-    std::array<uint64_t, 3> inv_multipliers_{};  // (a_j^{-1} mod p_j) for each hash family j
-
     // Cached parameters (copied from KeyInitContext in init()).
     std::array<uint64_t, 3> primes_{};
     std::array<uint64_t, 3> multipliers_{};
@@ -114,13 +111,6 @@ struct QuotientKey {
         multipliers_ = ctx.multipliers;
         biases_ = ctx.biases;
         segment_starts_ = ctx.segment_starts;
-
-        // Precompute modular inverses a_j^{-1} modulo p_j for each hash family j.
-        for (size_t j = 0; j < 3; ++j) {
-            const uint64_t p = primes_[j];
-            const uint64_t a = multipliers_[j] % p;
-            inv_multipliers_[j] = mod_inverse(a, p);
-        }
     }
 
     void init(const KeyInitContext& ctx) {
