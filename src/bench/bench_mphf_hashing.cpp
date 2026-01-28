@@ -25,7 +25,7 @@ using cltj::hashing::ExplicitBitvector;
 using cltj::hashing::GlGhStorage;
 using cltj::hashing::MPHF;
 using cltj::hashing::PackedTritStorage;
-using cltj::hashing::policies::NoFingerprints;
+using cltj::hashing::policies::NoKey;
 
 namespace ph = pthash;
 
@@ -87,7 +87,7 @@ BenchResult run_bench_case(const std::string& strategy_name, size_t n, uint64_t 
 
     auto keys = generate_unique_keys(n, seed);
 
-    MPHF<StorageStrategy, NoFingerprints> mphf;
+    MPHF<StorageStrategy, NoKey> mphf;
 
     // 1. Measure build time
     auto start_build = std::chrono::high_resolution_clock::now();
@@ -117,7 +117,7 @@ BenchResult run_bench_case(const std::string& strategy_name, size_t n, uint64_t 
     result.query_time_us =
         std::chrono::duration_cast<std::chrono::microseconds>(end_query - start_query).count();
 
-    // 3. Space usage (NoFingerprints, so this is pure MPHF core space).
+    // 3. Space usage (NoKey, so this is pure MPHF core space).
     auto breakdown = mphf.get_size_breakdown();
     result.size_bytes = breakdown.total_bytes();
     result.bits_per_key = (result.size_bytes * 8.0) / static_cast<double>(n);

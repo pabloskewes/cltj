@@ -60,6 +60,14 @@ class GlGhStorage : public StorageStrategy<GlGhStorage> {
         }
     }
 
+    bool is_vertex_occupied(uint32_t vertex) const {
+        if (vertex >= m_) {
+            return false;
+        }
+        // B[v] = ~(Gl[v] & Gh[v]); occupied iff B[v] = 1.
+        return !(Gl_[vertex] & Gh_[vertex]);
+    }
+
     /**
      * @brief Initialize storage for m vertices
      * 
