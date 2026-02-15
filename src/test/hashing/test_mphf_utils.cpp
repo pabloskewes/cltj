@@ -120,6 +120,41 @@ void test_mod_inverse() {
     LOG_INFO("mod_inverse tests passed!");
 }
 
+void test_splitmix64() {
+    LOG_INFO("Testing splitmix64...");
+
+    // Test that consecutive seeds produce very different outputs
+    uint64_t out0 = splitmix64(0);
+    uint64_t out1 = splitmix64(1);
+    uint64_t out2 = splitmix64(2);
+
+    assert(out0 != out1);
+    assert(out1 != out2);
+    assert(out0 != out2);
+
+    // Test determinism: same input produces same output
+    assert(splitmix64(42) == splitmix64(42));
+    assert(splitmix64(1000) == splitmix64(1000));
+
+    // Test that mixing provides good avalanche (1-bit difference in input should change ~50% of output bits)
+    uint64_t a = splitmix64(0x1234567890ABCDEFULL);
+    uint64_t b = splitmix64(0x1234567890ABCDEFULL ^ 1ULL);  // flip 1 bit
+    int changed_bits = __builtin_popcountll(a ^ b);
+    assert(changed_bits > 20 && changed_bits < 44);  // expect ~32 bits changed (50%)
+
+    // Test with SEED + retry_count pattern (as used in MPHF)
+    const uint64_t SEED = 0xC1A0ULL;
+    uint64_t mixed0 = splitmix64(SEED ^ 0);
+    uint64_t mixed1 = splitmix64(SEED ^ 1);
+    uint64_t mixed10 = splitmix64(SEED ^ 10);
+
+    assert(mixed0 != mixed1);
+    assert(mixed1 != mixed10);
+    assert(mixed0 != mixed10);
+
+    LOG_INFO("splitmix64 tests passed!");
+}
+
 int main() {
     test_mod_mul();
     test_mod_pow();
@@ -127,6 +162,7 @@ int main() {
     test_next_prime();
     test_all_coprime();
     test_mod_inverse();
+    test_splitmix64();
 
     LOG_INFO("All mphf_utils tests passed successfully!");
     return 0;
