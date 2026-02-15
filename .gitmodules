@@ -1,3 +1,6 @@
 [submodule "lib/pthash"]
 	path = lib/pthash
 	url = https://github.com/jermp/pthash.git
+[submodule "lib/fastmod"]
+	path = lib/fastmod
+	url = https://github.com/lemire/fastmod
