@@ -162,6 +162,7 @@ class PackedTritStorage : public StorageStrategy<PackedTritStorage<BStrategy>> {
         B_.load(in);
         sdsl::read_member(m_, in);
         sdsl::read_member(n_, in);
+        construction_complete_ = true;
     }
 
     size_t size_in_bytes() const { return G_prime_.size_in_bytes() + B_.size_in_bytes(); }
