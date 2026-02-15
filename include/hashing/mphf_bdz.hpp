@@ -127,7 +127,9 @@ class MPHF {
         breakdown.used_pos_bytes = storage_breakdown.used_pos_bytes;
         breakdown.rank_bytes = storage_breakdown.rank_bytes;
         breakdown.q_bytes = key_policy_.size_in_bytes();
-        breakdown.other_bytes = sizeof(m_) + sizeof(n_) + sizeof(primes_) + sizeof(retry_count_);
+        // Metadata: n (4) + 3×prime_deltas (3) + retry_count (1) = 8 bytes
+        // Note: m_ and primes_ are not serialized (computed/reconstructed)
+        breakdown.other_bytes = sizeof(n_) + 3 * sizeof(uint8_t) + sizeof(retry_count_);
         return breakdown;
     }
 
@@ -157,11 +159,17 @@ class MPHF {
 
         // Core data structures (essential for queries)
         written_bytes += storage_.serialize(out, child, "storage_");
-        written_bytes += sdsl::write_member(m_, out, child, "m_");
         written_bytes += sdsl::write_member(n_, out, child, "n_");
 
         // Hash function parameters (essential for queries)
-        written_bytes += sdsl::write_member(primes_, out, child, "primes_");
+        // Store p_j as delta_j = p_j - target_segment
+        const uint64_t target_segment = compute_target_segment();
+        for (int k = 0; k < 3; ++k) {
+            uint64_t delta = primes_[k] - target_segment;
+            assert(delta <= 255 && "Prime delta out of uint8_t range - unexpected!");
+            uint8_t delta_byte = static_cast<uint8_t>(delta);
+            written_bytes += sdsl::write_member(delta_byte, out, child, "prime_delta_" + std::to_string(k));
+        }
         written_bytes += sdsl::write_member(retry_count_, out, child, "retry_count_");
 
         // Key policy payload (e.g., QuotientKey or FullKey data)
@@ -178,12 +186,19 @@ class MPHF {
     void load(std::istream& in) {
         // Core data structures
         storage_.load(in);
-        sdsl::read_member(m_, in);
         sdsl::read_member(n_, in);
 
         // Hash function parameters
-        sdsl::read_member(primes_, in);
+        // Reconstruct primes from delta_j = p_j - target_segment
+        const uint64_t target_segment = compute_target_segment();
+        for (int k = 0; k < 3; ++k) {
+            uint8_t delta;
+            sdsl::read_member(delta, in);
+            primes_[k] = target_segment + delta;
+        }
         sdsl::read_member(retry_count_, in);
+
+        m_ = static_cast<uint32_t>(primes_[0] + primes_[1] + primes_[2]);
 
         // Recompute segment_starts from primes
         segment_starts_[0] = 0;
@@ -302,6 +317,15 @@ class MPHF {
     }
 
   private:
+    /**
+     * @brief Compute target segment size for prime selection
+     * @return The target segment size (~m/3) used as base for prime selection
+     */
+    uint64_t compute_target_segment() const {
+        const uint64_t target_m = static_cast<uint64_t>(std::ceil(1.25 * static_cast<double>(n_)));
+        return std::max<uint64_t>(3, (target_m + 2) / 3);  // ceil(target_m/3)
+    }
+
     // ========== STEP 1: Hash Function Initialization ==========
     /**
      * @brief Initialize the three hash functions h0, h1, h2
@@ -310,8 +334,7 @@ class MPHF {
      * to vary the hypergraph while keeping m essentially constant.
      */
     bool initialize_hash_functions(const std::vector<uint64_t>& keys, int retry_count) {
-        const uint64_t target_m = static_cast<uint64_t>(std::ceil(1.25 * static_cast<double>(n_)));
-        const uint64_t target_segment = std::max<uint64_t>(3, (target_m + 2) / 3);  // ceil(target_m/3)
+        const uint64_t target_segment = compute_target_segment();
 
         if (retry_count == 0) {
             uint64_t base = target_segment;
