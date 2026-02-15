@@ -127,8 +127,7 @@ class MPHF {
         breakdown.used_pos_bytes = storage_breakdown.used_pos_bytes;
         breakdown.rank_bytes = storage_breakdown.rank_bytes;
         breakdown.q_bytes = key_policy_.size_in_bytes();
-        breakdown.other_bytes =
-            sizeof(m_) + sizeof(n_) + sizeof(primes_) + sizeof(segment_starts_) + sizeof(retry_count_);
+        breakdown.other_bytes = sizeof(m_) + sizeof(n_) + sizeof(primes_) + sizeof(retry_count_);
         return breakdown;
     }
 
@@ -163,7 +162,6 @@ class MPHF {
 
         // Hash function parameters (essential for queries)
         written_bytes += sdsl::write_member(primes_, out, child, "primes_");
-        written_bytes += sdsl::write_member(segment_starts_, out, child, "segment_starts_");
         written_bytes += sdsl::write_member(retry_count_, out, child, "retry_count_");
 
         // Key policy payload (e.g., QuotientKey or FullKey data)
@@ -185,8 +183,12 @@ class MPHF {
 
         // Hash function parameters
         sdsl::read_member(primes_, in);
-        sdsl::read_member(segment_starts_, in);
         sdsl::read_member(retry_count_, in);
+
+        // Recompute segment_starts from primes
+        segment_starts_[0] = 0;
+        segment_starts_[1] = primes_[0];
+        segment_starts_[2] = primes_[0] + primes_[1];
 
         regenerate_coefficients();
 
