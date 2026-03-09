@@ -88,6 +88,8 @@ add_cltj_executable(build-cltj-dyn src/bench/build-cltj-dyn.cpp bench hybridbv_g
 
 add_cltj_executable(build-xcltj src/bench/build-xcltj.cpp bench hybridbv_gn)
 
+add_cltj_executable(build-hcltj src/bench/build-hcltj.cpp bench hybridbv_gn)
+
 add_cltj_executable(build-xcltj-dyn src/bench/build-xcltj-dyn.cpp bench hybridbv_gn)
 
 add_cltj_executable(build-uncltj src/bench/build-uncltj.cpp bench)
@@ -113,6 +115,12 @@ target_compile_definitions(bench-query-xcltj PRIVATE ADAPTIVE=1)
 
 add_cltj_executable(bench-query-xcltj-global src/bench/bench-query-xcltj.cpp bench)
 target_compile_definitions(bench-query-xcltj-global PRIVATE ADAPTIVE=0)
+
+add_cltj_executable(bench-query-hcltj src/bench/bench-query-hcltj.cpp bench)
+target_compile_definitions(bench-query-hcltj PRIVATE ADAPTIVE=1)
+
+add_cltj_executable(bench-query-hcltj-global src/bench/bench-query-hcltj.cpp bench)
+target_compile_definitions(bench-query-hcltj-global PRIVATE ADAPTIVE=0)
 
 add_cltj_executable(bench-query-cltj-rdf src/bench/bench-query-cltj-rdf.cpp bench hybridbv_gn)
 target_compile_definitions(bench-query-cltj-rdf PRIVATE ADAPTIVE=1)
