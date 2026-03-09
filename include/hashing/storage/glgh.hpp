@@ -30,6 +30,25 @@ class GlGhStorage : public StorageStrategy<GlGhStorage> {
   public:
     GlGhStorage() : m_(0) {}
 
+    GlGhStorage(GlGhStorage&& o) noexcept
+        : Gl_(std::move(o.Gl_)), Gh_(std::move(o.Gh_)),
+          rank_B_(std::move(o.rank_B_)), m_(o.m_) {
+        rank_B_.set_vector(&Gl_);
+        rank_B_.set_gh(&Gh_);
+    }
+
+    GlGhStorage& operator=(GlGhStorage&& o) noexcept {
+        if (this != &o) {
+            Gl_ = std::move(o.Gl_);
+            Gh_ = std::move(o.Gh_);
+            rank_B_ = std::move(o.rank_B_);
+            m_ = o.m_;
+            rank_B_.set_vector(&Gl_);
+            rank_B_.set_gh(&Gh_);
+        }
+        return *this;
+    }
+
     /**
      * @brief Get G value for a vertex
      * 

@@ -220,6 +220,9 @@ set_target_properties(test-mphf-adversarial PROPERTIES CXX_STANDARD 17 CXX_STAND
 add_cltj_executable(test-mphf-serialization src/test/hashing/test_mphf_serialization.cpp test)
 set_target_properties(test-mphf-serialization PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
+add_cltj_executable(test-mphf-move src/test/hashing/test_mphf_move.cpp test)
+set_target_properties(test-mphf-move PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+
 add_cltj_executable(test-pthash-simple src/test/hashing/test_pthash_simple.cpp test)
 target_link_libraries(test-pthash-simple PRIVATE PTHASH)
 set_target_properties(test-pthash-simple PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)

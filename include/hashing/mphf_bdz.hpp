@@ -85,8 +85,8 @@ class MPHF {
     // management (e.g., rank support with pointer relationships to bitvectors).
     MPHF(const MPHF&) = delete;
     MPHF& operator=(const MPHF&) = delete;
-    MPHF(MPHF&&) = delete;
-    MPHF& operator=(MPHF&&) = delete;
+    MPHF(MPHF&&) = default;
+    MPHF& operator=(MPHF&&) = default;
 
     /**
      * @brief Build MPHF for given keys
