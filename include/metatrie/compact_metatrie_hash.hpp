@@ -10,6 +10,8 @@
 #include <sdsl/vectors.hpp>
 #include <string>
 #include <vector>
+#include <hashing/mphf_bdz.hpp>
+#include <hashing/storage/glgh.hpp>
 
 namespace cltj {
 
@@ -19,6 +21,8 @@ class compact_metatrie_hash {
     typedef uint32_t value_type;
 
   private:
+    using mphf_type = hashing::MPHF<hashing::GlGhStorage, hashing::policies::QuotientKey>;
+
     sdsl::bit_vector m_bv;
     sdsl::int_vector<> m_seq;
     // sdsl::rank_support_v<1> m_rank1;
@@ -26,6 +30,13 @@ class compact_metatrie_hash {
     sdsl::select_support_mcl<0> m_select0;
 
     size_type m_root_degree;
+
+    // Hash overlay
+    // TODO: Empty until Batch 2 builds MPHFs
+    std::vector<mphf_type> m_mphfs;
+    sdsl::bit_vector m_has_hash;
+    sdsl::rank_support_v<1> m_hash_rank;
+    uint32_t m_threshold = 0;
 
     void copy(const compact_metatrie_hash& o) {
         m_bv = o.m_bv;
