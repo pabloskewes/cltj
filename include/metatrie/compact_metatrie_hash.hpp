@@ -150,6 +150,13 @@ class compact_metatrie_hash {
         written_bytes += m_seq.serialize(out, child, "seq");
         written_bytes += m_succ0.serialize(out, child, "succ0");
         written_bytes += m_select0.serialize(out, child, "select0");
+        written_bytes += sdsl::write_member(m_threshold, out, child, "threshold");
+        written_bytes += m_has_hash.serialize(out, child, "has_hash");
+        written_bytes += m_hash_rank.serialize(out, child, "hash_rank");
+        uint32_t n = m_mphfs.size();
+        written_bytes += sdsl::write_member(n, out, child, "n_mphfs");
+        for (auto& mphf : m_mphfs)
+            written_bytes += mphf.serialize(out, child, "mphf");
         sdsl::structure_tree::add_size(child, written_bytes);
         return written_bytes;
     }
@@ -160,6 +167,14 @@ class compact_metatrie_hash {
         m_succ0.load(in, &m_bv);
         m_select0.load(in, &m_bv);
         m_root_degree = m_succ0(1);
+        sdsl::read_member(m_threshold, in);
+        m_has_hash.load(in);
+        m_hash_rank.load(in, &m_has_hash);
+        uint32_t n;
+        sdsl::read_member(n, in);
+        m_mphfs.resize(n);
+        for (auto& mphf : m_mphfs)
+            mphf.load(in);
     }
 };
 }  // namespace cltj
