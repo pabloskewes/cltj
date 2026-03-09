@@ -38,17 +38,8 @@ class compact_metatrie_hash {
     sdsl::rank_support_v<1> m_hash_rank;
     uint32_t m_threshold = 0;
 
-    void copy(const compact_metatrie_hash& o) {
-        m_bv = o.m_bv;
-        m_seq = o.m_seq;
-        // m_rank1 = o.m_rank1;
-        // m_rank1.set_vector(&m_bv);
-        m_succ0 = o.m_succ0;
-        m_succ0.set_vector(&m_bv);
-        m_select0 = o.m_select0;
-        m_select0.set_vector(&m_bv);
-        m_root_degree = o.m_root_degree;
-    }
+    // Copy is disabled: std::vector<mphf_type> is not copyable (MPHF copy is deleted by design).
+    // Might change in the future if we find a good reason to copy it.
 
     /*inline size_type rank0(const size_type i) const {
       return i - m_rank1(i);
@@ -68,19 +59,11 @@ class compact_metatrie_hash {
         m_root_degree = m_succ0(1);
     }
 
-    //! Copy constructor
-    compact_metatrie_hash(const compact_metatrie_hash& o) { copy(o); }
+    compact_metatrie_hash(const compact_metatrie_hash&) = delete;
+    compact_metatrie_hash& operator=(const compact_metatrie_hash&) = delete;
 
     //! Move constructor
     compact_metatrie_hash(compact_metatrie_hash&& o) { *this = std::move(o); }
-
-    //! Copy Operator=
-    compact_metatrie_hash& operator=(const compact_metatrie_hash& o) {
-        if (this != &o) {
-            copy(o);
-        }
-        return *this;
-    }
 
     //! Move Operator=
     compact_metatrie_hash& operator=(compact_metatrie_hash&& o) {
@@ -94,6 +77,11 @@ class compact_metatrie_hash {
             m_select0 = std::move(o.m_select0);
             m_select0.set_vector(&m_bv);
             m_root_degree = o.m_root_degree;
+            m_mphfs = std::move(o.m_mphfs);
+            m_has_hash = std::move(o.m_has_hash);
+            m_hash_rank = std::move(o.m_hash_rank);
+            m_hash_rank.set_vector(&m_has_hash);
+            m_threshold = o.m_threshold;
         }
         return *this;
     }
