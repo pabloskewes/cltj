@@ -81,8 +81,6 @@ class MPHF {
           biases_{0, 0, 0},
           segment_starts_{0, 0, 0} {}
 
-    // Disabling copy and move because storage strategy may have complex resource
-    // management (e.g., rank support with pointer relationships to bitvectors).
     MPHF(const MPHF&) = delete;
     MPHF& operator=(const MPHF&) = delete;
     MPHF(MPHF&&) = default;
