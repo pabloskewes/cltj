@@ -5,6 +5,7 @@
 #include <cltj_config.hpp>
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <queue>
 #include <sdsl/select_support_mcl.hpp>
 #include <sdsl/vectors.hpp>
@@ -115,6 +116,34 @@ class compact_metatrie_hash {
     size_type children(size_type i) const { return m_succ0(i + 1) - i; }
 
     size_type first_child(size_type i) const { return i; }
+
+    std::map<size_type, size_type> children_histogram() const {
+        std::map<size_type, size_type> hist;
+
+        size_type num_zeros = 0;
+        for (size_type i = 0; i < m_bv.size(); i++)
+            if (!m_bv[i])
+                num_zeros++;
+
+        std::vector<size_type> current_level = {0};
+        while (!current_level.empty()) {
+            std::vector<size_type> next_level;
+            for (auto node : current_level) {
+                size_type d = children(node);
+                hist[d]++;
+                for (size_type n = 1; n <= d; n++) {
+                    if (node + 1 + n > num_zeros)
+                        break;
+                    size_type child_node = child(node, n);
+                    if (child_node + 1 < m_bv.size())
+                        next_level.push_back(child_node);
+                }
+            }
+            current_level = std::move(next_level);
+        }
+
+        return hist;
+    }
 
     inline size_type nodeselect(size_type i) const { return m_select0(i + 2); }
 
