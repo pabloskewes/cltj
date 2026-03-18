@@ -123,6 +123,7 @@ add_cltj_executable(bench-query-hcltj-global src/bench/bench-query-hcltj.cpp ben
 target_compile_definitions(bench-query-hcltj-global PRIVATE ADAPTIVE=0)
 
 add_cltj_executable(stats-hcltj src/bench/stats-hcltj.cpp analysis)
+set_target_properties(stats-hcltj PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
 add_cltj_executable(bench-query-cltj-rdf src/bench/bench-query-cltj-rdf.cpp bench hybridbv_gn)
 target_compile_definitions(bench-query-cltj-rdf PRIVATE ADAPTIVE=1)
