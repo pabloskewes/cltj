@@ -149,6 +149,69 @@ class compact_metatrie_hash {
         return hist;
     }
 
+    struct NodeInfo {
+        size_type node;
+        int64_t parent;  // -1 for the root (depth == 0)
+        uint32_t depth;
+        uint32_t key;  // value in m_seq at this node's position; 0 for the root
+        size_type n_children;
+    };
+
+    /**
+     * @brief Returns one NodeInfo per internal node in BFS order.
+     *
+     * In this LOUDS encoding, a node at position p stores its *children's*
+     * keys at m_seq[p .. p + children(p) - 1].  The node's own key lives
+     * in its parent's m_seq range.  Therefore the key is passed from parent
+     * to child during BFS, and the root (parent == -1) gets key = 0.
+     *
+     * For partial tries (SOP, PSO, OPS) the first-level keys are not stored
+     * in the trie at all (they come from the full trie via trie switching).
+     * In that case, first-level nodes appear with key = 0 and depth = 0.
+     * Their children carry the correct second-level keys from m_seq.
+     * The LOUDS navigation also links subsequent first-level nodes as
+     * "children" of the first one, which is a navigation artifact, not a
+     * semantic parent-child relationship.
+     */
+    std::vector<NodeInfo> dump_nodes() const {
+        std::vector<NodeInfo> nodes;
+
+        size_type num_zeros = 0;
+        for (size_type i = 0; i < m_bv.size(); i++)
+            if (!m_bv[i])
+                num_zeros++;
+
+        struct BFSEntry {
+            size_type node;
+            int64_t parent;
+            uint32_t depth;
+            uint32_t key;
+        };
+
+        std::vector<BFSEntry> current_level = {
+            {0, -1, 0, 0}
+        };
+        while (!current_level.empty()) {
+            std::vector<BFSEntry> next_level;
+            for (auto& [node, parent, depth, key] : current_level) {
+                size_type d = children(node);
+                nodes.push_back({node, parent, depth, key, d});
+
+                for (size_type n = 1; n <= d; n++) {
+                    if (node + 1 + n > num_zeros)
+                        break;
+                    size_type child_node = child(node, n);
+                    uint32_t child_key = static_cast<uint32_t>(m_seq[node + n - 1]);
+                    if (child_node + 1 < m_bv.size())
+                        next_level.push_back({child_node, static_cast<int64_t>(node), depth + 1, child_key});
+                }
+            }
+            current_level = std::move(next_level);
+        }
+
+        return nodes;
+    }
+
     inline size_type nodeselect(size_type i) const { return m_select0(i + 2); }
 
     pair<uint32_t, uint32_t> binary_search_seek(uint32_t val, uint32_t i, uint32_t f) const {
