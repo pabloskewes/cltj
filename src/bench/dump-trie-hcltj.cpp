@@ -11,10 +11,10 @@ const char* trie_names[] = {"SPO", "SOP", "POS", "PSO", "OSP", "OPS"};
 void write_csv(const string& path,
                const vector<cltj::compact_metatrie_hash::NodeInfo>& nodes) {
     ofstream out(path);
-    out << "node,parent,depth,key,n_children\n";
+    out << "parent,depth,key,n_children,is_leaf\n";
     for (auto& n : nodes)
-        out << n.node << "," << n.parent << "," << n.depth << ","
-            << n.key << "," << n.n_children << "\n";
+        out << n.parent << "," << n.depth << ","
+            << n.key << "," << n.n_children << "," << (n.is_leaf ? 1 : 0) << "\n";
 }
 
 int main(int argc, char** argv) {

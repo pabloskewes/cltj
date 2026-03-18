@@ -150,28 +150,31 @@ class compact_metatrie_hash {
     }
 
     struct NodeInfo {
-        size_type node;
-        int64_t parent;  // -1 for the root (depth == 0)
+        int64_t parent;  // row index of parent in the output vector; -1 for the root
         uint32_t depth;
-        uint32_t key;  // value in m_seq at this node's position; 0 for the root
+        uint32_t key;  // 0 for the virtual root
         size_type n_children;
+        bool is_leaf;
     };
 
     /**
-     * @brief Returns one NodeInfo per internal node in BFS order.
+     * @brief Returns one NodeInfo per node in BFS order, including leaf nodes.
+     *
+     * Each entry's parent field is the 0-based row index of its parent in
+     * the returned vector.  The root has parent = -1.
      *
      * In this LOUDS encoding, a node at position p stores its *children's*
      * keys at m_seq[p .. p + children(p) - 1].  The node's own key lives
-     * in its parent's m_seq range.  Therefore the key is passed from parent
-     * to child during BFS, and the root (parent == -1) gets key = 0.
+     * in its parent's m_seq range.  The key is passed from parent to child
+     * during BFS, and the virtual root gets key = 0.
+     *
+     * The last-level nodes (e.g. O-values in full tries) are not encoded in
+     * the BV.  Their keys are read from m_seq and emitted as leaf entries
+     * (is_leaf = true, n_children = 0).
      *
      * For partial tries (SOP, PSO, OPS) the first-level keys are not stored
-     * in the trie at all (they come from the full trie via trie switching).
-     * In that case, first-level nodes appear with key = 0 and depth = 0.
-     * Their children carry the correct second-level keys from m_seq.
-     * The LOUDS navigation also links subsequent first-level nodes as
-     * "children" of the first one, which is a navigation artifact, not a
-     * semantic parent-child relationship.
+     * in the trie (they come from the full trie via trie switching).
+     * First-level nodes therefore appear with key = 0.
      */
     std::vector<NodeInfo> dump_nodes() const {
         std::vector<NodeInfo> nodes;
@@ -182,8 +185,8 @@ class compact_metatrie_hash {
                 num_zeros++;
 
         struct BFSEntry {
-            size_type node;
-            int64_t parent;
+            size_type louds_pos;
+            int64_t parent_idx;
             uint32_t depth;
             uint32_t key;
         };
@@ -193,17 +196,23 @@ class compact_metatrie_hash {
         };
         while (!current_level.empty()) {
             std::vector<BFSEntry> next_level;
-            for (auto& [node, parent, depth, key] : current_level) {
-                size_type d = children(node);
-                nodes.push_back({node, parent, depth, key, d});
+            for (auto& e : current_level) {
+                size_type d = children(e.louds_pos);
+                int64_t my_idx = static_cast<int64_t>(nodes.size());
+                nodes.push_back({e.parent_idx, e.depth, e.key, d, false});
 
                 for (size_type n = 1; n <= d; n++) {
-                    if (node + 1 + n > num_zeros)
-                        break;
-                    size_type child_node = child(node, n);
-                    uint32_t child_key = static_cast<uint32_t>(m_seq[node + n - 1]);
-                    if (child_node + 1 < m_bv.size())
-                        next_level.push_back({child_node, static_cast<int64_t>(node), depth + 1, child_key});
+                    uint32_t child_key = static_cast<uint32_t>(m_seq[e.louds_pos + n - 1]);
+                    if (e.louds_pos + 1 + n > num_zeros) {
+                        nodes.push_back({my_idx, e.depth + 1, child_key, 0, true});
+                    } else {
+                        size_type child_pos = child(e.louds_pos, n);
+                        if (child_pos + 1 < m_bv.size()) {
+                            next_level.push_back({child_pos, my_idx, e.depth + 1, child_key});
+                        } else {
+                            nodes.push_back({my_idx, e.depth + 1, child_key, 0, true});
+                        }
+                    }
                 }
             }
             current_level = std::move(next_level);
