@@ -117,6 +117,10 @@ class compact_metatrie_hash {
 
     size_type first_child(size_type i) const { return i; }
 
+    /**
+     * @brief Computes a histogram of node out-degrees in the metatrie.
+     * @return A map where key = number of children and value = node count.
+     */
     std::map<size_type, size_type> children_histogram() const {
         std::map<size_type, size_type> hist;
 

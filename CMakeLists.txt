@@ -240,6 +240,9 @@ set_target_properties(test-pthash-simple PROPERTIES CXX_STANDARD 17 CXX_STANDARD
 
 add_cltj_executable(analyze-trie-structure src/test/hashing/analyze_trie_structure.cpp analysis)
 
+add_cltj_executable(test-children-histogram src/test/hcltj/test_children_histogram.cpp test/hcltj)
+set_target_properties(test-children-histogram PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+
 add_cltj_executable(count-distinct-spo src/analysis/count_distinct_spo.cpp analysis)
 
 add_cltj_executable(bench-mphf-hashing src/bench/bench_mphf_hashing.cpp analysis)
