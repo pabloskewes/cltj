@@ -103,6 +103,8 @@ class compact_metatrie_hash {
 
     size_type root_degree() const { return m_root_degree; }
 
+    size_type mphf_count() const { return m_mphfs.size(); }
+
     /*
       Receives index of current node and the child that is required
       Returns index of the nth child of current node
@@ -156,6 +158,53 @@ class compact_metatrie_hash {
         size_type n_children;
         bool is_leaf;
     };
+
+    /**
+     * @brief Builds MPHF for every node with >= threshold children.
+     *
+     * Walks the LOUDS in BFS order
+     * For each node whose out-degree meets the threshold, extracts the keys
+     * from m_seq and builds an MPHF.  m_has_hash[node_pos] is set to 1 for
+     * each such node, and m_hash_rank is rebuilt over the updated bitvector.
+     */
+    void build_hash_overlay(uint32_t threshold) {
+        m_threshold = threshold;
+        m_has_hash = sdsl::bit_vector(m_bv.size(), 0);
+        m_mphfs.clear();
+
+        size_type num_zeros = 0;
+        for (size_type i = 0; i < m_bv.size(); i++)
+            if (!m_bv[i])
+                num_zeros++;
+
+        std::vector<size_type> current_level = {0};
+        while (!current_level.empty()) {
+            std::vector<size_type> next_level;
+            for (auto node : current_level) {
+                size_type n_children = children(node);
+                if (n_children >= threshold) {
+                    std::vector<uint64_t> keys;
+                    keys.reserve(n_children);
+                    for (size_type k = 0; k < n_children; k++)
+                        keys.push_back(static_cast<uint64_t>(m_seq[node + k]));
+                    mphf_type mphf;
+                    if (mphf.build(keys)) {
+                        m_has_hash[node] = 1;
+                        m_mphfs.push_back(std::move(mphf));
+                    }
+                }
+                for (size_type n = 1; n <= n_children; n++) {
+                    if (node + 1 + n > num_zeros)
+                        break;
+                    size_type child_node = child(node, n);
+                    if (child_node + 1 < m_bv.size())
+                        next_level.push_back(child_node);
+                }
+            }
+            current_level = std::move(next_level);
+        }
+        sdsl::util::init_support(m_hash_rank, &m_has_hash);
+    }
 
     /**
      * @brief Returns one NodeInfo per node in BFS order, including leaf nodes.
