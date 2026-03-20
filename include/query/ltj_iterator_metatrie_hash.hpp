@@ -252,6 +252,20 @@ class ltj_iterator_metatrie_hash {
         return resolve_trie()->hash_contains(parent(), key);
     }
 
+    /**
+     * @brief Returns the m_seq index range [beg, end) for children of the current node.
+     *
+     * The algorithm scans trie->seq[beg..end) to enumerate all children
+     * of the smallest list during hashing intersection.
+     */
+    std::pair<size_type, size_type> children_range() const {
+        const auto* trie = resolve_trie();
+        size_type node = parent();
+        size_type count = trie->children(node);
+        size_type beg = trie->first_child(node);
+        return {beg, beg + count};
+    }
+
     inline size_type parent() const;
 
     ltj_iterator_metatrie_hash() = default;
