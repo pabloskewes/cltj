@@ -227,12 +227,19 @@ class ltj_iterator_metatrie_hash {
     inline const bool is_empty() { return m_is_empty; }
 
     /**
-     * True iff the current LOUDS node (same trie and parent() as leap/exists)
-     * has an MPHF overlay.
+     * True iff the current LOUDS node for @p var has an MPHF overlay.
+     * Calls choose_trie internally so that resolve_trie()/parent() point
+     * to the correct trie for the given variable.
      */
-    bool current_node_has_hash() const {
+    bool current_node_has_hash(var_type var) {
         if (m_is_empty)
             return false;
+        state_type state = o;
+        if (is_variable_subject(var))
+            state = s;
+        else if (is_variable_predicate(var))
+            state = p;
+        choose_trie(state);
         return resolve_trie()->node_has_hash(parent());
     }
 
@@ -257,6 +264,7 @@ class ltj_iterator_metatrie_hash {
      *
      * The algorithm scans trie->seq[beg..end) to enumerate all children
      * of the smallest list during hashing intersection.
+     * Assumes the trie has been selected (e.g. via current_node_has_hash).
      */
     std::pair<size_type, size_type> children_range() const {
         const auto* trie = resolve_trie();
@@ -264,6 +272,16 @@ class ltj_iterator_metatrie_hash {
         size_type count = trie->children(node);
         size_type beg = trie->first_child(node);
         return {beg, beg + count};
+    }
+
+    /**
+     * @brief Returns the key stored at position @p pos in the active trie's m_seq.
+     *
+     * Used to scan children sequentially without allocating a vector.
+     * Assumes the trie has been selected (e.g. via current_node_has_hash).
+     */
+    value_type child_value_at(size_type pos) const {
+        return resolve_trie()->seq[pos];
     }
 
     inline size_type parent() const;

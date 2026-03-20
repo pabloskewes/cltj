@@ -393,50 +393,87 @@ class ltj_algorithm_hash {
                     m_veo.up();
                 }
             } else {
+                // Compute children sizes
+                std::vector<size_type> children_sizes(itrs.size());
+                size_type min_idx = 0;
+                for (size_type i = 0; i < itrs.size(); ++i) {
+                    state_type state = o;
+                    if (itrs[i]->is_variable_subject(x_j))
+                        state = s;
+                    else if (itrs[i]->is_variable_predicate(x_j))
+                        state = p;
+                    children_sizes[i] = itrs[i]->children(state);
+                    if (children_sizes[i] < children_sizes[min_idx])
+                        min_idx = i;
+                }
+
                 // TODO: Make stats optional
                 IntersectionStats stats;
                 stats.variable_id = x_j;
                 stats.depth = j;
+                stats.list_sizes.assign(children_sizes.begin(), children_sizes.end());
 
-                // Collect list sizes from each iterator
-                for (ltj_iter_type* iter : itrs) {
-                    // Determine which state/variable this iterator represents
-                    state_type state = o;  // default
-                    if (iter->is_variable_subject(x_j)) {
-                        state = s;
-                    } else if (iter->is_variable_predicate(x_j)) {
-                        state = p;
-                    }
-                    stats.list_sizes.push_back(iter->children(state));
-                }
+                if (itrs[min_idx]->current_node_has_hash(x_j)) {
+                    // HASH PATH: scan smallest list, O(1) membership check on others
+                    auto [beg, end_pos] = itrs[min_idx]->children_range();
 
-                value_type c = seek(x_j);
-                // cout << "Seek (init): (" << (uint64_t) x_j << ": " << c << ")"
-                // <<endl;
-                while (c != 0) {  // If empty c=0
-                    // Count each result found
-                    stats.result_size++;
+                    for (size_type pos = beg; pos < end_pos; ++pos) {
+                        value_type c = itrs[min_idx]->child_value_at(pos);
 
-                    // 1. Adding result to tuple
-                    tuple[j] = {x_j, c};
-                    // 2. Going down in the tries by setting x_j = c (\mu(t_i) in paper)
-                    for (ltj_iter_type* iter : itrs) {
-                        iter->down(x_j, c);
+                        bool in_all = true;
+                        for (size_type i = 0; i < itrs.size(); ++i) {
+                            if (i == min_idx)
+                                continue;
+                            if (!itrs[i]->hash_contains(x_j, c)) {
+                                in_all = false;
+                                break;
+                            }
+                        }
+
+                        if (in_all) {
+                            stats.result_size++;
+                            tuple[j] = {x_j, c};
+
+                            for (ltj_iter_type* iter : itrs) {
+                                state_type st = o;
+                                if (iter->is_variable_subject(x_j))
+                                    st = s;
+                                else if (iter->is_variable_predicate(x_j))
+                                    st = p;
+                                iter->exists(st, c);
+                            }
+                            for (ltj_iter_type* iter : itrs) {
+                                iter->down(x_j, c);
+                            }
+                            m_veo.down();
+                            ok = search(j + 1, tuple, res, start, limit_results, timeout_seconds);
+                            if (!ok)
+                                return false;
+                            for (ltj_iter_type* iter : itrs) {
+                                iter->up(x_j);
+                            }
+                            m_veo.up();
+                        }
                     }
-                    m_veo.down();
-                    // 3. Search with the next variable x_{j+1}
-                    ok = search(j + 1, tuple, res, start, limit_results, timeout_seconds);
-                    if (!ok)
-                        return false;
-                    // 4. Going up in the tries by removing x_j = c
-                    for (ltj_iter_type* iter : itrs) {
-                        iter->up(x_j);
+                } else {
+                    // LEAPFROG PATH: unchanged
+                    value_type c = seek(x_j);
+                    while (c != 0) {  // If empty c=0
+                        stats.result_size++;
+                        tuple[j] = {x_j, c};
+                        for (ltj_iter_type* iter : itrs) {
+                            iter->down(x_j, c);
+                        }
+                        m_veo.down();
+                        ok = search(j + 1, tuple, res, start, limit_results, timeout_seconds);
+                        if (!ok)
+                            return false;
+                        for (ltj_iter_type* iter : itrs) {
+                            iter->up(x_j);
+                        }
+                        m_veo.up();
+                        c = seek(x_j, c + 1);
                     }
-                    m_veo.up();
-                    // 5. Next constant for x_j
-                    c = seek(x_j, c + 1);
-                    // cout << "Seek (bucle): (" << (uint64_t) x_j << ": " << c << ")"
-                    // <<endl;
                 }
 
                 // TODO: Make stats optional
