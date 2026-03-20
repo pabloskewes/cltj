@@ -181,6 +181,25 @@ class ltj_iterator_metatrie_hash {
         return cur_node;
     }
 
+    /**
+     * @brief Returns the effective trie for the current iterator state.
+     *
+     * Applies the partial-to-full trie switch when needed
+     * (`m_nfixed == 2 && m_status_i == 1`).
+     */
+    const typename index_scheme_type::trie_type* resolve_trie() const {
+        const auto* trie = m_ptr_index->get_trie(m_trie_i);
+        if (m_nfixed == 2 && m_status_i == 1) {
+            switch (m_trie_i) {
+                case 1: trie = m_ptr_index->get_trie(4); break;  // SOP -> OSP
+                case 3: trie = m_ptr_index->get_trie(0); break;  // PSO -> SPO
+                case 5: trie = m_ptr_index->get_trie(2); break;  // OPS -> POS
+                default: break;
+            }
+        }
+        return trie;
+    }
+
   public:
     /*
       Returns the key of the current position of the iterator
@@ -199,6 +218,16 @@ class ltj_iterator_metatrie_hash {
         return m_ptr_triple_pattern->term_o.is_variable && var == m_ptr_triple_pattern->term_o.value;
     }
     inline const bool is_empty() { return m_is_empty; }
+
+    /**
+     * True iff the current LOUDS node (same trie and parent() as leap/exists)
+     * has an MPHF overlay.
+     */
+    bool current_node_has_hash() const {
+        if (m_is_empty)
+            return false;
+        return resolve_trie()->node_has_hash(parent());
+    }
 
     inline size_type parent() const;
 
@@ -343,6 +372,7 @@ class ltj_iterator_metatrie_hash {
             return true;
         }
 
+        // TODO: duplicated from original iterator logic; keep behavior for now, deduplicate with resolve_trie().
         if (m_nfixed == 2 && m_status_i == 1) {
             switch (m_trie_i) {
                 case 1:
@@ -383,6 +413,7 @@ class ltj_iterator_metatrie_hash {
         choose_trie(state);
         const auto* trie = m_ptr_index->get_trie(m_trie_i);
 
+        // TODO: duplicated from original iterator logic; keep behavior for now, deduplicate with resolve_trie().
         if (m_nfixed == 2 && m_status_i == 1) {
             switch (m_trie_i) {
                 case 1:
@@ -451,6 +482,7 @@ class ltj_iterator_metatrie_hash {
             t_i = m_trie_i;  // Previously decided
             s_i = m_status_i;  // Previously decided
 
+            // TODO: duplicated from original iterator logic; keep behavior for now, deduplicate with resolve_trie().
             if (m_nfixed == 2 && m_status_i == 1) {
                 switch (m_trie_i) {
                     case 1:
@@ -514,6 +546,7 @@ class ltj_iterator_metatrie_hash {
 
     inline size_type subtree_size_fixed2() const {
         const auto* trie = m_ptr_index->get_trie(m_trie_i);
+        // TODO: duplicated from original iterator logic; keep behavior for now, deduplicate with resolve_trie().
         if (m_nfixed == 2 && m_status_i == 1) {
             switch (m_trie_i) {
                 case 1:
@@ -535,6 +568,7 @@ class ltj_iterator_metatrie_hash {
     std::vector<uint64_t> seek_all(var_type x_j) {
         std::vector<uint64_t> results;
         size_type t_i;
+        // TODO: duplicated from original iterator logic; keep behavior for now, deduplicate with resolve_trie().
         if (m_nfixed == 2 && m_status_i == 1) {
             switch (m_trie_i) {
                 case 1:
