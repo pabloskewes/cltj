@@ -191,10 +191,17 @@ class ltj_iterator_metatrie_hash {
         const auto* trie = m_ptr_index->get_trie(m_trie_i);
         if (m_nfixed == 2 && m_status_i == 1) {
             switch (m_trie_i) {
-                case 1: trie = m_ptr_index->get_trie(4); break;  // SOP -> OSP
-                case 3: trie = m_ptr_index->get_trie(0); break;  // PSO -> SPO
-                case 5: trie = m_ptr_index->get_trie(2); break;  // OPS -> POS
-                default: break;
+                case 1:
+                    trie = m_ptr_index->get_trie(4);
+                    break;  // SOP -> OSP
+                case 3:
+                    trie = m_ptr_index->get_trie(0);
+                    break;  // PSO -> SPO
+                case 5:
+                    trie = m_ptr_index->get_trie(2);
+                    break;  // OPS -> POS
+                default:
+                    break;
             }
         }
         return trie;
@@ -227,6 +234,22 @@ class ltj_iterator_metatrie_hash {
         if (m_is_empty)
             return false;
         return resolve_trie()->node_has_hash(parent());
+    }
+
+    /**
+     * @brief O(1) membership check via the MPHF overlay of the current node.
+     *
+     * Resolves which trie to use for @p var (same logic as leap/exists),
+     * then delegates to the trie's hash_contains(parent(), key).
+     */
+    bool hash_contains(var_type var, value_type key) {
+        state_type state = o;
+        if (is_variable_subject(var))
+            state = s;
+        else if (is_variable_predicate(var))
+            state = p;
+        choose_trie(state);
+        return resolve_trie()->hash_contains(parent(), key);
     }
 
     inline size_type parent() const;
