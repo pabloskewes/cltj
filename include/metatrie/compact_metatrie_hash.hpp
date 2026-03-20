@@ -105,6 +105,13 @@ class compact_metatrie_hash {
 
     size_type mphf_count() const { return m_mphfs.size(); }
 
+    bool node_has_hash(size_type node_pos) const { return m_has_hash[node_pos]; }
+
+    bool hash_contains(size_type node_pos, value_type key) const {
+        size_type mphf_idx = m_hash_rank(node_pos);
+        return m_mphfs[mphf_idx].contains(static_cast<uint64_t>(key));
+    }
+
     /*
       Receives index of current node and the child that is required
       Returns index of the nth child of current node
