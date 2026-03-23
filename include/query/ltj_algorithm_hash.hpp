@@ -437,7 +437,7 @@ class ltj_algorithm_hash {
 
                             // min_iter: position already known from scan, skip binary search
                             itrs[min_idx]->set_level_status(pos, beg, end_pos - beg);
-                            // TODO: eliminate exists() for non-min iterators too (satellite data in MPHF)
+                            // TODO: avoid exists() for non-min iterators too, as it costs O(log n)
                             for (size_type i = 0; i < itrs.size(); ++i) {
                                 if (i == min_idx)
                                     continue;
