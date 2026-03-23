@@ -285,6 +285,7 @@ class ltj_algorithm_hash {
                     m_veo.up();
                 }
             } else {
+                // TODO: add hash path here (same as search()) if join_str() needs it
                 value_type c = seek(x_j);
                 // cout << "Seek (init): (" << (uint64_t) x_j << ": " << c << ")"
                 // <<endl;
