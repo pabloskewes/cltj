@@ -415,29 +415,26 @@ public:
           m_veo.up();
         }
       } else {
-        // TODO: Make stats optional
         IntersectionStats stats;
-        stats.variable_id = x_j;
-        stats.depth = j;
-
-        // Collect list sizes from each iterator
-        for (ltj_iter_type *iter : itrs) {
-          // Determine which state/variable this iterator represents
-          state_type state = o; // default
-          if (iter->is_variable_subject(x_j)) {
-            state = s;
-          } else if (iter->is_variable_predicate(x_j)) {
-            state = p;
+        if constexpr (COLLECT_STATS) {
+          stats.variable_id = x_j;
+          stats.depth = j;
+          for (ltj_iter_type *iter : itrs) {
+            state_type state = o;
+            if (iter->is_variable_subject(x_j)) {
+              state = s;
+            } else if (iter->is_variable_predicate(x_j)) {
+              state = p;
+            }
+            stats.list_sizes.push_back(iter->children(state));
           }
-          stats.list_sizes.push_back(iter->children(state));
         }
 
         value_type c = seek(x_j);
         // cout << "Seek (init): (" << (uint64_t) x_j << ": " << c << ")"
         // <<endl;
         while (c != 0) { // If empty c=0
-          // Count each result found
-          stats.result_size++;
+          if constexpr (COLLECT_STATS) stats.result_size++;
 
           // 1. Adding result to tuple
           tuple[j] = {x_j, c};
@@ -461,12 +458,11 @@ public:
           // <<endl;
         }
 
-        // TODO: Make stats optional
-        stats.alternation_complexity =
-            calculate_alternation_complexity(itrs, x_j);
-
-        // TODO: compute leapfrog_seeks (needs to be done in seek)
-        m_stats.push_back(stats);
+        if constexpr (COLLECT_STATS) {
+          stats.alternation_complexity =
+              calculate_alternation_complexity(itrs, x_j);
+          m_stats.push_back(stats);
+        }
       }
       m_veo.done();
     }

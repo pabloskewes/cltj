@@ -8,6 +8,10 @@
 
 namespace ltj {
 
+// Set to false and recompile to disable stats collection in benchmarks.
+// When false, all IntersectionStats code is eliminated at compile time.
+inline constexpr bool COLLECT_STATS = true;
+
 /**
  * @brief Stores statistics for a single k-way set intersection operation (a
  * leapfrog join).

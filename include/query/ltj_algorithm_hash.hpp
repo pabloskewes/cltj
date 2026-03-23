@@ -408,11 +408,12 @@ class ltj_algorithm_hash {
                         min_idx = i;
                 }
 
-                // TODO: Make stats optional
                 IntersectionStats stats;
-                stats.variable_id = x_j;
-                stats.depth = j;
-                stats.list_sizes.assign(children_sizes.begin(), children_sizes.end());
+                if constexpr (COLLECT_STATS) {
+                    stats.variable_id = x_j;
+                    stats.depth = j;
+                    stats.list_sizes.assign(children_sizes.begin(), children_sizes.end());
+                }
 
                 if (itrs[min_idx]->current_node_has_hash(x_j)) {
                     // HASH PATH: scan smallest list, O(1) membership check on others
@@ -432,7 +433,7 @@ class ltj_algorithm_hash {
                         }
 
                         if (in_all) {
-                            stats.result_size++;
+                            if constexpr (COLLECT_STATS) stats.result_size++;
                             tuple[j] = {x_j, c};
 
                             // min_iter: position already known from scan, skip binary search
@@ -465,7 +466,7 @@ class ltj_algorithm_hash {
                     // LEAPFROG PATH: unchanged
                     value_type c = seek(x_j);
                     while (c != 0) {  // If empty c=0
-                        stats.result_size++;
+                        if constexpr (COLLECT_STATS) stats.result_size++;
                         tuple[j] = {x_j, c};
                         for (ltj_iter_type* iter : itrs) {
                             iter->down(x_j, c);
@@ -482,11 +483,10 @@ class ltj_algorithm_hash {
                     }
                 }
 
-                // TODO: Make stats optional
-                stats.alternation_complexity = calculate_alternation_complexity(itrs, x_j);
-
-                // TODO: compute leapfrog_seeks (needs to be done in seek)
-                m_stats.push_back(stats);
+                if constexpr (COLLECT_STATS) {
+                    stats.alternation_complexity = calculate_alternation_complexity(itrs, x_j);
+                    m_stats.push_back(stats);
+                }
             }
             m_veo.done();
         }
