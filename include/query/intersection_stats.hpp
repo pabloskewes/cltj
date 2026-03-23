@@ -8,9 +8,13 @@
 
 namespace ltj {
 
-// Set to false and recompile to disable stats collection in benchmarks.
-// When false, all IntersectionStats code is eliminated at compile time.
+// Controlled via CMake -DCOLLECT_STATS=OFF (default ON).
+// When false, all stats code is eliminated at compile time (zero overhead).
+#ifdef COLLECT_STATS_ENABLED
 inline constexpr bool COLLECT_STATS = true;
+#else
+inline constexpr bool COLLECT_STATS = false;
+#endif
 
 /**
  * @brief Stores statistics for a single k-way set intersection operation (a
