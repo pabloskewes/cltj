@@ -95,6 +95,10 @@ class compact_metatrie_hash {
         sdsl::util::swap_support(m_succ0, o.m_succ0, &m_bv, &o.m_bv);
         sdsl::util::swap_support(m_select0, o.m_select0, &m_bv, &o.m_bv);
         std::swap(m_root_degree, o.m_root_degree);
+        std::swap(m_mphfs, o.m_mphfs);
+        std::swap(m_has_hash, o.m_has_hash);
+        sdsl::util::swap_support(m_hash_rank, o.m_hash_rank, &m_has_hash, &o.m_has_hash);
+        std::swap(m_threshold, o.m_threshold);
     }
 
     /*
