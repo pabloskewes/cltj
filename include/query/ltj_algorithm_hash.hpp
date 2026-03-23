@@ -435,13 +435,18 @@ class ltj_algorithm_hash {
                             stats.result_size++;
                             tuple[j] = {x_j, c};
 
-                            for (ltj_iter_type* iter : itrs) {
+                            // min_iter: position already known from scan, skip binary search
+                            itrs[min_idx]->set_level_status(pos, beg, end_pos - beg);
+                            // TODO: eliminate exists() for non-min iterators too (satellite data in MPHF)
+                            for (size_type i = 0; i < itrs.size(); ++i) {
+                                if (i == min_idx)
+                                    continue;
                                 state_type st = o;
-                                if (iter->is_variable_subject(x_j))
+                                if (itrs[i]->is_variable_subject(x_j))
                                     st = s;
-                                else if (iter->is_variable_predicate(x_j))
+                                else if (itrs[i]->is_variable_predicate(x_j))
                                     st = p;
-                                iter->exists(st, c);
+                                itrs[i]->exists(st, c);
                             }
                             for (ltj_iter_type* iter : itrs) {
                                 iter->down(x_j, c);
