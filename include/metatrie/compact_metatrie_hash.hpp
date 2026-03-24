@@ -12,7 +12,9 @@
 #include <string>
 #include <vector>
 #include <hashing/mphf_bdz.hpp>
+#include <hashing/mphf_build_tracer.hpp>
 #include <hashing/storage/glgh.hpp>
+#include <util/instrument.hpp>
 
 namespace cltj {
 
@@ -178,10 +180,13 @@ class compact_metatrie_hash {
      * from m_seq and builds an MPHF.  m_has_hash[node_pos] is set to 1 for
      * each such node, and m_hash_rank is rebuilt over the updated bitvector.
      */
-    void build_hash_overlay(uint32_t threshold) {
+    // TODO: move tracer metadata (e.g., trie_id) out of this functional API.
+    void build_hash_overlay(uint32_t threshold, uint32_t trie_id = UINT32_MAX) {
         m_threshold = threshold;
         m_has_hash = sdsl::bit_vector(m_bv.size(), 0);
         m_mphfs.clear();
+
+        hashing::MphfBuildTracer<COLLECT_MPHF_BUILD_TRACE> tracer("mphf_trace.jsonl");
 
         size_type num_zeros = 0;
         for (size_type i = 0; i < m_bv.size(); i++)
@@ -198,8 +203,13 @@ class compact_metatrie_hash {
                     keys.reserve(n_children);
                     for (size_type k = 0; k < n_children; k++)
                         keys.push_back(static_cast<uint64_t>(m_seq[node + k]));
+
+                    tracer.on_node_start(trie_id, node, n_children, threshold);
                     mphf_type mphf;
-                    if (mphf.build(keys)) {
+                    bool ok = mphf.build(keys, tracer);
+                    tracer.on_node_end(ok);
+
+                    if (ok) {
                         m_has_hash[node] = 1;
                         m_mphfs.push_back(std::move(mphf));
                     }
