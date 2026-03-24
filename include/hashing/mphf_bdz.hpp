@@ -474,9 +474,43 @@ class MPHF {
 
         bool ok = (peeling_order.size() == triples.size());
         if (!ok) {
+            // Per-segment degree diagnostics (initial degrees, before peeling)
+            uint32_t seg_bounds[4] = {
+                0, static_cast<uint32_t>(segment_starts_[1]), static_cast<uint32_t>(segment_starts_[2]), m_
+            };
+            uint32_t seg_min[3], seg_max[3], seg_deg1[3];
+            for (int s = 0; s < 3; ++s) {
+                seg_min[s] = UINT32_MAX;
+                seg_max[s] = 0;
+                seg_deg1[s] = 0;
+                for (uint32_t v = seg_bounds[s]; v < seg_bounds[s + 1]; ++v) {
+                    uint32_t d = static_cast<uint32_t>(incident[v].size());
+                    if (d < seg_min[s])
+                        seg_min[s] = d;
+                    if (d > seg_max[s])
+                        seg_max[s] = d;
+                    if (d == 1)
+                        seg_deg1[s]++;
+                }
+            }
+
+            uint64_t key_min = triples[0].key, key_max = triples[0].key;
+            for (const auto& t : triples) {
+                if (t.key < key_min)
+                    key_min = t.key;
+                if (t.key > key_max)
+                    key_max = t.key;
+            }
+            uint64_t key_range = key_max - key_min + 1;
+            double density = static_cast<double>(triples.size()) / static_cast<double>(key_range);
+
             LOG_WARN(
-                "[MPHF::peeling] Failed: peeled " << peeling_order.size() << "/" << triples.size()
-                                                  << " edges (cycle remains)"
+                "[MPHF::peeling] Failed: peeled "
+                << peeling_order.size() << "/" << triples.size() << " edges (cycle remains)"
+                << " | seg_min_deg={" << seg_min[0] << "," << seg_min[1] << "," << seg_min[2] << "}"
+                << " seg_max_deg={" << seg_max[0] << "," << seg_max[1] << "," << seg_max[2] << "}"
+                << " seg_deg1={" << seg_deg1[0] << "," << seg_deg1[1] << "," << seg_deg1[2] << "}"
+                << " keys=[" << key_min << ".." << key_max << "] density=" << density
             );
         } else {
             LOG_INFO("[MPHF::peeling] Success: peeled all " << triples.size() << " edges");
