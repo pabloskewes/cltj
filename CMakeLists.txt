@@ -244,6 +244,9 @@ set_target_properties(test-mphf-quotient PROPERTIES CXX_STANDARD 17 CXX_STANDARD
 add_cltj_executable(test-mphf-adversarial src/test/hashing/test_mphf_adversarial.cpp test)
 set_target_properties(test-mphf-adversarial PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
+add_cltj_executable(repro-mphf-build src/test/hashing/repro_mphf_build.cpp test)
+set_target_properties(repro-mphf-build PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+
 add_cltj_executable(test-mphf-serialization src/test/hashing/test_mphf_serialization.cpp test)
 set_target_properties(test-mphf-serialization PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 

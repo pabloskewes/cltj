@@ -22,6 +22,7 @@ struct MphfBuildTracer {
     void on_node_start(uint32_t, uint64_t, uint64_t, uint32_t) {}
     void on_try_start(int) {}
     void on_try_result(int, uint32_t, uint32_t, uint32_t, bool) {}
+    void on_session_start(const char*) {}
     void on_node_end(bool) {}
     void flush() {}
 };
@@ -78,6 +79,14 @@ struct MphfBuildTracer<true> {
             std::chrono::steady_clock::now() - node_t0_).count();
         out_ << "{\"type\":\"node_end\""
              << ",\"success\":" << (success ? "true" : "false") << ",\"elapsed_ms\":" << elapsed_ms << "}\n";
+        out_.flush();
+    }
+
+    void on_session_start(const char* note = nullptr) {
+        out_ << "{\"type\":\"session_start\"";
+        if (note && note[0] != '\0')
+            out_ << ",\"note\":\"" << note << "\"";
+        out_ << "}\n";
         out_.flush();
     }
 
