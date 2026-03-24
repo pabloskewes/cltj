@@ -11,6 +11,7 @@
 #include <sdsl/vectors.hpp>
 #include <string>
 #include <vector>
+#include <hashing/key_dumper.hpp>
 #include <hashing/mphf_bdz.hpp>
 #include <hashing/mphf_build_tracer.hpp>
 #include <hashing/storage/glgh.hpp>
@@ -187,6 +188,7 @@ class compact_metatrie_hash {
         m_mphfs.clear();
 
         hashing::MphfBuildTracer<COLLECT_MPHF_BUILD_TRACE> tracer("mphf_trace.jsonl");
+        hashing::KeyDumper<DUMP_MPHF_KEYS> dumper(".");
 
         size_type num_zeros = 0;
         for (size_type i = 0; i < m_bv.size(); i++)
@@ -208,6 +210,9 @@ class compact_metatrie_hash {
                     mphf_type mphf;
                     bool ok = mphf.build(keys, tracer);
                     tracer.on_node_end(ok);
+
+                    if (!ok)
+                        dumper.dump(keys, trie_id, node);
 
                     if (ok) {
                         m_has_hash[node] = 1;

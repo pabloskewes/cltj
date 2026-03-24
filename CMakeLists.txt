@@ -101,6 +101,7 @@ add_cltj_executable(build-cltj-dyn src/bench/build-cltj-dyn.cpp bench hybridbv_g
 add_cltj_executable(build-xcltj src/bench/build-xcltj.cpp bench hybridbv_gn)
 
 add_cltj_executable(build-hcltj src/bench/build-hcltj.cpp bench hybridbv_gn)
+set_target_properties(build-hcltj PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
 add_cltj_executable(build-xcltj-dyn src/bench/build-xcltj-dyn.cpp bench hybridbv_gn)
 
