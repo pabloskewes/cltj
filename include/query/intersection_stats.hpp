@@ -5,16 +5,11 @@
 #include <cstdint>
 #include <numeric>
 #include <vector>
+#include <util/instrument.hpp>
 
 namespace ltj {
 
-// Controlled via CMake -DCOLLECT_STATS=OFF (default ON).
-// When false, all stats code is eliminated at compile time (zero overhead).
-#ifdef COLLECT_STATS_ENABLED
-inline constexpr bool COLLECT_STATS = true;
-#else
-inline constexpr bool COLLECT_STATS = false;
-#endif
+using cltj::COLLECT_QUERY_STATS;
 
 /**
  * @brief Stores statistics for a single k-way set intersection operation (a

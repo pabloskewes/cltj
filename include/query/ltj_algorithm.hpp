@@ -416,7 +416,7 @@ public:
         }
       } else {
         IntersectionStats stats;
-        if constexpr (COLLECT_STATS) {
+        if constexpr (COLLECT_QUERY_STATS) {
           stats.variable_id = x_j;
           stats.depth = j;
           for (ltj_iter_type *iter : itrs) {
@@ -434,7 +434,7 @@ public:
         // cout << "Seek (init): (" << (uint64_t) x_j << ": " << c << ")"
         // <<endl;
         while (c != 0) { // If empty c=0
-          if constexpr (COLLECT_STATS) stats.result_size++;
+          if constexpr (COLLECT_QUERY_STATS) stats.result_size++;
 
           // 1. Adding result to tuple
           tuple[j] = {x_j, c};
@@ -458,7 +458,7 @@ public:
           // <<endl;
         }
 
-        if constexpr (COLLECT_STATS) {
+        if constexpr (COLLECT_QUERY_STATS) {
           stats.alternation_complexity =
               calculate_alternation_complexity(itrs, x_j);
           m_stats.push_back(stats);
