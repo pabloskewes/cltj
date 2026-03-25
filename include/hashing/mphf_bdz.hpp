@@ -251,22 +251,24 @@ class MPHF {
 
         storage_.build_rank();
 
-        // Calculate max_key if the policy needs it
+        // Calculate max mixed key if the policy needs it (quotient width uses premixed values).
         uint64_t max_key = 0;
         if constexpr (KeyPolicy::needs_input_stats) {
-            if (!keys.empty()) {
-                max_key = *std::max_element(keys.begin(), keys.end());
+            for (auto k : keys) {
+                uint64_t y = static_cast<uint64_t>(premix32(static_cast<uint32_t>(k)));
+                if (y > max_key) max_key = y;
             }
         }
 
-        // Initialize key policy and store per-key payloads
+        // Initialize key policy and store per-key payloads.
+        // triple.key = premix32(key) = y; key policy operates on y.
         policies::KeyInitContext ctx{n_, primes_, multipliers_, biases_, segment_starts_, max_key};
         key_policy_.init(ctx);
         for (auto key : keys) {
             auto triple = compute_triple(key);
             int which_h = determine_which_h(triple.v0, triple.v1, triple.v2);
             uint32_t idx = query(key);
-            key_policy_.store(idx, key, triple, which_h);
+            key_policy_.store(idx, triple.key, triple, which_h);
         }
 
         return true;
@@ -321,7 +323,7 @@ class MPHF {
         uint32_t idx = storage_.rank(selected_vertex);
         if (idx >= n_)
             return false;
-        return key_policy_.verify(idx, key, which_h);
+        return key_policy_.verify(idx, triple.key, which_h);  // triple.key = premix32(key)
     }
 
   private:
@@ -598,6 +600,19 @@ class MPHF {
     }
 
     /**
+     * @brief Bijective 32-bit premixer (MurmurHash3 finalizer variant).
+     * Destroys arithmetic structure in consecutive/arithmetic-progression keys
+     * before hashing, enabling peeling to succeed on dense key sets.
+     * Bijective over uint32_t (each step is invertible).
+     */
+    static uint32_t premix32(uint32_t x) {
+        x = ((x >> 16) ^ x) * 0x45d9f3bU;
+        x = ((x >> 16) ^ x) * 0x45d9f3bU;
+        x = (x >> 16) ^ x;
+        return x;
+    }
+
+    /**
      * @brief Compute hash function h_k(x) for k ∈ {0,1,2}
      * h_k(x) = d_k + ((a_k · x + b_k) mod r_k)
      * with r_k = primes_[k], a_k = multipliers_[k], b_k = biases_[k], d_k = segment_starts_[k].
@@ -613,11 +628,14 @@ class MPHF {
     }
 
     /**
-     * @brief Compute triple (v0, v1, v2) for a given key
-     * Each hash function maps to its own segment of the vertex space
+     * @brief Compute triple (v0, v1, v2) for a given key.
+     * Applies premix32 before hashing to destroy arithmetic structure.
+     * triple.key stores the mixed value y = premix32(key); the key policy
+     * operates on y (not the original key) so that quotienting remains valid.
      */
     Triple compute_triple(uint64_t key) const {
-        return Triple(key, hash_function(key, 0), hash_function(key, 1), hash_function(key, 2));
+        uint64_t y = static_cast<uint64_t>(premix32(static_cast<uint32_t>(key)));
+        return Triple(y, hash_function(y, 0), hash_function(y, 1), hash_function(y, 2));
     }
 
     /**
