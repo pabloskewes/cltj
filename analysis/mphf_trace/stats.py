@@ -65,8 +65,8 @@ def residual_stats(df: pd.DataFrame) -> pd.DataFrame:
         "n_children",
         "success",
         "retries_used",
-        "min_residual",
-        "max_residual",
+        "best_failed_residual",
+        "worst_failed_residual",
         "best_peeled_frac",
         "total_elapsed_ms",
     ]

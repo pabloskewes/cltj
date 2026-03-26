@@ -117,8 +117,8 @@ def main() -> None:
             "n_children",
             "success",
             "retries_used",
-            "min_residual",
-            "max_residual",
+            "best_failed_residual",
+            "worst_failed_residual",
             "best_peeled_frac",
             "total_elapsed_ms",
         ]
@@ -133,14 +133,14 @@ def main() -> None:
         )
         # Fallback feasibility summary
         print()
-        max_res = partial["min_residual"].max()
-        print(f"  Max min-residual across all nodes: {max_res}")
+        worst_best = partial["best_failed_residual"].max()
+        print(f"  Largest best_failed_residual across all nodes: {worst_best}")
         print(
-            f"  → A fallback capped at residual ≤ {max_res} edges would cover all cases."
+            f"  → A fallback capped at residual ≤ {worst_best} edges would cover all cases."
         )
-        bytes_for_max = max_res * 4
+        bytes_for_max = worst_best * 4
         print(
-            f"  → Sorted-array fallback for {max_res} uint32_t keys: {bytes_for_max:,} bytes"
+            f"  → Sorted-array fallback for {worst_best} uint32_t keys: {bytes_for_max:,} bytes"
         )
 
     # ------------------------------------------------------------------

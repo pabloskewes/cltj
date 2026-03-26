@@ -20,9 +20,9 @@ Output columns
   success          : bool   - did the node build successfully?
   retries_used     : int    - index of the winning retry (0 = first attempt succeeded),
                               or MAX_RETRIES if all retries failed
-  min_residual     : int    - smallest (n_children - peeled) across all failed retries,
-                              0 if first attempt succeeded
-  max_residual     : int    - largest residual across failed retries, 0 if first succeeded
+  best_failed_residual  : int - smallest (n_children - peeled) across all failed retries,
+                                0 if first attempt succeeded ("how close did the best miss get?")
+  worst_failed_residual : int - largest residual across failed retries, 0 if first succeeded
   best_peeled_frac : float  - best peeled_frac seen in any failed retry (1.0 if none)
   total_elapsed_ms : float  - wall time for the whole node (from node_start to node_end)
 
@@ -78,8 +78,8 @@ def load_trace(path: str | Path) -> pd.DataFrame:
 
                 if failed_retries:
                     residuals = [n - r["peeled"] for r in failed_retries]
-                    min_res = min(residuals)
-                    max_res = max(residuals)
+                    best_failed_res = min(residuals)
+                    worst_failed_res = max(residuals)
                     best_frac = max(r["peeled_frac"] for r in failed_retries)
                     # winning retry index = last failed retry index + 1 (if success),
                     # or MAX_RETRIES (= len of failed list) if all failed
@@ -89,8 +89,8 @@ def load_trace(path: str | Path) -> pd.DataFrame:
                         else len(failed_retries)
                     )
                 else:
-                    min_res = 0
-                    max_res = 0
+                    best_failed_res = 0
+                    worst_failed_res = 0
                     best_frac = 1.0
                     retries_used = 0
 
@@ -99,8 +99,8 @@ def load_trace(path: str | Path) -> pd.DataFrame:
                         **current,
                         "success": success,
                         "retries_used": retries_used,
-                        "min_residual": min_res,
-                        "max_residual": max_res,
+                        "best_failed_residual": best_failed_res,
+                        "worst_failed_residual": worst_failed_res,
                         "best_peeled_frac": best_frac,
                         "total_elapsed_ms": ev["elapsed_ms"],
                     }

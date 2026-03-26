@@ -160,7 +160,7 @@ def plot_retry_histogram(
 
 
 # ---------------------------------------------------------------------------
-# 3. Scatter: n_children vs min_residual (only nodes with ≥1 failed retry)
+# 3. Scatter: n_children vs best_failed_residual (only nodes with ≥1 failed retry)
 # ---------------------------------------------------------------------------
 
 
@@ -183,7 +183,7 @@ def plot_residual_vs_size(
 
     ax.scatter(
         ok["n_children"],
-        ok["min_residual"],
+        ok["best_failed_residual"],
         alpha=0.8,
         s=40,
         color=GREEN,
@@ -192,7 +192,7 @@ def plot_residual_vs_size(
     )
     ax.scatter(
         fail["n_children"],
-        fail["min_residual"],
+        fail["best_failed_residual"],
         alpha=1.0,
         s=120,
         color=RED,
@@ -204,20 +204,20 @@ def plot_residual_vs_size(
     # Annotate each point with its n and residual
     for _, row in partial.iterrows():
         ax.annotate(
-            f"  n={row['n_children']:.1e}\n  res={row['min_residual']}",
-            xy=(row["n_children"], row["min_residual"]),
+            f"  n={row['n_children']:.1e}\n  res={row['best_failed_residual']}",
+            xy=(row["n_children"], row["best_failed_residual"]),
             fontsize=6.5,
             color=RED if not row["success"] else GREEN,
             va="bottom",
         )
 
     ax.set_xscale("log")
-    if partial["min_residual"].min() > 0:
+    if partial["best_failed_residual"].min() > 0:
         ax.set_yscale("log")
     ax.set_xlabel("n_children (log scale)", fontsize=11)
-    ax.set_ylabel("min residual edges (log scale)", fontsize=11)
+    ax.set_ylabel("best failed residual (log scale)", fontsize=11)
     ax.set_title(
-        "Smallest 2-core residual vs node size\n"
+        "Best failed residual (smallest 2-core miss) vs node size\n"
         "(only nodes with ≥1 failed retry shown)",
         fontsize=12,
     )
