@@ -22,8 +22,11 @@ int main(int argc, char** argv) {
         cltj::spo_triple spo;
         do {
             ifs >> s >> p >> o;
-            if (ifs.fail()) break;
-            spo[0] = s; spo[1] = p; spo[2] = o;
+            if (ifs.fail())
+                break;
+            spo[0] = s;
+            spo[1] = p;
+            spo[2] = o;
             D.emplace_back(spo);
         } while (!ifs.eof());
 
@@ -36,11 +39,14 @@ int main(int argc, char** argv) {
         auto stop = timer::now();
         std::cout << "Trie build: " << duration_cast<seconds>(stop - start).count() << "s" << std::endl;
 
+        // Free D before overlay build to reduce peak memory
+        std::vector<cltj::spo_triple>().swap(D);
+
         std::cout << "Building hash overlay (threshold=" << threshold << ")..." << std::endl;
         start = timer::now();
         uint32_t total_mphfs = 0;
         for (int i = 0; i < 6; i++) {
-            index.get_trie(i)->build_hash_overlay(threshold);
+            index.get_trie(i)->build_hash_overlay(threshold, static_cast<uint32_t>(i));
             uint32_t n = static_cast<uint32_t>(index.get_trie(i)->mphf_count());
             std::cout << "  trie " << i << ": " << n << " MPHFs" << std::endl;
             total_mphfs += n;

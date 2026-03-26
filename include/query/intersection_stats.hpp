@@ -5,8 +5,11 @@
 #include <cstdint>
 #include <numeric>
 #include <vector>
+#include <util/instrument.hpp>
 
 namespace ltj {
+
+using cltj::COLLECT_QUERY_STATS;
 
 /**
  * @brief Stores statistics for a single k-way set intersection operation (a

@@ -13,6 +13,9 @@ endif()
 # Options to control permissive mode and libc++ usage
 option(CLTJ_PERMISSIVE "Add -fpermissive to mimic legacy builds" ON)
 option(CLTJ_USE_LIBCXX "Force -stdlib=libc++ (needed mainly on macOS)" ON)
+option(CLTJ_COLLECT_QUERY_STATS "Collect intersection stats (disable for clean benchmarks)" ON)
+option(CLTJ_COLLECT_MPHF_BUILD_TRACE "Trace MPHF build per-node (JSONL output)" OFF)
+option(CLTJ_DUMP_MPHF_KEYS "Dump key sets for failed MPHF builds (binary)" OFF)
 set(CLTJ_LEGACY_CXX_STANDARD 11 CACHE STRING "C++ standard for legacy targets")
 set_property(CACHE CLTJ_LEGACY_CXX_STANDARD PROPERTY STRINGS 11 14 17)
 
@@ -28,6 +31,15 @@ target_include_directories(cltj_core INTERFACE
   ${CMAKE_CURRENT_SOURCE_DIR}/include
   ${CMAKE_CURRENT_SOURCE_DIR}/lib/hybridBV/include
 )
+if(CLTJ_COLLECT_QUERY_STATS)
+  target_compile_definitions(cltj_core INTERFACE CLTJ_COLLECT_QUERY_STATS_ENABLED)
+endif()
+if(CLTJ_COLLECT_MPHF_BUILD_TRACE)
+  target_compile_definitions(cltj_core INTERFACE CLTJ_COLLECT_MPHF_BUILD_TRACE_ENABLED)
+endif()
+if(CLTJ_DUMP_MPHF_KEYS)
+  target_compile_definitions(cltj_core INTERFACE CLTJ_DUMP_MPHF_KEYS_ENABLED)
+endif()
 
 # Logging interface target wired through cltj_core
 add_library(cltj_logging INTERFACE)
@@ -89,6 +101,7 @@ add_cltj_executable(build-cltj-dyn src/bench/build-cltj-dyn.cpp bench hybridbv_g
 add_cltj_executable(build-xcltj src/bench/build-xcltj.cpp bench hybridbv_gn)
 
 add_cltj_executable(build-hcltj src/bench/build-hcltj.cpp bench hybridbv_gn)
+set_target_properties(build-hcltj PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
 add_cltj_executable(build-xcltj-dyn src/bench/build-xcltj-dyn.cpp bench hybridbv_gn)
 
@@ -230,6 +243,9 @@ set_target_properties(test-mphf-quotient PROPERTIES CXX_STANDARD 17 CXX_STANDARD
 
 add_cltj_executable(test-mphf-adversarial src/test/hashing/test_mphf_adversarial.cpp test)
 set_target_properties(test-mphf-adversarial PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+
+add_cltj_executable(repro-mphf-build src/test/hashing/repro_mphf_build.cpp test)
+set_target_properties(repro-mphf-build PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
 add_cltj_executable(test-mphf-serialization src/test/hashing/test_mphf_serialization.cpp test)
 set_target_properties(test-mphf-serialization PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)

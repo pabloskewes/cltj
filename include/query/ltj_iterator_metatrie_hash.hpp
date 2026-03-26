@@ -284,6 +284,21 @@ class ltj_iterator_metatrie_hash {
         return resolve_trie()->seq[pos];
     }
 
+    /**
+     * @brief Directly sets the next-level status frame, skipping binary search.
+     *
+     * Used in the hash path for the min_iter, where we already know the
+     * position from the sequential scan. Avoids the O(log n) binary search
+     * that exists() would do.
+     * Assumes the trie has been selected (e.g. via current_node_has_hash).
+     */
+    void set_level_status(size_type pos, size_type beg, size_type count) {
+        m_status[m_nfixed + 1].beg = pos;
+        m_status[m_nfixed + 1].end = beg + count - 1;
+        m_status[m_nfixed + 1].cnt = count;
+        m_redo[m_nfixed] = false;
+    }
+
     inline size_type parent() const;
 
     ltj_iterator_metatrie_hash() = default;

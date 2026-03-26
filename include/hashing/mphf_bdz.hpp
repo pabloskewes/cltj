@@ -1,6 +1,7 @@
 #pragma once
 #include "mphf_utils.hpp"
 #include "mphf_types.hpp"
+#include "mphf_build_tracer.hpp"
 #include "storage/baseline.hpp"
 #include "key_policies.hpp"
 #include <util/logger.hpp>
@@ -68,6 +69,7 @@ class MPHF {
     static constexpr int MAX_RETRIES = 10;
     static constexpr uint64_t SEED = 0xC1A0ULL;
     uint8_t retry_count_;  // Number of retries used in last build (stored for serialization)
+    uint32_t last_peeled_ = 0;  // Edges peeled in last try_build (for tracing)
 
   public:
     using size_type = size_t;  // Required for sdsl::size_in_bytes
@@ -87,26 +89,34 @@ class MPHF {
     MPHF& operator=(MPHF&&) = default;
 
     /**
-     * @brief Build MPHF for given keys
-     * @param keys Vector of keys to hash
-     * @return true if successful, false if failed after all retries
+     * @brief Build MPHF for given keys (no tracing).
+     * Delegates to the traced overload with a no-op tracer (zero overhead).
      */
     bool build(const std::vector<uint64_t>& keys) {
-        n_ = keys.size();
-        if (n_ == 0) {
-            return false;
-        }
+        hashing::MphfBuildTracer<false> noop("");
+        return build(keys, noop);
+    }
 
-        // Retry logic
+    /**
+     * @brief Build MPHF with tracing support.
+     * Timing is only measured when Tracer::is_enabled is true (zero-cost otherwise).
+     */
+    template <typename Tracer>
+    bool build(const std::vector<uint64_t>& keys, Tracer& tracer) {
+        n_ = keys.size();
+        if (n_ == 0)
+            return false;
+
         for (int retry = 0; retry < MAX_RETRIES; ++retry) {
             retry_count_ = retry;
-            if (try_build(keys, retry)) {
+            tracer.on_try_start(retry);
+            bool ok = try_build(keys, retry);
+            tracer.on_try_result(retry, m_, n_, last_peeled_, ok);
+            if (ok)
                 return true;
-            }
-            // If failed, the next retry will use different hash parameters
         }
 
-        retry_count_ = MAX_RETRIES;  // Failed after all retries
+        retry_count_ = MAX_RETRIES;
         return false;
     }
 
@@ -472,11 +482,46 @@ class MPHF {
             }
         }
 
-        bool ok = (peeling_order.size() == triples.size());
+        last_peeled_ = static_cast<uint32_t>(peeling_order.size());
+        bool ok = (last_peeled_ == triples.size());
         if (!ok) {
+            // Per-segment degree diagnostics (initial degrees, before peeling)
+            uint32_t seg_bounds[4] = {
+                0, static_cast<uint32_t>(segment_starts_[1]), static_cast<uint32_t>(segment_starts_[2]), m_
+            };
+            uint32_t seg_min[3], seg_max[3], seg_deg1[3];
+            for (int s = 0; s < 3; ++s) {
+                seg_min[s] = UINT32_MAX;
+                seg_max[s] = 0;
+                seg_deg1[s] = 0;
+                for (uint32_t v = seg_bounds[s]; v < seg_bounds[s + 1]; ++v) {
+                    uint32_t d = static_cast<uint32_t>(incident[v].size());
+                    if (d < seg_min[s])
+                        seg_min[s] = d;
+                    if (d > seg_max[s])
+                        seg_max[s] = d;
+                    if (d == 1)
+                        seg_deg1[s]++;
+                }
+            }
+
+            uint64_t key_min = triples[0].key, key_max = triples[0].key;
+            for (const auto& t : triples) {
+                if (t.key < key_min)
+                    key_min = t.key;
+                if (t.key > key_max)
+                    key_max = t.key;
+            }
+            uint64_t key_range = key_max - key_min + 1;
+            double density = static_cast<double>(triples.size()) / static_cast<double>(key_range);
+
             LOG_WARN(
-                "[MPHF::peeling] Failed: peeled " << peeling_order.size() << "/" << triples.size()
-                                                  << " edges (cycle remains)"
+                "[MPHF::peeling] Failed: peeled "
+                << peeling_order.size() << "/" << triples.size() << " edges (cycle remains)"
+                << " | seg_min_deg={" << seg_min[0] << "," << seg_min[1] << "," << seg_min[2] << "}"
+                << " seg_max_deg={" << seg_max[0] << "," << seg_max[1] << "," << seg_max[2] << "}"
+                << " seg_deg1={" << seg_deg1[0] << "," << seg_deg1[1] << "," << seg_deg1[2] << "}"
+                << " keys=[" << key_min << ".." << key_max << "] density=" << density
             );
         } else {
             LOG_INFO("[MPHF::peeling] Success: peeled all " << triples.size() << " edges");
