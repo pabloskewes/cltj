@@ -7,6 +7,7 @@
 
 #include <cltj_config.hpp>
 #include <metatrie/cltj_compact_metatrie.hpp>
+#include <metatrie/compact_metatrie_hash.hpp>
 
 namespace cltj {
 
@@ -276,6 +277,7 @@ public:
 };
 
 typedef cltj::cltj_index_metatrie<cltj::compact_metatrie> compact_ltj_metatrie;
+typedef cltj::cltj_index_metatrie<cltj::compact_metatrie_hash> compact_ltj_metatrie_hash;
 // typedef cltj::cltj_index_metatrie<cltj::uncompact_trie_v2> uncompact_ltj;
 
 } // namespace cltj

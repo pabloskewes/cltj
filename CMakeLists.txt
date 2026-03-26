@@ -88,6 +88,8 @@ add_cltj_executable(build-cltj-dyn src/bench/build-cltj-dyn.cpp bench hybridbv_g
 
 add_cltj_executable(build-xcltj src/bench/build-xcltj.cpp bench hybridbv_gn)
 
+add_cltj_executable(build-hcltj src/bench/build-hcltj.cpp bench hybridbv_gn)
+
 add_cltj_executable(build-xcltj-dyn src/bench/build-xcltj-dyn.cpp bench hybridbv_gn)
 
 add_cltj_executable(build-uncltj src/bench/build-uncltj.cpp bench)
@@ -113,6 +115,18 @@ target_compile_definitions(bench-query-xcltj PRIVATE ADAPTIVE=1)
 
 add_cltj_executable(bench-query-xcltj-global src/bench/bench-query-xcltj.cpp bench)
 target_compile_definitions(bench-query-xcltj-global PRIVATE ADAPTIVE=0)
+
+add_cltj_executable(bench-query-hcltj src/bench/bench-query-hcltj.cpp bench)
+target_compile_definitions(bench-query-hcltj PRIVATE ADAPTIVE=1)
+
+add_cltj_executable(bench-query-hcltj-global src/bench/bench-query-hcltj.cpp bench)
+target_compile_definitions(bench-query-hcltj-global PRIVATE ADAPTIVE=0)
+
+add_cltj_executable(stats-hcltj src/bench/stats-hcltj.cpp analysis)
+set_target_properties(stats-hcltj PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+
+add_cltj_executable(dump-trie-hcltj src/bench/dump-trie-hcltj.cpp analysis)
+set_target_properties(dump-trie-hcltj PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
 add_cltj_executable(bench-query-cltj-rdf src/bench/bench-query-cltj-rdf.cpp bench hybridbv_gn)
 target_compile_definitions(bench-query-cltj-rdf PRIVATE ADAPTIVE=1)
@@ -220,11 +234,23 @@ set_target_properties(test-mphf-adversarial PROPERTIES CXX_STANDARD 17 CXX_STAND
 add_cltj_executable(test-mphf-serialization src/test/hashing/test_mphf_serialization.cpp test)
 set_target_properties(test-mphf-serialization PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
+add_cltj_executable(test-mphf-move src/test/hashing/test_mphf_move.cpp test)
+set_target_properties(test-mphf-move PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+
 add_cltj_executable(test-pthash-simple src/test/hashing/test_pthash_simple.cpp test)
 target_link_libraries(test-pthash-simple PRIVATE PTHASH)
 set_target_properties(test-pthash-simple PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
 add_cltj_executable(analyze-trie-structure src/test/hashing/analyze_trie_structure.cpp analysis)
+
+add_cltj_executable(test-children-histogram src/test/hcltj/test_children_histogram.cpp test/hcltj)
+set_target_properties(test-children-histogram PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+
+add_cltj_executable(test-hash-contains src/test/hcltj/test_hash_contains.cpp test/hcltj)
+set_target_properties(test-hash-contains PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+
+add_cltj_executable(test-hcltj-correctness src/test/hcltj/test_hcltj_correctness.cpp test/hcltj)
+set_target_properties(test-hcltj-correctness PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
 add_cltj_executable(count-distinct-spo src/analysis/count_distinct_spo.cpp analysis)
 
