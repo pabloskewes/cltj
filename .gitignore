@@ -45,3 +45,7 @@ build/
 
 # Datasets
 /wikidata/
+
+# Nightly run artifacts
+mphf_trace.jsonl
+mphf_dumps.jsonl
