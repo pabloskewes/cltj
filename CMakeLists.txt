@@ -13,6 +13,8 @@ endif()
 # Options to control permissive mode and libc++ usage
 option(CLTJ_PERMISSIVE "Add -fpermissive to mimic legacy builds" ON)
 option(CLTJ_USE_LIBCXX "Force -stdlib=libc++ (needed mainly on macOS)" ON)
+option(CLTJ_USE_BUNDLED_SDSL "Build and link bundled lib/sdsl-lite submodule" ON)
+option(CLTJ_APPLY_BUNDLED_SDSL_PATCHES "Apply local compatibility patches to bundled lib/sdsl-lite" ON)
 option(CLTJ_COLLECT_QUERY_STATS "Collect intersection stats (disable for clean benchmarks)" ON)
 option(CLTJ_COLLECT_MPHF_BUILD_TRACE "Trace MPHF build per-node (JSONL output)" OFF)
 option(CLTJ_DUMP_MPHF_KEYS "Dump key sets for failed MPHF builds (binary)" OFF)
@@ -73,11 +75,49 @@ else()
     message(STATUS "CPU does NOT support SSE4.2")
 endif()
 
-include_directories(~/include
-                    ${CMAKE_HOME_DIRECTORY}/lib/hybridBV/include
-                    ${CMAKE_HOME_DIRECTORY}/include)
+if(CLTJ_USE_BUNDLED_SDSL)
+  if(CLTJ_APPLY_BUNDLED_SDSL_PATCHES)
+    find_program(GIT_EXECUTABLE git REQUIRED)
+    set(CLTJ_SDSL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/lib/sdsl-lite)
+    set(CLTJ_SDSL_PATCH ${CMAKE_CURRENT_SOURCE_DIR}/third_party/patches/sdsl-louds-tree-swap.patch)
 
-link_directories(~/lib)
+    execute_process(
+      COMMAND ${GIT_EXECUTABLE} -C ${CLTJ_SDSL_DIR} apply --check ${CLTJ_SDSL_PATCH}
+      RESULT_VARIABLE CLTJ_SDSL_PATCH_CAN_APPLY
+      OUTPUT_QUIET
+      ERROR_QUIET
+    )
+    if(CLTJ_SDSL_PATCH_CAN_APPLY EQUAL 0)
+      message(STATUS "Applying bundled sdsl-lite compatibility patch: sdsl-louds-tree-swap.patch")
+      execute_process(
+        COMMAND ${GIT_EXECUTABLE} -C ${CLTJ_SDSL_DIR} apply ${CLTJ_SDSL_PATCH}
+        COMMAND_ERROR_IS_FATAL ANY
+      )
+    else()
+      execute_process(
+        COMMAND ${GIT_EXECUTABLE} -C ${CLTJ_SDSL_DIR} apply --reverse --check ${CLTJ_SDSL_PATCH}
+        RESULT_VARIABLE CLTJ_SDSL_PATCH_ALREADY_APPLIED
+        OUTPUT_QUIET
+        ERROR_QUIET
+      )
+      if(CLTJ_SDSL_PATCH_ALREADY_APPLIED EQUAL 0)
+        message(STATUS "Bundled sdsl-lite compatibility patch already applied")
+      else()
+        message(FATAL_ERROR
+          "Bundled sdsl-lite does not match the expected patch state for "
+          "third_party/patches/sdsl-louds-tree-swap.patch"
+        )
+      endif()
+    endif()
+  endif()
+  add_subdirectory(lib/sdsl-lite EXCLUDE_FROM_ALL)
+else()
+  include_directories(~/include)
+  link_directories(~/lib)
+endif()
+
+include_directories(${CMAKE_HOME_DIRECTORY}/lib/hybridBV/include
+                    ${CMAKE_HOME_DIRECTORY}/include)
 add_subdirectory(lib/hybridBV)
 add_subdirectory(lib/pthash)
 

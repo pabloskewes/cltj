@@ -4,3 +4,6 @@
 [submodule "lib/fastmod"]
 	path = lib/fastmod
 	url = https://github.com/lemire/fastmod
+[submodule "lib/sdsl-lite"]
+	path = lib/sdsl-lite
+	url = https://github.com/adriangbrandon/sdsl-lite.git
