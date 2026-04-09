@@ -274,7 +274,7 @@ TestResult test_zero_quotient_edge_case() {
 
         // Generate keys guaranteed to have q=0
         std::vector<uint64_t> small_keys;
-        const size_t N = std::min(10000ULL, p_min);
+        const size_t N = std::min(static_cast<uint64_t>(10000), p_min);
         for (uint64_t i = 0; i < N; ++i) {
             small_keys.push_back(i);
         }
