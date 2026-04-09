@@ -13,6 +13,7 @@ endif()
 # Options to control permissive mode and libc++ usage
 option(CLTJ_PERMISSIVE "Add -fpermissive to mimic legacy builds" ON)
 option(CLTJ_USE_LIBCXX "Force -stdlib=libc++ (needed mainly on macOS)" ON)
+option(CLTJ_USE_BUNDLED_SDSL "Build and link bundled lib/sdsl-lite submodule" ON)
 option(CLTJ_COLLECT_QUERY_STATS "Collect intersection stats (disable for clean benchmarks)" ON)
 option(CLTJ_COLLECT_MPHF_BUILD_TRACE "Trace MPHF build per-node (JSONL output)" OFF)
 option(CLTJ_DUMP_MPHF_KEYS "Dump key sets for failed MPHF builds (binary)" OFF)
@@ -73,11 +74,15 @@ else()
     message(STATUS "CPU does NOT support SSE4.2")
 endif()
 
-include_directories(~/include
-                    ${CMAKE_HOME_DIRECTORY}/lib/hybridBV/include
-                    ${CMAKE_HOME_DIRECTORY}/include)
+if(CLTJ_USE_BUNDLED_SDSL)
+  add_subdirectory(lib/sdsl-lite EXCLUDE_FROM_ALL)
+else()
+  include_directories(~/include)
+  link_directories(~/lib)
+endif()
 
-link_directories(~/lib)
+include_directories(${CMAKE_HOME_DIRECTORY}/lib/hybridBV/include
+                    ${CMAKE_HOME_DIRECTORY}/include)
 add_subdirectory(lib/hybridBV)
 add_subdirectory(lib/pthash)
 
