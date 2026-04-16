@@ -42,6 +42,7 @@ cmake-build-debug/
 .idea/
 plots/
 build/
+results/
 
 # Datasets
 /wikidata/
