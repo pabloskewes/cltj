@@ -53,6 +53,8 @@ void analyze_strategy(
     if (breakdown.q_bytes > 0) {
         print_component("Key payload", breakdown.q_bytes);
     }
+    print_component("Other metadata", breakdown.other_bytes);
+    print_component("Fallback system", breakdown.fallback_bytes);
     std::ostringstream oss;
     oss << std::fixed << std::setprecision(2) << bits_per_key;
     std::cout << "  TOTAL: " << breakdown.total_bytes() << " bytes (" << oss.str() << " bits/key)"

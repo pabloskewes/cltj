@@ -11,23 +11,28 @@
 #include <cassert>
 #include <cmath>
 #include <cstdint>
-#include <list>
 #include <queue>
 #include <random>
 #include <sdsl/bit_vectors.hpp>
 #include <sdsl/rank_support_v.hpp>
 #include <sdsl/structure_tree.hpp>
 #include <sdsl/util.hpp>
-#include <stack>
 #include <vector>
-#include <tuple>
 #include <type_traits>
 
 namespace cltj {
 namespace hashing {
 
 /**
- * @brief Size breakdown structure for MPHF components
+ * @brief Size breakdown of all MPHF components in bytes.
+ *
+ * Components:
+ *   - g_bytes        : G array (main peeling payload).
+ *   - used_pos_bytes : B bitvector marking used slots.
+ *   - rank_bytes     : rank support over B.
+ *   - q_bytes        : key payload (FullKey, QuotientKey, ...).
+ *   - other_bytes    : serialized metadata (n, prime deltas, retry_count, n_peeled).
+ *   - fallback_bytes : fallback system residual array (sorted residual keys).
  */
 struct SizeBreakdown {
     size_t g_bytes = 0;
@@ -35,7 +40,7 @@ struct SizeBreakdown {
     size_t rank_bytes = 0;
     size_t q_bytes = 0;
     size_t other_bytes = 0;
-    size_t fallback_bytes = 0;  // residual_keys_ array + n_peeled_ field
+    size_t fallback_bytes = 0;
 
     size_t total_bytes() const {
         return g_bytes + used_pos_bytes + rank_bytes + q_bytes + other_bytes + fallback_bytes;
@@ -46,12 +51,17 @@ struct SizeBreakdown {
  * @brief Minimal Perfect Hash Function (MPHF) Builder using MWHC/BDZ algorithm
  *
  * Algorithm overview:
- * 1. Map each key to a triple (v0, v1, v2) using 3 hash functions
- * 2. Build a 3-uniform hypergraph and perform "peeling" to get topological
- * order
- * 3. Assign values to array G such that each triple has a unique "winner"
- * vertex
- * 4. Use a bitvector to compact the hash function to minimal range [0,n)
+ * 1. Apply premix32 to the input keys, then map each key to a triple (v0, v1, v2)
+ *    using 3 hash functions
+ * 2. Build a 3-uniform hypergraph and perform "peeling" to get topological order
+ * 3. Assign values to array G such that each triple has a unique "winner" vertex
+ * 4. Use a bitvector to compact the hash function to minimal range [0, n)
+ *
+ * Fallback system: if peeling leaves a small residual 2-core, keep the peeled BDZ
+ * path and store the residual keys in a sorted array for binary-search lookup.
+ *
+ * @tparam StorageStrategy  storage layout for G, B and rank support.
+ * @tparam KeyPolicy        payload policy for membership / reconstruction.
  */
 template <typename StorageStrategy = BaselineStorage, typename KeyPolicy = policies::NoKey>
 class MPHF {
@@ -75,14 +85,11 @@ class MPHF {
     uint8_t retry_count_;  // Number of retries used in last build (stored for serialization)
     uint32_t last_peeled_ = 0;  // Edges peeled in last try_build (for tracing)
 
-    // Peel-and-fallback: when peeling leaves a small residual 2-core, accept the partial
-    // peel and store the residual keys in a sorted array for binary-search lookup.
-    // MIN_RETRIES_BEFORE_FALLBACK: how many full-peel attempts must fail before fallback
-    // is considered. Gives the normal retry path a fair chance first.
-    static constexpr uint32_t MAX_FALLBACK_RESIDUAL = 10000;
-    static constexpr int MIN_RETRIES_BEFORE_FALLBACK = 2;
-    std::vector<uint32_t> residual_keys_;  // sorted premixed keys of the 2-core
-    uint32_t n_peeled_ = 0;               // keys mapped by BDZ path; residual use binary search
+    // Fallback system
+    static constexpr uint32_t MAX_FALLBACK_RESIDUAL = 10000;  // max 2-core size accepted as fallback
+    static constexpr int MIN_RETRIES_BEFORE_FALLBACK = 2;  // full-peel attempts before fallback kicks in
+    std::vector<uint32_t> residual_keys_;  // sorted premixed keys of the accepted 2-core
+    uint32_t n_peeled_ = 0;  // |peeled subset|; residual keys live in [n_peeled_, n_)
 
   public:
     using size_type = size_t;  // Required for sdsl::size_in_bytes
@@ -113,6 +120,7 @@ class MPHF {
 
     /**
      * @brief Build MPHF with tracing support.
+     * Repeats try_build() with different seeds until success or MAX_RETRIES is exhausted.
      * Timing is only measured when Tracer::is_enabled is true (zero-cost otherwise).
      */
     template <typename Tracer>
@@ -156,7 +164,7 @@ class MPHF {
         // Note: m_ and primes_ are not serialized (computed/reconstructed)
         breakdown.other_bytes = sizeof(n_) + 3 * sizeof(uint8_t) + sizeof(retry_count_) + sizeof(n_peeled_);
         breakdown.fallback_bytes = sizeof(uint32_t)  // residual_count field
-                                 + residual_keys_.size() * sizeof(uint32_t);
+            + residual_keys_.size() * sizeof(uint32_t);
         return breakdown;
     }
 
@@ -174,6 +182,7 @@ class MPHF {
     /**
      * @brief Serialize the MPHF to an output stream.
      * Conforms to the SDSL serialization interface.
+     * Persists the peeled BDZ state, KeyPolicy payload and Fallback system state.
      * @param out The output stream.
      * @param v The structure tree node (for visualization).
      * @param name The name for the structure tree node.
@@ -184,12 +193,11 @@ class MPHF {
             sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
         size_t written_bytes = 0;
 
-        // Core data structures (essential for queries)
+        // Core query state
         written_bytes += storage_.serialize(out, child, "storage_");
         written_bytes += sdsl::write_member(n_, out, child, "n_");
 
-        // Hash function parameters (essential for queries)
-        // Store p_j as delta_j = p_j - target_segment
+        // Hash parameters, encoded as p_j - target_segment
         const uint64_t target_segment = compute_target_segment();
         for (int k = 0; k < 3; ++k) {
             uint64_t delta = primes_[k] - target_segment;
@@ -199,10 +207,10 @@ class MPHF {
         }
         written_bytes += sdsl::write_member(retry_count_, out, child, "retry_count_");
 
-        // Key policy payload (e.g., QuotientKey or FullKey data)
+        // KeyPolicy payload
         written_bytes += key_policy_.serialize(out, child, "key_policy_");
 
-        // Fallback data: n_peeled + residual key array
+        // Fallback system state
         written_bytes += sdsl::write_member(n_peeled_, out, child, "n_peeled_");
         uint32_t residual_count = static_cast<uint32_t>(residual_keys_.size());
         written_bytes += sdsl::write_member(residual_count, out, child, "residual_count");
@@ -216,15 +224,15 @@ class MPHF {
 
     /**
      * @brief Load the MPHF from an input stream.
+     * Reconstructs the peeled BDZ state, KeyPolicy payload and Fallback system state.
      * @param in The input stream.
      */
     void load(std::istream& in) {
-        // Core data structures
+        // Core query state
         storage_.load(in);
         sdsl::read_member(n_, in);
 
-        // Hash function parameters
-        // Reconstruct primes from delta_j = p_j - target_segment
+        // Hash parameters, decoded from p_j - target_segment
         const uint64_t target_segment = compute_target_segment();
         for (int k = 0; k < 3; ++k) {
             uint8_t delta;
@@ -235,24 +243,19 @@ class MPHF {
 
         m_ = static_cast<uint32_t>(primes_[0] + primes_[1] + primes_[2]);
 
-        // Recompute segment_starts from primes
+        // Rebuild derived hash state
         segment_starts_[0] = 0;
         segment_starts_[1] = primes_[0];
         segment_starts_[2] = primes_[0] + primes_[1];
 
         regenerate_coefficients();
 
-        // Load key policy payload. Use n_peeled_ for sizing (loaded below) -- but we need
-        // n_peeled_ before binding. Load it first, then bind.
-        // Key policy payload
-        // Rebind context for key policy and load its payload (if any).
-        // Note: max_mixed_key is not needed in load() since init() is not called, only bind_context().
-        // We use n_ temporarily here; n_peeled_ is loaded right after.
+        // KeyPolicy only needs the hash parameters rebound before load().
         policies::KeyInitContext ctx{n_, primes_, multipliers_, biases_, segment_starts_, 0};
         key_policy_.bind_context(ctx);
         key_policy_.load(in);
 
-        // Fallback data
+        // Fallback system state
         sdsl::read_member(n_peeled_, in);
         uint32_t residual_count = 0;
         sdsl::read_member(residual_count, in);
@@ -264,10 +267,18 @@ class MPHF {
 
     /**
      * @brief Single attempt to build MPHF.
-     * If peeling leaves a small residual 2-core (<= MAX_FALLBACK_RESIDUAL keys),
-     * the partial peel is accepted: peeled keys use the BDZ path and residual keys
-     * are stored in residual_keys_ for binary-search lookup.
-     * Returns true on full peel OR accepted fallback; false to request a retry.
+     *
+     * Algorithm:
+     * 1. Initialize hash functions and storage for this retry.
+     * 2. Generate one triple per key.
+     * 3. Peel the 3-uniform hypergraph to obtain a topological ordering.
+     * 4. If a small residual 2-core survives and is eligible for the Fallback
+     *    system, accept the partial peel; otherwise request another retry.
+     * 5. Assign G values on the peeled subset and build rank support.
+     * 6. Initialize the KeyPolicy on the peeled prefix and store residual keys
+     *    in sorted order for binary-search lookup.
+     *
+     * @return true on full peel or accepted fallback; false to request a retry.
      */
     bool try_build(const std::vector<uint64_t>& keys, int retry_count) {
         if (!initialize_hash_functions(keys, retry_count)) {
@@ -283,13 +294,11 @@ class MPHF {
         uint32_t residual_count = static_cast<uint32_t>(triples.size() - peeling_order.size());
 
         if (!fully_peeled) {
-            if (residual_count > MAX_FALLBACK_RESIDUAL || retry_count < MIN_RETRIES_BEFORE_FALLBACK) {
-                return false;  // Not eligible for fallback yet, retry with different seed
-            }
+            if (residual_count > MAX_FALLBACK_RESIDUAL || retry_count < MIN_RETRIES_BEFORE_FALLBACK)
+                return false;
             LOG_WARN(
                 "[MPHF::fallback] Accepting partial peel: peeled="
-                << peeling_order.size() << "/" << triples.size()
-                << " residual=" << residual_count
+                << peeling_order.size() << "/" << triples.size() << " residual=" << residual_count
             );
         }
 
@@ -298,7 +307,7 @@ class MPHF {
         assign_g_values(peeling_order);
         storage_.build_rank();
 
-        // Collect residual keys (sorted premixed values) for binary-search fallback.
+        // Residual keys are stored sorted for binary-search lookup.
         residual_keys_.clear();
         if (!fully_peeled) {
             residual_keys_.reserve(residual_count);
@@ -310,21 +319,24 @@ class MPHF {
             std::sort(residual_keys_.begin(), residual_keys_.end());
         }
 
-        // Calculate max mixed key for quotient width (over all keys; minor over-alloc
-        // for residual keys is harmless since they don't get quotients).
+        // Quotient width uses the max mixed key over the full input.
         uint64_t max_mixed_key = 0;
         if constexpr (KeyPolicy::needs_input_stats) {
             for (auto k : keys) {
                 uint64_t mixed_key = static_cast<uint64_t>(premix32(static_cast<uint32_t>(k)));
-                if (mixed_key > max_mixed_key) max_mixed_key = mixed_key;
+                if (mixed_key > max_mixed_key)
+                    max_mixed_key = mixed_key;
             }
         }
 
-        // Initialize key policy sized to n_peeled_ (residual keys use binary search, not quotients).
-        policies::KeyInitContext ctx{n_peeled_, primes_, multipliers_, biases_, segment_starts_, max_mixed_key};
+        // KeyPolicy only covers the peeled prefix.
+        policies::KeyInitContext ctx{
+            n_peeled_, primes_, multipliers_, biases_, segment_starts_, max_mixed_key
+        };
         key_policy_.init(ctx);
         for (uint32_t i = 0; i < static_cast<uint32_t>(keys.size()); ++i) {
-            if (!fully_peeled && !edge_removed[i]) continue;  // skip residual keys
+            if (!fully_peeled && !edge_removed[i])
+                continue;
             auto triple = compute_triple(keys[i]);
             int which_h = determine_which_h(triple.v0, triple.v1, triple.v2);
             uint32_t idx = query(keys[i]);
@@ -338,16 +350,17 @@ class MPHF {
      * @brief Query the MPHF for a key
      * Algorithm:
      * 1. Compute triple (v0, v1, v2)
-     * 2. Compute j = (G[v0] + G[v1] + G[v2]) mod 3
-     * 3. Select vertex based on j
-     * 4. Apply rank operation for compactification
+     * 2. If the key belongs to the Fallback system, return its residual index
+     * 3. Compute j = (G[v0] + G[v1] + G[v2]) mod 3
+     * 4. Select vertex based on j
+     * 5. Apply rank operation for compactification
      * @param key Key to query
      * @return Hash value in range [0, n)
      */
     uint32_t query(uint64_t key) const {
         auto triple = compute_triple(key);
 
-        // Fallback path: residual keys are not in the BDZ structure.
+        // Residual keys bypass the BDZ path.
         if (!residual_keys_.empty()) {
             uint32_t mixed_key_u32 = static_cast<uint32_t>(triple.mixed_key);
             auto it = std::lower_bound(residual_keys_.begin(), residual_keys_.end(), mixed_key_u32);
@@ -360,7 +373,7 @@ class MPHF {
             return 0;
         }
 
-        // BDZ path
+        // Peeled BDZ path.
         uint32_t j = (storage_.g_get(triple.v0) + storage_.g_get(triple.v1) + storage_.g_get(triple.v2)) % 3;
         uint32_t selected_vertex = triple.v(static_cast<int>(j));
         return storage_.rank(selected_vertex);
@@ -376,14 +389,14 @@ class MPHF {
 
         auto triple = compute_triple(key);
 
-        // Fallback path: check residual (2-core) keys via binary search.
+        // Fallback path: check residual keys via binary search.
         if (!residual_keys_.empty()) {
             uint32_t mixed_key_u32 = static_cast<uint32_t>(triple.mixed_key);
             if (std::binary_search(residual_keys_.begin(), residual_keys_.end(), mixed_key_u32))
                 return true;
         }
 
-        // BDZ path: check the peeled portion.
+        // Peeled BDZ path.
         int which_h = determine_which_h(triple.v0, triple.v1, triple.v2);
         uint32_t selected_vertex = triple.v(which_h);
         if (!storage_.is_vertex_occupied(selected_vertex)) {
@@ -392,7 +405,7 @@ class MPHF {
         uint32_t idx = storage_.rank(selected_vertex);
         if (idx >= n_peeled_)
             return false;
-        return key_policy_.verify(idx, triple.mixed_key, which_h);  // triple.mixed_key = premix32(key)
+        return key_policy_.verify(idx, triple.mixed_key, which_h);
     }
 
   private:
@@ -700,15 +713,12 @@ class MPHF {
      */
     Triple compute_triple(uint64_t key) const {
         assert(
-            key <= static_cast<uint64_t>(UINT32_MAX)
-            && "premix32 requires keys to fit in uint32_t; larger inputs would truncate"
+            key <= static_cast<uint64_t>(UINT32_MAX) &&
+            "premix32 requires keys to fit in uint32_t; larger inputs would truncate"
         );
         uint64_t mixed_key = static_cast<uint64_t>(premix32(static_cast<uint32_t>(key)));
         return Triple(
-            mixed_key,
-            hash_function(mixed_key, 0),
-            hash_function(mixed_key, 1),
-            hash_function(mixed_key, 2)
+            mixed_key, hash_function(mixed_key, 0), hash_function(mixed_key, 1), hash_function(mixed_key, 2)
         );
     }
 

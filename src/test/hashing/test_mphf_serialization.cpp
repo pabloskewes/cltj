@@ -2,16 +2,23 @@
 // Verifies that serialize() → load() preserves all internal state and query results
 // NOTE: Currently only tests GlGhStorage because BaselineStorage and PackedTritStorage have double-free bugs in destructors (detected by ASan - issue with SDSL memory management)
 // TODO: Fix above issue and re-enable BaselineStorage and PackedTritStorage tests
+#include <algorithm>
+#include <cassert>
+#include <iostream>
+#include <sstream>
+#include <random>
+#include <stdexcept>
+#include <unordered_set>
+#include <vector>
+
+// Test-only access to synthesize a fallback-active fixture.
+#define private public
 #include <hashing/mphf_bdz.hpp>
+#undef private
+
 #include <hashing/storage/packed_trit.hpp>
 #include <hashing/storage/glgh.hpp>
 #include <util/logger.hpp>
-#include <cassert>
-#include <sstream>
-#include <random>
-#include <unordered_set>
-#include <vector>
-#include <iostream>
 
 using cltj::hashing::GlGhStorage;
 using cltj::hashing::MPHF;
@@ -28,20 +35,61 @@ static std::vector<uint64_t> generate_keys(size_t n, uint64_t seed) {
     return std::vector<uint64_t>(unique_keys.begin(), unique_keys.end());
 }
 
+template <typename StorageStrategy>
+std::vector<uint64_t> synthesize_fallback_fixture(
+    MPHF<StorageStrategy, FullKey>& mphf, const std::vector<uint64_t>& keys, size_t residual_count
+) {
+    assert(residual_count > 0 && residual_count < keys.size());
+
+    std::vector<std::pair<uint32_t, uint64_t>> indexed_keys;
+    indexed_keys.reserve(keys.size());
+    for (uint64_t key : keys) {
+        indexed_keys.emplace_back(mphf.query(key), key);
+    }
+    std::sort(indexed_keys.begin(), indexed_keys.end());
+
+    std::vector<uint64_t> residual_keys;
+    residual_keys.reserve(residual_count);
+    mphf.residual_keys_.clear();
+    for (size_t i = indexed_keys.size() - residual_count; i < indexed_keys.size(); ++i) {
+        uint64_t key = indexed_keys[i].second;
+        residual_keys.push_back(key);
+        mphf.residual_keys_.push_back(static_cast<uint32_t>(cltj::hashing::premix32(static_cast<uint32_t>(key)
+        )));
+    }
+    std::sort(mphf.residual_keys_.begin(), mphf.residual_keys_.end());
+    mphf.n_peeled_ = static_cast<uint32_t>(keys.size() - residual_count);
+
+    // The synthetic fixture should remain a valid MPHF for the original key set.
+    std::unordered_set<uint32_t> indices;
+    indices.reserve(keys.size());
+    for (uint64_t key : keys) {
+        assert(mphf.contains(key));
+        indices.insert(mphf.query(key));
+    }
+    assert(indices.size() == keys.size());
+
+    return residual_keys;
+}
+
 /**
  * @brief Test serialization round-trip for a given storage strategy
  * 
  * Verifies that after serialize() -> load():
- * 1. All metadata fields match (m, n, retry_count)
+ * 1. All metadata fields match (m, n, retry_count, n_peeled, n_residual, has_fallback)
  * 2. All query() results are identical
  * 3. contains() behaves identically
- * 4. Size breakdown is preserved
+ * 4. Fallback-system queries are preserved
+ * 5. Size breakdown is preserved
  */
 template <typename StorageStrategy>
-void test_roundtrip(size_t n, const std::string& strategy_name) {
-    std::cout << "\n--- Round-Trip Test: n=" << n << " [" << strategy_name << "] ---" << std::endl;
-
-    auto keys = generate_keys(n, 42 + n);
+void test_roundtrip(
+    const std::vector<uint64_t>& keys,
+    const std::string& strategy_name,
+    const std::string& case_label,
+    bool synthesize_fallback = false
+) {
+    std::cout << "\n--- Round-Trip Test: " << case_label << " [" << strategy_name << "] ---" << std::endl;
 
     // Build original MPHF
     MPHF<StorageStrategy, FullKey> mphf1;
@@ -51,10 +99,19 @@ void test_roundtrip(size_t n, const std::string& strategy_name) {
     }
     std::cout << "  [OK] Built original MPHF" << std::endl;
 
+    std::vector<uint64_t> residual_fixture_keys;
+    if (synthesize_fallback) {
+        residual_fixture_keys = synthesize_fallback_fixture(mphf1, keys, 2);
+        std::cout << "  [OK] Synthesized fallback-active fixture with residual=2" << std::endl;
+    }
+
     // Capture original state
     uint32_t original_m = mphf1.m();
     uint32_t original_n = mphf1.n();
     int original_retries = mphf1.retry_count();
+    uint32_t original_n_peeled = mphf1.n_peeled();
+    uint32_t original_n_residual = mphf1.n_residual();
+    bool original_has_fallback = mphf1.has_fallback();
     auto original_breakdown = mphf1.get_size_breakdown();
 
     // Serialize to stringstream
@@ -76,8 +133,12 @@ void test_roundtrip(size_t n, const std::string& strategy_name) {
     assert(mphf2.m() == original_m && "m_ mismatch after load");
     assert(mphf2.n() == original_n && "n_ mismatch after load");
     assert(mphf2.retry_count() == original_retries && "retry_count_ mismatch after load");
+    assert(mphf2.n_peeled() == original_n_peeled && "n_peeled_ mismatch after load");
+    assert(mphf2.n_residual() == original_n_residual && "n_residual mismatch after load");
+    assert(mphf2.has_fallback() == original_has_fallback && "has_fallback mismatch after load");
     std::cout << "  [OK] Metadata preserved: m=" << original_m << " n=" << original_n
-              << " retries=" << original_retries << std::endl;
+              << " retries=" << original_retries << " n_peeled=" << original_n_peeled
+              << " residual=" << original_n_residual << std::endl;
 
     // 2. Check that all query() results match
     bool queries_match = true;
@@ -105,7 +166,21 @@ void test_roundtrip(size_t n, const std::string& strategy_name) {
     assert(contains_match && "contains() differs after deserialization");
     std::cout << "  [OK] All contains() results match" << std::endl;
 
-    // 4. Check false positives match (sample a few non-keys)
+    // 4. Check fallback-system queries explicitly
+    for (uint64_t key : residual_fixture_keys) {
+        uint32_t h1 = mphf1.query(key);
+        uint32_t h2 = mphf2.query(key);
+        assert(h1 == h2 && "Fallback query differs after deserialization");
+        assert(h1 >= original_n_peeled && h1 < original_n && "Fallback query index out of range");
+        assert(mphf1.contains(key) && mphf2.contains(key) && "Fallback key missing after deserialization");
+    }
+    if (!residual_fixture_keys.empty()) {
+        std::cout << "  [OK] Fallback-system queries preserved for " << residual_fixture_keys.size()
+                  << " residual keys" << std::endl;
+    }
+
+    // 5. Check false positives match (sample a few non-keys)
+    const size_t n = keys.size();
     std::mt19937_64 rng(12345);
     std::unordered_set<uint64_t> key_set(keys.begin(), keys.end());
     size_t fp_sample = std::min((size_t)1000, n / 10);
@@ -127,7 +202,7 @@ void test_roundtrip(size_t n, const std::string& strategy_name) {
     assert(fp_match && "False positive behavior differs after deserialization");
     std::cout << "  [OK] False positive behavior matches (sampled " << fp_sample << " non-keys)" << std::endl;
 
-    // 5. Check that size breakdown is identical
+    // 6. Check that size breakdown is identical
     auto new_breakdown = mphf2.get_size_breakdown();
     assert(
         new_breakdown.total_bytes() == original_breakdown.total_bytes() &&
@@ -138,6 +213,7 @@ void test_roundtrip(size_t n, const std::string& strategy_name) {
     assert(new_breakdown.rank_bytes == original_breakdown.rank_bytes && "Rank bytes differ");
     assert(new_breakdown.q_bytes == original_breakdown.q_bytes && "Q bytes differ");
     assert(new_breakdown.other_bytes == original_breakdown.other_bytes && "Other bytes differ");
+    assert(new_breakdown.fallback_bytes == original_breakdown.fallback_bytes && "Fallback bytes differ");
     std::cout << "  [OK] Size breakdown matches: " << new_breakdown.total_bytes() << " bytes" << std::endl;
 
     std::cout << "  PASSED: All fields and queries preserved after round-trip" << std::endl;
@@ -154,7 +230,8 @@ int main() {
     for (size_t n : test_sizes) {
         try {
             // Test GlGhStorage (the optimized one with seed-based serialization)
-            test_roundtrip<GlGhStorage>(n, "GlGhStorage");
+            auto keys = generate_keys(n, 42 + n);
+            test_roundtrip<GlGhStorage>(keys, "GlGhStorage", "n=" + std::to_string(n));
             passed++;
         } catch (const std::exception& e) {
             std::cerr << "FAILED: GlGhStorage n=" << n << " - " << e.what() << std::endl;
@@ -178,9 +255,18 @@ int main() {
         // total_tests++;
     }
 
+    try {
+        auto keys = generate_keys(10000, 20260418);
+        test_roundtrip<GlGhStorage>(keys, "GlGhStorage", "synthetic fallback fixture", true);
+        passed++;
+    } catch (const std::exception& e) {
+        std::cerr << "FAILED: GlGhStorage synthetic fallback fixture - " << e.what() << std::endl;
+    }
+    total_tests++;
+
     std::cout << "\n========== Test Summary ==========" << std::endl;
-    std::cout << "Total: " << total_tests << " (" << test_sizes.size() << " size × GlGhStorage only)"
-              << std::endl;
+    std::cout << "Total: " << total_tests << " (" << test_sizes.size()
+              << " size cases + 1 synthetic fallback fixture × GlGhStorage only)" << std::endl;
     std::cout << "Passed: " << passed << "/" << total_tests << std::endl;
     std::cout << "Failed: " << (total_tests - passed) << "/" << total_tests << std::endl;
 
