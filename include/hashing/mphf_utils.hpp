@@ -129,21 +129,5 @@ inline uint64_t mod_inverse(uint64_t a, uint64_t p) {
     return mod_pow(a, p - 2, p);
 }
 
-/**
- * @brief SplitMix64 hash mixer for seed diversification.
- *
- * Ensures that numerically close seeds produce completely different outputs
- * when initializing PRNGs.
- *
- * Written in 2015 by Sebastiano Vigna (vigna@acm.org), public domain.
- * Reference: https://github.com/svaarala/duktape/blob/master/misc/splitmix64.c
- */
-inline uint64_t splitmix64(uint64_t x) {
-    x += 0x9E3779B97F4A7C15ULL;
-    x = (x ^ (x >> 30)) * 0xBF58476D1CE4E5B9ULL;
-    x = (x ^ (x >> 27)) * 0x94D049BB133111EBULL;
-    return x ^ (x >> 31);
-}
-
 }  // namespace hashing
 }  // namespace cltj

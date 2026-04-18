@@ -1,4 +1,5 @@
 #include <cassert>
+#include <hashing/mixers.hpp>
 #include <hashing/mphf_utils.hpp>
 #include <util/logger.hpp>
 

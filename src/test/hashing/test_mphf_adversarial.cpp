@@ -404,6 +404,11 @@ TestResult test_dense_cluster_attack() {
 /**
  * TEST 1.4: 64-bit Boundary (Arithmetic Overflow)
  *
+ * Note: under the current premix32 design, this tier is also expected to expose
+ * the uint32 domain boundary of the mixer. False positives here are not
+ * necessarily a regression in the MPHF logic; they can simply reflect inputs
+ * that fall outside the supported premix domain.
+ *
  * Validates correct behavior with overflow of uint64_t in hash function.
  *
  * Hash function is h_j(x) = (a_j * x + b_j) mod p_j.

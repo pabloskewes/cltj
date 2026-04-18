@@ -11,7 +11,6 @@
 #include <sdsl/util.hpp>
 
 #include "mphf_types.hpp"
-#include "mphf_utils.hpp"
 
 namespace cltj {
 namespace hashing {
@@ -23,7 +22,7 @@ struct KeyInitContext {
     const std::array<uint64_t, 3>& multipliers;
     const std::array<uint64_t, 3>& biases;
     const std::array<uint64_t, 3>& segment_starts;
-    uint64_t max_key;
+    uint64_t max_mixed_key;  // upper bound for the post-mixer key domain used by the policy
 };
 
 struct NoKey {
@@ -94,10 +93,10 @@ struct FullKey {
 
 struct QuotientKey {
     static constexpr bool supports_contains = true;
-    static constexpr bool needs_input_stats = true;  // Needs max_key to compute optimal width
+    static constexpr bool needs_input_stats = true;  // Needs max_mixed_key to compute optimal width
 
     // Persisted values
-    sdsl::int_vector<> quotients_;  // q_j(x) = floor(x / p_j) for each key x
+    sdsl::int_vector<> quotients_;  // q_j(y) = floor(y / p_j) for each mixed key y
 
     // Cached parameters (copied from KeyInitContext in init()).
     std::array<uint64_t, 3> primes_{};
@@ -116,11 +115,12 @@ struct QuotientKey {
     void init(const KeyInitContext& ctx) {
         bind_context(ctx);
 
-        // p_min is the worst case scenario for the quotient, so we use it to compute the width.
+        // Quotients are computed over the post-mixer domain y, so the width bound
+        // must use the largest mixed key that can reach this policy.
         uint64_t p_min = std::min({primes_[0], primes_[1], primes_[2]});
         uint64_t q_max;
-        if (ctx.max_key > 0) {
-            q_max = ctx.max_key / p_min;
+        if (ctx.max_mixed_key > 0) {
+            q_max = ctx.max_mixed_key / p_min;
         } else {
             q_max = std::numeric_limits<uint64_t>::max() / p_min;
         }
@@ -128,18 +128,18 @@ struct QuotientKey {
         quotients_ = sdsl::int_vector<>(ctx.n, 0, quotient_width);
     }
 
-    void store(size_t idx, uint64_t key, const Triple&, int which_h) {
+    void store(size_t idx, uint64_t mixed_key, const Triple&, int which_h) {
         assert(idx < quotients_.size());
         assert(which_h >= 0 && which_h <= 2);
 
         const size_t j = static_cast<size_t>(which_h);
         const uint64_t p = primes_[j];
-        const uint64_t q = key / p;  // q_j(x) = floor(x / p_j)
+        const uint64_t q = mixed_key / p;  // q_j(y) = floor(y / p_j)
 
         quotients_[idx] = q;
     }
 
-    bool verify(size_t idx, uint64_t key, int which_h) const {
+    bool verify(size_t idx, uint64_t mixed_key, int which_h) const {
         if (idx >= quotients_.size())
             return false;
         if (which_h < 0 || which_h > 2)
@@ -150,7 +150,7 @@ struct QuotientKey {
 
         // Check quotient: by biyectivity, B[v]=1 filter already guarantees rest matches.
         const uint64_t q_stored = quotients_[idx];
-        const uint64_t q_query = key / p;
+        const uint64_t q_query = mixed_key / p;
 
         return q_query == q_stored;
     }

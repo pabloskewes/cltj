@@ -1,4 +1,5 @@
 #pragma once
+#include "mixers.hpp"
 #include "mphf_utils.hpp"
 #include "mphf_types.hpp"
 #include "mphf_build_tracer.hpp"
@@ -245,7 +246,7 @@ class MPHF {
         // n_peeled_ before binding. Load it first, then bind.
         // Key policy payload
         // Rebind context for key policy and load its payload (if any).
-        // Note: max_key is not needed in load() since init() is not called, only bind_context().
+        // Note: max_mixed_key is not needed in load() since init() is not called, only bind_context().
         // We use n_ temporarily here; n_peeled_ is loaded right after.
         policies::KeyInitContext ctx{n_, primes_, multipliers_, biases_, segment_starts_, 0};
         key_policy_.bind_context(ctx);
@@ -303,31 +304,31 @@ class MPHF {
             residual_keys_.reserve(residual_count);
             for (uint32_t i = 0; i < static_cast<uint32_t>(triples.size()); ++i) {
                 if (!edge_removed[i]) {
-                    residual_keys_.push_back(static_cast<uint32_t>(triples[i].key));
+                    residual_keys_.push_back(static_cast<uint32_t>(triples[i].mixed_key));
                 }
             }
             std::sort(residual_keys_.begin(), residual_keys_.end());
         }
 
-        // Calculate max premixed key for quotient width (over all keys; minor over-alloc
+        // Calculate max mixed key for quotient width (over all keys; minor over-alloc
         // for residual keys is harmless since they don't get quotients).
-        uint64_t max_key = 0;
+        uint64_t max_mixed_key = 0;
         if constexpr (KeyPolicy::needs_input_stats) {
             for (auto k : keys) {
-                uint64_t y = static_cast<uint64_t>(premix32(static_cast<uint32_t>(k)));
-                if (y > max_key) max_key = y;
+                uint64_t mixed_key = static_cast<uint64_t>(premix32(static_cast<uint32_t>(k)));
+                if (mixed_key > max_mixed_key) max_mixed_key = mixed_key;
             }
         }
 
         // Initialize key policy sized to n_peeled_ (residual keys use binary search, not quotients).
-        policies::KeyInitContext ctx{n_peeled_, primes_, multipliers_, biases_, segment_starts_, max_key};
+        policies::KeyInitContext ctx{n_peeled_, primes_, multipliers_, biases_, segment_starts_, max_mixed_key};
         key_policy_.init(ctx);
         for (uint32_t i = 0; i < static_cast<uint32_t>(keys.size()); ++i) {
             if (!fully_peeled && !edge_removed[i]) continue;  // skip residual keys
             auto triple = compute_triple(keys[i]);
             int which_h = determine_which_h(triple.v0, triple.v1, triple.v2);
             uint32_t idx = query(keys[i]);
-            key_policy_.store(idx, triple.key, triple, which_h);
+            key_policy_.store(idx, triple.mixed_key, triple, which_h);
         }
 
         return true;
@@ -348,9 +349,9 @@ class MPHF {
 
         // Fallback path: residual keys are not in the BDZ structure.
         if (!residual_keys_.empty()) {
-            uint32_t pk = static_cast<uint32_t>(triple.key);
-            auto it = std::lower_bound(residual_keys_.begin(), residual_keys_.end(), pk);
-            if (it != residual_keys_.end() && *it == pk) {
+            uint32_t mixed_key_u32 = static_cast<uint32_t>(triple.mixed_key);
+            auto it = std::lower_bound(residual_keys_.begin(), residual_keys_.end(), mixed_key_u32);
+            if (it != residual_keys_.end() && *it == mixed_key_u32) {
                 return n_peeled_ + static_cast<uint32_t>(it - residual_keys_.begin());
             }
         }
@@ -377,8 +378,8 @@ class MPHF {
 
         // Fallback path: check residual (2-core) keys via binary search.
         if (!residual_keys_.empty()) {
-            uint32_t pk = static_cast<uint32_t>(triple.key);
-            if (std::binary_search(residual_keys_.begin(), residual_keys_.end(), pk))
+            uint32_t mixed_key_u32 = static_cast<uint32_t>(triple.mixed_key);
+            if (std::binary_search(residual_keys_.begin(), residual_keys_.end(), mixed_key_u32))
                 return true;
         }
 
@@ -391,7 +392,7 @@ class MPHF {
         uint32_t idx = storage_.rank(selected_vertex);
         if (idx >= n_peeled_)
             return false;
-        return key_policy_.verify(idx, triple.key, which_h);  // triple.key = premix32(key)
+        return key_policy_.verify(idx, triple.mixed_key, which_h);  // triple.mixed_key = premix32(key)
     }
 
   private:
@@ -581,15 +582,15 @@ class MPHF {
                 }
             }
 
-            uint64_t key_min = triples[0].key, key_max = triples[0].key;
+            uint64_t mixed_key_min = triples[0].mixed_key, mixed_key_max = triples[0].mixed_key;
             for (const auto& t : triples) {
-                if (t.key < key_min)
-                    key_min = t.key;
-                if (t.key > key_max)
-                    key_max = t.key;
+                if (t.mixed_key < mixed_key_min)
+                    mixed_key_min = t.mixed_key;
+                if (t.mixed_key > mixed_key_max)
+                    mixed_key_max = t.mixed_key;
             }
-            uint64_t key_range = key_max - key_min + 1;
-            double density = static_cast<double>(triples.size()) / static_cast<double>(key_range);
+            uint64_t mixed_key_range = mixed_key_max - mixed_key_min + 1;
+            double density = static_cast<double>(triples.size()) / static_cast<double>(mixed_key_range);
 
             LOG_WARN(
                 "[MPHF::peeling] Failed: peeled "
@@ -597,7 +598,7 @@ class MPHF {
                 << " | seg_min_deg={" << seg_min[0] << "," << seg_min[1] << "," << seg_min[2] << "}"
                 << " seg_max_deg={" << seg_max[0] << "," << seg_max[1] << "," << seg_max[2] << "}"
                 << " seg_deg1={" << seg_deg1[0] << "," << seg_deg1[1] << "," << seg_deg1[2] << "}"
-                << " keys=[" << key_min << ".." << key_max << "] density=" << density
+                << " mixed_keys=[" << mixed_key_min << ".." << mixed_key_max << "] density=" << density
             );
         } else {
             LOG_INFO("[MPHF::peeling] Success: peeled all " << triples.size() << " edges");
@@ -675,19 +676,6 @@ class MPHF {
     }
 
     /**
-     * @brief Bijective 32-bit premixer (MurmurHash3 finalizer variant).
-     * Destroys arithmetic structure in consecutive/arithmetic-progression keys
-     * before hashing, enabling peeling to succeed on dense key sets.
-     * Bijective over uint32_t (each step is invertible).
-     */
-    static uint32_t premix32(uint32_t x) {
-        x = ((x >> 16) ^ x) * 0x45d9f3bU;
-        x = ((x >> 16) ^ x) * 0x45d9f3bU;
-        x = (x >> 16) ^ x;
-        return x;
-    }
-
-    /**
      * @brief Compute hash function h_k(x) for k ∈ {0,1,2}
      * h_k(x) = d_k + ((a_k · x + b_k) mod r_k)
      * with r_k = primes_[k], a_k = multipliers_[k], b_k = biases_[k], d_k = segment_starts_[k].
@@ -705,12 +693,23 @@ class MPHF {
     /**
      * @brief Compute triple (v0, v1, v2) for a given key.
      * Applies premix32 before hashing to destroy arithmetic structure.
-     * triple.key stores the mixed value y = premix32(key); the key policy
-     * operates on y (not the original key) so that quotienting remains valid.
+     * triple.mixed_key stores the mixed value premix32(key); the key policy
+     * operates on that mixed value (not the original key) so that quotienting remains valid.
+     * Precondition: key must fit in uint32_t, since premix32 is defined over
+     * the uint32 domain and larger inputs would truncate silently.
      */
     Triple compute_triple(uint64_t key) const {
-        uint64_t y = static_cast<uint64_t>(premix32(static_cast<uint32_t>(key)));
-        return Triple(y, hash_function(y, 0), hash_function(y, 1), hash_function(y, 2));
+        assert(
+            key <= static_cast<uint64_t>(UINT32_MAX)
+            && "premix32 requires keys to fit in uint32_t; larger inputs would truncate"
+        );
+        uint64_t mixed_key = static_cast<uint64_t>(premix32(static_cast<uint32_t>(key)));
+        return Triple(
+            mixed_key,
+            hash_function(mixed_key, 0),
+            hash_function(mixed_key, 1),
+            hash_function(mixed_key, 2)
+        );
     }
 
     /**
