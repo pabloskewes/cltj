@@ -42,6 +42,11 @@ cmake-build-debug/
 .idea/
 plots/
 build/
+results/
 
 # Datasets
 /wikidata/
+
+# Nightly run artifacts
+mphf_trace.jsonl
+mphf_dumps.jsonl

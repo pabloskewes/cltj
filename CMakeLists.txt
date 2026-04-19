@@ -13,7 +13,7 @@ endif()
 # Options to control permissive mode and libc++ usage
 option(CLTJ_PERMISSIVE "Add -fpermissive to mimic legacy builds" ON)
 option(CLTJ_USE_LIBCXX "Force -stdlib=libc++ (needed mainly on macOS)" ON)
-option(CLTJ_COLLECT_QUERY_STATS "Collect intersection stats (disable for clean benchmarks)" ON)
+option(CLTJ_COLLECT_QUERY_STATS "Collect intersection stats (disable for clean benchmarks)" OFF)
 option(CLTJ_COLLECT_MPHF_BUILD_TRACE "Trace MPHF build per-node (JSONL output)" OFF)
 option(CLTJ_DUMP_MPHF_KEYS "Dump key sets for failed MPHF builds (binary)" OFF)
 set(CLTJ_LEGACY_CXX_STANDARD 11 CACHE STRING "C++ standard for legacy targets")

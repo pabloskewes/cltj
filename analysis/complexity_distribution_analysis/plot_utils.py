@@ -13,29 +13,28 @@ def plot_scatter_alt_vs_min(
     title: str = "Alternation Complexity vs Minimum Size",
     x_col: str = ALT_COL,
     y_col: str = MIN_COL,
-):
+) -> plt.Figure:
     """
     Plot a scatter plot of alternation complexity vs minimum size.
     """
-    plt.figure(figsize=(8, 6))
-    plt.scatter(df[x_col], df[y_col], alpha=0.5)
-    plt.xlabel(x_col)
-    plt.ylabel(y_col)
-    plt.title(title)
-    plt.grid(True, which="both", ls="--", alpha=0.7)
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.scatter(df[x_col], df[y_col], alpha=0.5)
+    ax.set_xlabel(x_col)
+    ax.set_ylabel(y_col)
+    ax.set_title(title)
+    ax.grid(True, which="both", ls="--", alpha=0.7)
 
-    plt.xscale("log")
-    plt.yscale("log")
+    ax.set_xscale("log")
+    ax.set_yscale("log")
 
-    # add x=y reference line
     lims = [
         np.min([df[x_col].min(), df[y_col].min()]),
         np.max([df[x_col].max(), df[y_col].max()]),
     ]
-    plt.plot(lims, lims, "r--", label="x = y")
-    plt.legend()
+    ax.plot(lims, lims, "r--", label="x = y")
+    ax.legend()
 
-    plt.show()
+    return fig
 
 
 def plot_boxplot_alt_vs_min(
@@ -43,18 +42,18 @@ def plot_boxplot_alt_vs_min(
     title: str = "Alternation Complexity vs q * min",
     x_col: str = ALT_COL,
     y_col: str = MIN_COL,
-):
+) -> plt.Figure:
     """
     Plot a boxplot of alternation complexity vs minimum size.
     """
-    plt.figure(figsize=(8, 6))
-    plt.boxplot(
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.boxplot(
         [df[x_col], df[y_col]],
         tick_labels=[x_col, y_col],
         patch_artist=True,
     )
-    plt.title(title)
-    plt.yscale("log")
-    plt.ylabel("Value (log scale)")
-    plt.grid(True, axis="y", linestyle="--", alpha=0.7)
-    plt.show()
+    ax.set_title(title)
+    ax.set_yscale("log")
+    ax.set_ylabel("Value (log scale)")
+    ax.grid(True, axis="y", linestyle="--", alpha=0.7)
+    return fig

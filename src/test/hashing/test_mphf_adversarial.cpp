@@ -274,7 +274,7 @@ TestResult test_zero_quotient_edge_case() {
 
         // Generate keys guaranteed to have q=0
         std::vector<uint64_t> small_keys;
-        const size_t N = std::min(10000ULL, p_min);
+        const size_t N = std::min(static_cast<uint64_t>(10000), p_min);
         for (uint64_t i = 0; i < N; ++i) {
             small_keys.push_back(i);
         }
@@ -403,6 +403,11 @@ TestResult test_dense_cluster_attack() {
 
 /**
  * TEST 1.4: 64-bit Boundary (Arithmetic Overflow)
+ *
+ * Note: under the current premix32 design, this tier is also expected to expose
+ * the uint32 domain boundary of the mixer. False positives here are not
+ * necessarily a regression in the MPHF logic; they can simply reflect inputs
+ * that fall outside the supported premix domain.
  *
  * Validates correct behavior with overflow of uint64_t in hash function.
  *

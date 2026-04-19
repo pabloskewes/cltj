@@ -1,4 +1,5 @@
 #pragma once
+#include "mixers.hpp"
 #include "mphf_utils.hpp"
 #include "mphf_types.hpp"
 #include "mphf_build_tracer.hpp"
@@ -10,23 +11,28 @@
 #include <cassert>
 #include <cmath>
 #include <cstdint>
-#include <list>
 #include <queue>
 #include <random>
 #include <sdsl/bit_vectors.hpp>
 #include <sdsl/rank_support_v.hpp>
 #include <sdsl/structure_tree.hpp>
 #include <sdsl/util.hpp>
-#include <stack>
 #include <vector>
-#include <tuple>
 #include <type_traits>
 
 namespace cltj {
 namespace hashing {
 
 /**
- * @brief Size breakdown structure for MPHF components
+ * @brief Size breakdown of all MPHF components in bytes.
+ *
+ * Components:
+ *   - g_bytes        : G array (main peeling payload).
+ *   - used_pos_bytes : B bitvector marking used slots.
+ *   - rank_bytes     : rank support over B.
+ *   - q_bytes        : key payload (FullKey, QuotientKey, ...).
+ *   - other_bytes    : serialized metadata (n, prime deltas, retry_count, n_peeled).
+ *   - fallback_bytes : fallback system residual array (sorted residual keys).
  */
 struct SizeBreakdown {
     size_t g_bytes = 0;
@@ -34,20 +40,28 @@ struct SizeBreakdown {
     size_t rank_bytes = 0;
     size_t q_bytes = 0;
     size_t other_bytes = 0;
+    size_t fallback_bytes = 0;
 
-    size_t total_bytes() const { return g_bytes + used_pos_bytes + rank_bytes + q_bytes + other_bytes; }
+    size_t total_bytes() const {
+        return g_bytes + used_pos_bytes + rank_bytes + q_bytes + other_bytes + fallback_bytes;
+    }
 };
 
 /**
  * @brief Minimal Perfect Hash Function (MPHF) Builder using MWHC/BDZ algorithm
  *
  * Algorithm overview:
- * 1. Map each key to a triple (v0, v1, v2) using 3 hash functions
- * 2. Build a 3-uniform hypergraph and perform "peeling" to get topological
- * order
- * 3. Assign values to array G such that each triple has a unique "winner"
- * vertex
- * 4. Use a bitvector to compact the hash function to minimal range [0,n)
+ * 1. Apply premix32 to the input keys, then map each key to a triple (v0, v1, v2)
+ *    using 3 hash functions
+ * 2. Build a 3-uniform hypergraph and perform "peeling" to get topological order
+ * 3. Assign values to array G such that each triple has a unique "winner" vertex
+ * 4. Use a bitvector to compact the hash function to minimal range [0, n)
+ *
+ * Fallback system: if peeling leaves a small residual 2-core, keep the peeled BDZ
+ * path and store the residual keys in a sorted array for binary-search lookup.
+ *
+ * @tparam StorageStrategy  storage layout for G, B and rank support.
+ * @tparam KeyPolicy        payload policy for membership / reconstruction.
  */
 template <typename StorageStrategy = BaselineStorage, typename KeyPolicy = policies::NoKey>
 class MPHF {
@@ -71,6 +85,12 @@ class MPHF {
     uint8_t retry_count_;  // Number of retries used in last build (stored for serialization)
     uint32_t last_peeled_ = 0;  // Edges peeled in last try_build (for tracing)
 
+    // Fallback system
+    static constexpr uint32_t MAX_FALLBACK_RESIDUAL = 10000;  // max 2-core size accepted as fallback
+    static constexpr int MIN_RETRIES_BEFORE_FALLBACK = 2;  // full-peel attempts before fallback kicks in
+    std::vector<uint32_t> residual_keys_;  // sorted premixed keys of the accepted 2-core
+    uint32_t n_peeled_ = 0;  // |peeled subset|; residual keys live in [n_peeled_, n_)
+
   public:
     using size_type = size_t;  // Required for sdsl::size_in_bytes
 
@@ -78,6 +98,7 @@ class MPHF {
         : m_(0),
           n_(0),
           retry_count_(0),
+          n_peeled_(0),
           primes_{0, 0, 0},
           multipliers_{0, 0, 0},
           biases_{0, 0, 0},
@@ -99,6 +120,7 @@ class MPHF {
 
     /**
      * @brief Build MPHF with tracing support.
+     * Repeats try_build() with different seeds until success or MAX_RETRIES is exhausted.
      * Timing is only measured when Tracer::is_enabled is true (zero-cost otherwise).
      */
     template <typename Tracer>
@@ -123,6 +145,9 @@ class MPHF {
     uint32_t n() const { return n_; }
     uint32_t m() const { return m_; }
     int retry_count() const { return retry_count_; }
+    uint32_t n_peeled() const { return n_peeled_; }
+    uint32_t n_residual() const { return static_cast<uint32_t>(residual_keys_.size()); }
+    bool has_fallback() const { return !residual_keys_.empty(); }
 
     /**
      * @brief Get detailed size breakdown of all MPHF components
@@ -135,9 +160,11 @@ class MPHF {
         breakdown.used_pos_bytes = storage_breakdown.used_pos_bytes;
         breakdown.rank_bytes = storage_breakdown.rank_bytes;
         breakdown.q_bytes = key_policy_.size_in_bytes();
-        // Metadata: n (4) + 3×prime_deltas (3) + retry_count (1) = 8 bytes
+        // Metadata: n (4) + 3×prime_deltas (3) + retry_count (1) + n_peeled (4) = 12 bytes
         // Note: m_ and primes_ are not serialized (computed/reconstructed)
-        breakdown.other_bytes = sizeof(n_) + 3 * sizeof(uint8_t) + sizeof(retry_count_);
+        breakdown.other_bytes = sizeof(n_) + 3 * sizeof(uint8_t) + sizeof(retry_count_) + sizeof(n_peeled_);
+        breakdown.fallback_bytes = sizeof(uint32_t)  // residual_count field
+            + residual_keys_.size() * sizeof(uint32_t);
         return breakdown;
     }
 
@@ -155,6 +182,7 @@ class MPHF {
     /**
      * @brief Serialize the MPHF to an output stream.
      * Conforms to the SDSL serialization interface.
+     * Persists the peeled BDZ state, KeyPolicy payload and Fallback system state.
      * @param out The output stream.
      * @param v The structure tree node (for visualization).
      * @param name The name for the structure tree node.
@@ -165,12 +193,11 @@ class MPHF {
             sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
         size_t written_bytes = 0;
 
-        // Core data structures (essential for queries)
+        // Core query state
         written_bytes += storage_.serialize(out, child, "storage_");
         written_bytes += sdsl::write_member(n_, out, child, "n_");
 
-        // Hash function parameters (essential for queries)
-        // Store p_j as delta_j = p_j - target_segment
+        // Hash parameters, encoded as p_j - target_segment
         const uint64_t target_segment = compute_target_segment();
         for (int k = 0; k < 3; ++k) {
             uint64_t delta = primes_[k] - target_segment;
@@ -180,8 +207,16 @@ class MPHF {
         }
         written_bytes += sdsl::write_member(retry_count_, out, child, "retry_count_");
 
-        // Key policy payload (e.g., QuotientKey or FullKey data)
+        // KeyPolicy payload
         written_bytes += key_policy_.serialize(out, child, "key_policy_");
+
+        // Fallback system state
+        written_bytes += sdsl::write_member(n_peeled_, out, child, "n_peeled_");
+        uint32_t residual_count = static_cast<uint32_t>(residual_keys_.size());
+        written_bytes += sdsl::write_member(residual_count, out, child, "residual_count");
+        for (uint32_t rk : residual_keys_) {
+            written_bytes += sdsl::write_member(rk, out, child, "rk");
+        }
 
         sdsl::structure_tree::add_size(child, written_bytes);
         return written_bytes;
@@ -189,15 +224,15 @@ class MPHF {
 
     /**
      * @brief Load the MPHF from an input stream.
+     * Reconstructs the peeled BDZ state, KeyPolicy payload and Fallback system state.
      * @param in The input stream.
      */
     void load(std::istream& in) {
-        // Core data structures
+        // Core query state
         storage_.load(in);
         sdsl::read_member(n_, in);
 
-        // Hash function parameters
-        // Reconstruct primes from delta_j = p_j - target_segment
+        // Hash parameters, decoded from p_j - target_segment
         const uint64_t target_segment = compute_target_segment();
         for (int k = 0; k < 3; ++k) {
             uint8_t delta;
@@ -208,32 +243,42 @@ class MPHF {
 
         m_ = static_cast<uint32_t>(primes_[0] + primes_[1] + primes_[2]);
 
-        // Recompute segment_starts from primes
+        // Rebuild derived hash state
         segment_starts_[0] = 0;
         segment_starts_[1] = primes_[0];
         segment_starts_[2] = primes_[0] + primes_[1];
 
         regenerate_coefficients();
 
-        // Rebind context for key policy and load its payload (if any).
-        // Note: max_key is not needed in load() since init() is not called, only bind_context().
+        // KeyPolicy only needs the hash parameters rebound before load().
         policies::KeyInitContext ctx{n_, primes_, multipliers_, biases_, segment_starts_, 0};
         key_policy_.bind_context(ctx);
         key_policy_.load(in);
+
+        // Fallback system state
+        sdsl::read_member(n_peeled_, in);
+        uint32_t residual_count = 0;
+        sdsl::read_member(residual_count, in);
+        residual_keys_.resize(residual_count);
+        for (uint32_t i = 0; i < residual_count; ++i) {
+            sdsl::read_member(residual_keys_[i], in);
+        }
     }
 
     /**
-     * @brief Single attempt to build MPHF
+     * @brief Single attempt to build MPHF.
+     *
      * Algorithm:
-     * 1. Initialize hash functions and arrays
-     * 2. Generate triples for all keys
-     * 3. Perform peeling to get topological ordering
-     * 4. Assign G array values in reverse order
-     * 5. Build compactification structures
-     * @param keys Vector of keys to hash
-     * @param retry_count Number of previous failed attempts (affects hash
-     * parameters)
-     * @return true if successful, false if need to retry
+     * 1. Initialize hash functions and storage for this retry.
+     * 2. Generate one triple per key.
+     * 3. Peel the 3-uniform hypergraph to obtain a topological ordering.
+     * 4. If a small residual 2-core survives and is eligible for the Fallback
+     *    system, accept the partial peel; otherwise request another retry.
+     * 5. Assign G values on the peeled subset and build rank support.
+     * 6. Initialize the KeyPolicy on the peeled prefix and store residual keys
+     *    in sorted order for binary-search lookup.
+     *
+     * @return true on full peel or accepted fallback; false to request a retry.
      */
     bool try_build(const std::vector<uint64_t>& keys, int retry_count) {
         if (!initialize_hash_functions(keys, retry_count)) {
@@ -243,30 +288,59 @@ class MPHF {
         std::vector<Triple> triples = generate_triples(keys);
 
         std::vector<Triple> peeling_order;
-        if (!perform_peeling(triples, peeling_order)) {
-            return false;  // Graph not peelable, need to retry
+        std::vector<uint8_t> edge_removed;
+        bool fully_peeled = perform_peeling(triples, peeling_order, edge_removed);
+
+        uint32_t residual_count = static_cast<uint32_t>(triples.size() - peeling_order.size());
+
+        if (!fully_peeled) {
+            if (residual_count > MAX_FALLBACK_RESIDUAL || retry_count < MIN_RETRIES_BEFORE_FALLBACK)
+                return false;
+            LOG_WARN(
+                "[MPHF::fallback] Accepting partial peel: peeled="
+                << peeling_order.size() << "/" << triples.size() << " residual=" << residual_count
+            );
         }
 
-        assign_g_values(peeling_order);
+        n_peeled_ = static_cast<uint32_t>(peeling_order.size());
 
+        assign_g_values(peeling_order);
         storage_.build_rank();
 
-        // Calculate max_key if the policy needs it
-        uint64_t max_key = 0;
+        // Residual keys are stored sorted for binary-search lookup.
+        residual_keys_.clear();
+        if (!fully_peeled) {
+            residual_keys_.reserve(residual_count);
+            for (uint32_t i = 0; i < static_cast<uint32_t>(triples.size()); ++i) {
+                if (!edge_removed[i]) {
+                    residual_keys_.push_back(static_cast<uint32_t>(triples[i].mixed_key));
+                }
+            }
+            std::sort(residual_keys_.begin(), residual_keys_.end());
+        }
+
+        // Quotient width uses the max mixed key over the full input.
+        uint64_t max_mixed_key = 0;
         if constexpr (KeyPolicy::needs_input_stats) {
-            if (!keys.empty()) {
-                max_key = *std::max_element(keys.begin(), keys.end());
+            for (auto k : keys) {
+                uint64_t mixed_key = static_cast<uint64_t>(premix32(static_cast<uint32_t>(k)));
+                if (mixed_key > max_mixed_key)
+                    max_mixed_key = mixed_key;
             }
         }
 
-        // Initialize key policy and store per-key payloads
-        policies::KeyInitContext ctx{n_, primes_, multipliers_, biases_, segment_starts_, max_key};
+        // KeyPolicy only covers the peeled prefix.
+        policies::KeyInitContext ctx{
+            n_peeled_, primes_, multipliers_, biases_, segment_starts_, max_mixed_key
+        };
         key_policy_.init(ctx);
-        for (auto key : keys) {
-            auto triple = compute_triple(key);
+        for (uint32_t i = 0; i < static_cast<uint32_t>(keys.size()); ++i) {
+            if (!fully_peeled && !edge_removed[i])
+                continue;
+            auto triple = compute_triple(keys[i]);
             int which_h = determine_which_h(triple.v0, triple.v1, triple.v2);
-            uint32_t idx = query(key);
-            key_policy_.store(idx, key, triple, which_h);
+            uint32_t idx = query(keys[i]);
+            key_policy_.store(idx, triple.mixed_key, triple, which_h);
         }
 
         return true;
@@ -276,32 +350,33 @@ class MPHF {
      * @brief Query the MPHF for a key
      * Algorithm:
      * 1. Compute triple (v0, v1, v2)
-     * 2. Compute j = (G[v0] + G[v1] + G[v2]) mod 3
-     * 3. Select vertex based on j
-     * 4. Apply rank operation for compactification
+     * 2. If the key belongs to the Fallback system, return its residual index
+     * 3. Compute j = (G[v0] + G[v1] + G[v2]) mod 3
+     * 4. Select vertex based on j
+     * 5. Apply rank operation for compactification
      * @param key Key to query
      * @return Hash value in range [0, n)
      */
     uint32_t query(uint64_t key) const {
+        auto triple = compute_triple(key);
+
+        // Residual keys bypass the BDZ path.
+        if (!residual_keys_.empty()) {
+            uint32_t mixed_key_u32 = static_cast<uint32_t>(triple.mixed_key);
+            auto it = std::lower_bound(residual_keys_.begin(), residual_keys_.end(), mixed_key_u32);
+            if (it != residual_keys_.end() && *it == mixed_key_u32) {
+                return n_peeled_ + static_cast<uint32_t>(it - residual_keys_.begin());
+            }
+        }
+
         if (storage_.m() == 0) {
             return 0;
         }
 
-        auto triple = compute_triple(key);
-
-        // Compute j = (G[v0] + G[v1] + G[v2]) mod 3
+        // Peeled BDZ path.
         uint32_t j = (storage_.g_get(triple.v0) + storage_.g_get(triple.v1) + storage_.g_get(triple.v2)) % 3;
-
-        // Select v_j
         uint32_t selected_vertex = triple.v(static_cast<int>(j));
-
-        // Apply rank operation for compactification
-        uint32_t res = storage_.rank(selected_vertex);
-
-        // std::cout << "[MPHF::query] key=" << key << " triple=(" << triple.v0 << ", " << triple.v1 << ", "
-        //           << triple.v2 << ") j=" << j << " sel=" << selected_vertex
-        //           << " -> res=" << res << "\n";
-        return res;
+        return storage_.rank(selected_vertex);
     }
 
     /**
@@ -313,15 +388,24 @@ class MPHF {
             return false;
 
         auto triple = compute_triple(key);
+
+        // Fallback path: check residual keys via binary search.
+        if (!residual_keys_.empty()) {
+            uint32_t mixed_key_u32 = static_cast<uint32_t>(triple.mixed_key);
+            if (std::binary_search(residual_keys_.begin(), residual_keys_.end(), mixed_key_u32))
+                return true;
+        }
+
+        // Peeled BDZ path.
         int which_h = determine_which_h(triple.v0, triple.v1, triple.v2);
         uint32_t selected_vertex = triple.v(which_h);
         if (!storage_.is_vertex_occupied(selected_vertex)) {
             return false;
         }
         uint32_t idx = storage_.rank(selected_vertex);
-        if (idx >= n_)
+        if (idx >= n_peeled_)
             return false;
-        return key_policy_.verify(idx, key, which_h);
+        return key_policy_.verify(idx, triple.mixed_key, which_h);
     }
 
   private:
@@ -412,12 +496,18 @@ class MPHF {
 
     // ========== STEP 3: Peeling Algorithm ==========
     /**
-     * @brief Perform peeling algorithm to find processing order
+     * @brief Perform peeling algorithm to find processing order.
      * @param triples Input triples
-     * @param peeling_order Output order (topological sort)
-     * @return true if peeling successful (graph is peelable)
+     * @param peeling_order Output order (topological sort of peeled edges)
+     * @param edge_removed_out Output: edge_removed[i]=1 iff edge i was peeled.
+     *        Populated regardless of success/failure; used by try_build for fallback.
+     * @return true if all edges were peeled (full success)
      */
-    bool perform_peeling(const std::vector<Triple>& triples, std::vector<Triple>& peeling_order) {
+    bool perform_peeling(
+        const std::vector<Triple>& triples,
+        std::vector<Triple>& peeling_order,
+        std::vector<uint8_t>& edge_removed_out
+    ) {
         peeling_order.clear();
         if (m_ == 0 || triples.empty()) {
             return false;
@@ -505,15 +595,15 @@ class MPHF {
                 }
             }
 
-            uint64_t key_min = triples[0].key, key_max = triples[0].key;
+            uint64_t mixed_key_min = triples[0].mixed_key, mixed_key_max = triples[0].mixed_key;
             for (const auto& t : triples) {
-                if (t.key < key_min)
-                    key_min = t.key;
-                if (t.key > key_max)
-                    key_max = t.key;
+                if (t.mixed_key < mixed_key_min)
+                    mixed_key_min = t.mixed_key;
+                if (t.mixed_key > mixed_key_max)
+                    mixed_key_max = t.mixed_key;
             }
-            uint64_t key_range = key_max - key_min + 1;
-            double density = static_cast<double>(triples.size()) / static_cast<double>(key_range);
+            uint64_t mixed_key_range = mixed_key_max - mixed_key_min + 1;
+            double density = static_cast<double>(triples.size()) / static_cast<double>(mixed_key_range);
 
             LOG_WARN(
                 "[MPHF::peeling] Failed: peeled "
@@ -521,11 +611,12 @@ class MPHF {
                 << " | seg_min_deg={" << seg_min[0] << "," << seg_min[1] << "," << seg_min[2] << "}"
                 << " seg_max_deg={" << seg_max[0] << "," << seg_max[1] << "," << seg_max[2] << "}"
                 << " seg_deg1={" << seg_deg1[0] << "," << seg_deg1[1] << "," << seg_deg1[2] << "}"
-                << " keys=[" << key_min << ".." << key_max << "] density=" << density
+                << " mixed_keys=[" << mixed_key_min << ".." << mixed_key_max << "] density=" << density
             );
         } else {
             LOG_INFO("[MPHF::peeling] Success: peeled all " << triples.size() << " edges");
         }
+        edge_removed_out = std::move(edge_removed);
         return ok;
     }
 
@@ -613,11 +704,22 @@ class MPHF {
     }
 
     /**
-     * @brief Compute triple (v0, v1, v2) for a given key
-     * Each hash function maps to its own segment of the vertex space
+     * @brief Compute triple (v0, v1, v2) for a given key.
+     * Applies premix32 before hashing to destroy arithmetic structure.
+     * triple.mixed_key stores the mixed value premix32(key); the key policy
+     * operates on that mixed value (not the original key) so that quotienting remains valid.
+     * Precondition: key must fit in uint32_t, since premix32 is defined over
+     * the uint32 domain and larger inputs would truncate silently.
      */
     Triple compute_triple(uint64_t key) const {
-        return Triple(key, hash_function(key, 0), hash_function(key, 1), hash_function(key, 2));
+        assert(
+            key <= static_cast<uint64_t>(UINT32_MAX) &&
+            "premix32 requires keys to fit in uint32_t; larger inputs would truncate"
+        );
+        uint64_t mixed_key = static_cast<uint64_t>(premix32(static_cast<uint32_t>(key)));
+        return Triple(
+            mixed_key, hash_function(mixed_key, 0), hash_function(mixed_key, 1), hash_function(mixed_key, 2)
+        );
     }
 
     /**

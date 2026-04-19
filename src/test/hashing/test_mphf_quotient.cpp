@@ -19,26 +19,27 @@ struct TestDataset {
     std::vector<uint64_t> guaranteed_non_keys;
 };
 
-std::vector<uint64_t> make_random_keys(size_t n, uint64_t seed) {
-    std::unordered_set<uint64_t> unique;
-    unique.reserve(n);
-    std::mt19937_64 rng(seed);
-    while (unique.size() < n) {
-        unique.insert(rng());
-    }
-    return std::vector<uint64_t>(unique.begin(), unique.end());
-}
+// All key generators use uint32 range because premix32 maps keys to [0, 2^32)
+// before hashing. Using 64-bit keys would risk silent 32-bit collisions between
+// keys and non-keys, causing spurious test failures.
 
 TestDataset make_random_dataset(size_t n, uint64_t seed) {
     TestDataset dataset;
-    dataset.name = "random";
-    dataset.keys = make_random_keys(n, seed);
-    std::mt19937_64 rng(seed ^ 0xABCDEF1234567890ULL);
+    dataset.name = "random-u32";
+    std::unordered_set<uint64_t> key_set;
+    key_set.reserve(n);
+    std::mt19937 rng(static_cast<uint32_t>(seed));
+    while (key_set.size() < n) {
+        key_set.insert(static_cast<uint64_t>(rng()));
+    }
+    dataset.keys.assign(key_set.begin(), key_set.end());
+
+    std::mt19937 rng_nk(static_cast<uint32_t>(seed ^ 0xABCDEF12ULL));
     for (size_t i = 0; i < n; ++i) {
         uint64_t candidate;
         do {
-            candidate = rng();
-        } while (std::find(dataset.keys.begin(), dataset.keys.end(), candidate) != dataset.keys.end());
+            candidate = static_cast<uint64_t>(rng_nk());
+        } while (key_set.count(candidate));
         dataset.guaranteed_non_keys.push_back(candidate);
     }
     return dataset;
@@ -46,12 +47,12 @@ TestDataset make_random_dataset(size_t n, uint64_t seed) {
 
 TestDataset make_even_odd_dataset(size_t n) {
     TestDataset dataset;
-    dataset.name = "even";
+    dataset.name = "even-odd-u32";
     std::unordered_set<uint64_t> unique;
     unique.reserve(n);
-    std::mt19937_64 rng(0xEADDA11CEULL);
+    std::mt19937 rng(static_cast<uint32_t>(0xEADDA11CEULL));
     while (unique.size() < n) {
-        uint64_t value = rng() & ~uint64_t(1);  // force even
+        uint64_t value = static_cast<uint64_t>(rng()) & ~uint64_t(1);
         unique.insert(value);
     }
     for (auto v : unique) {
@@ -61,7 +62,37 @@ TestDataset make_even_odd_dataset(size_t n) {
     return dataset;
 }
 
-bool run_dataset_test(const TestDataset& dataset) {
+// Adversarial: consecutive keys [base, base+n). This is the primary case premix32
+// is designed to solve — dense arithmetic structure that causes peeling failure
+// with linear hash families.
+TestDataset make_consecutive_dataset(size_t n, uint64_t base = 0) {
+    TestDataset dataset;
+    dataset.name = "consecutive-" + std::to_string(base) + "+" + std::to_string(n);
+    for (size_t i = 0; i < n; ++i) {
+        dataset.keys.push_back(base + i);
+    }
+    for (size_t i = 1; i <= n; ++i) {
+        dataset.guaranteed_non_keys.push_back(base + n + i);
+    }
+    return dataset;
+}
+
+// Adversarial: arithmetic progression {base, base+step, base+2*step, ...}.
+// Exercises the remainder-zero failure mode (all keys share residue structure).
+TestDataset make_arithmetic_progression_dataset(size_t n, uint64_t base, uint64_t step) {
+    TestDataset dataset;
+    dataset.name = "arith-step" + std::to_string(step);
+    for (size_t i = 0; i < n; ++i) {
+        dataset.keys.push_back(base + i * step);
+    }
+    for (size_t i = 0; i < n; ++i) {
+        dataset.guaranteed_non_keys.push_back(base + i * step + 1);
+    }
+    return dataset;
+}
+
+bool run_dataset_test(const TestDataset& dataset,
+                      uint64_t max_key_domain = std::numeric_limits<uint64_t>::max()) {
     MPHF<GlGhStorage, QuotientKey> mphf;
     if (!mphf.build(dataset.keys)) {
         std::cerr << "QuotientKey test failure: build failed for dataset " << dataset.name << "."
@@ -93,10 +124,13 @@ bool run_dataset_test(const TestDataset& dataset) {
         return false;
     }
 
+    // Under premix32, key+product no longer targets the algebraic collision it was designed
+    // for (premix destroys the linear relationship). It effectively tests that an arbitrary
+    // non-key in a different region of the uint64 space is rejected.
     for (auto key : dataset.keys) {
         __uint128_t fake128 = static_cast<__uint128_t>(key) + jump128;
         if (fake128 >= (static_cast<__uint128_t>(1) << 64)) {
-            continue;  // Skip overflow; extremely unlikely but safe.
+            continue;
         }
         uint64_t fake = static_cast<uint64_t>(fake128);
         if (mphf.contains(fake)) {
@@ -109,7 +143,10 @@ bool run_dataset_test(const TestDataset& dataset) {
     auto breakdown = mphf.get_size_breakdown();
     double q_bits_per_key = (breakdown.q_bytes * 8.0) / static_cast<double>(dataset.keys.size());
     uint64_t p_min = std::min({primes[0], primes[1], primes[2]});
-    uint64_t q_max = std::numeric_limits<uint64_t>::max() / p_min;
+    // q_max reflects the highest possible premixed key value divided by the smallest prime.
+    // For 64-bit keys: max_key_domain = UINT64_MAX.
+    // For 32-bit keys (e.g. Wikidata IDs): max_key_domain = UINT32_MAX.
+    uint64_t q_max = max_key_domain / p_min;
     double expected_width = static_cast<double>(sdsl::bits::hi(q_max) + 1);
     if (q_bits_per_key < expected_width || q_bits_per_key > expected_width + 0.5) {
         std::cerr << "QuotientKey test failure: q_bits_per_key=" << q_bits_per_key
@@ -124,17 +161,42 @@ bool run_dataset_test(const TestDataset& dataset) {
 }  // namespace
 
 int main() {
-    std::vector<TestDataset> datasets;
-    datasets.push_back(make_random_dataset(4000, 0xDEADBEEF12345678ULL));
-    datasets.push_back(make_random_dataset(8000, 0xBADCAFE987654321ULL));
-    datasets.push_back(make_even_odd_dataset(2048));
+    // premix32 maps all keys to [0, 2^32) before hashing, so the effective quotient
+    // domain is bounded by UINT32_MAX regardless of input key width.
+    constexpr uint64_t premix_domain = std::numeric_limits<uint32_t>::max();
+    int n_passed = 0;
 
-    for (const auto& dataset : datasets) {
-        if (!run_dataset_test(dataset)) {
+    // --- Group 1: Random keys (uint32 range) ---
+    std::vector<TestDataset> random_datasets;
+    random_datasets.push_back(make_random_dataset(4000, 0xDEADBEEF12345678ULL));
+    random_datasets.push_back(make_random_dataset(8000, 0xBADCAFE987654321ULL));
+    random_datasets.push_back(make_even_odd_dataset(2048));
+
+    for (const auto& dataset : random_datasets) {
+        if (!run_dataset_test(dataset, premix_domain)) {
             return 1;
         }
+        std::cout << "  PASS: " << dataset.name << " (n=" << dataset.keys.size() << ")" << std::endl;
+        ++n_passed;
     }
 
-    std::cout << "QuotientKey tests passed." << std::endl;
+    // --- Group 2: Adversarial — consecutive and arithmetic keys ---
+    // These are the cases that caused peeling failure before premix32.
+    std::vector<TestDataset> adversarial_datasets;
+    adversarial_datasets.push_back(make_consecutive_dataset(1000));
+    adversarial_datasets.push_back(make_consecutive_dataset(5000));
+    adversarial_datasets.push_back(make_consecutive_dataset(5000, 100000));
+    adversarial_datasets.push_back(make_arithmetic_progression_dataset(1000, 3, 3));
+    adversarial_datasets.push_back(make_arithmetic_progression_dataset(2000, 0, 7));
+
+    for (const auto& dataset : adversarial_datasets) {
+        if (!run_dataset_test(dataset, premix_domain)) {
+            return 1;
+        }
+        std::cout << "  PASS: " << dataset.name << " (n=" << dataset.keys.size() << ")" << std::endl;
+        ++n_passed;
+    }
+
+    std::cout << "QuotientKey tests: all " << n_passed << " datasets passed." << std::endl;
     return 0;
 }

@@ -118,7 +118,13 @@ int main(int argc, char** argv) {
     tracer.flush();
 
     if (ok) {
-        std::cout << "Result: SUCCESS (retry=" << mphf.retry_count() << ")\n";
+        std::cout << "Result: SUCCESS"
+                  << " retry=" << mphf.retry_count()
+                  << " n_peeled=" << mphf.n_peeled()
+                  << " n_residual=" << mphf.n_residual()
+                  << " has_fallback=" << (mphf.has_fallback() ? "yes" : "no")
+                  << " size_bytes=" << mphf.size_in_bytes()
+                  << "\n";
         return 0;
     } else {
         std::cout << "Result: FAILED (all " << mphf.retry_count() << " retries exhausted)\n";
