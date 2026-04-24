@@ -10,6 +10,7 @@
 #include <sdsl/select_support_mcl.hpp>
 #include <sdsl/vectors.hpp>
 #include <string>
+#include <utility>
 #include <vector>
 #include <hashing/key_dumper.hpp>
 #include <hashing/mphf_bdz.hpp>
@@ -112,11 +113,33 @@ class compact_metatrie_hash {
 
     size_type mphf_count() const { return m_mphfs.size(); }
 
+    /** 
+     * @brief True iff the node at LOUDS position @p node_pos has an MPHF overlay.
+     * @param node_pos LOUDS position of the node to check
+     * @return True if the node has an MPHF overlay, false otherwise.
+     */
     bool node_has_hash(size_type node_pos) const { return m_has_hash[node_pos]; }
 
+    /** 
+     * @brief O(1) membership check: is @p key a child of the hashed node at @p node_pos?
+     * @param node_pos LOUDS position of the node to check
+     * @param key The key to check
+     * @return True if @p key is a child, false otherwise.
+     */
     bool hash_contains(size_type node_pos, value_type key) const {
         size_type mphf_idx = m_hash_rank(node_pos);
         return m_mphfs[mphf_idx].contains(static_cast<uint64_t>(key));
+    }
+
+    /** 
+     * @brief Membership + slot in one pass: 
+     * @param node_pos LOUDS position of the node to check
+     * @param key The key to check
+     * @return {true, slot} if @p key is a child, {false, 0} otherwise.
+     */
+    std::pair<bool, uint32_t> hash_locate(size_type node_pos, value_type key) const {
+        size_type mphf_idx = m_hash_rank(node_pos);
+        return m_mphfs[mphf_idx].locate(static_cast<uint64_t>(key));
     }
 
     /*
