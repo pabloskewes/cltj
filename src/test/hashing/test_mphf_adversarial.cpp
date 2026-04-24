@@ -117,10 +117,10 @@ class TestReport {
 /**
  * @brief Generate random keys with controlled distribution
  * @param n Number of keys to generate
- * @param max_value Maximum value for keys (default: UINT64_MAX)
+ * @param max_value Maximum value for keys (default: UINT32_MAX, because premix32 maps keys to [0, 2^32))
  * @param seed Random seed for reproducibility
  */
-std::vector<uint64_t> generate_random_keys(size_t n, uint64_t seed = 42, uint64_t max_value = UINT64_MAX) {
+std::vector<uint64_t> generate_random_keys(size_t n, uint64_t seed = 42, uint64_t max_value = UINT32_MAX) {
     std::vector<uint64_t> keys;
     keys.reserve(n);
 
@@ -194,25 +194,19 @@ TestResult test_dopplerganger_attack() {
         for (uint64_t x : keys) {
             for (uint64_t p : primes) {
                 // Impostor up: x' = x + p (same r, q' = q+1)
-                if (x <= UINT64_MAX - p) {
-                    uint64_t impostor = x + p;
-                    bool contains_result = mphf.contains(impostor);
-
+                uint64_t impostor_up = x + p;
+                if (impostor_up <= UINT32_MAX) {
                     result.checks_run++;
-                    if (contains_result) {
+                    if (mphf.contains(impostor_up))
                         result.false_positives++;
-                    }
                 }
 
                 // Impostor down: x' = x - p (same r, q' = q-1)
                 if (x >= p) {
-                    uint64_t impostor = x - p;
-                    bool contains_result = mphf.contains(impostor);
-
+                    uint64_t impostor_down = x - p;
                     result.checks_run++;
-                    if (contains_result) {
+                    if (mphf.contains(impostor_down))
                         result.false_positives++;
-                    }
                 }
             }
         }
@@ -402,41 +396,29 @@ TestResult test_dense_cluster_attack() {
 }
 
 /**
- * TEST 1.4: 64-bit Boundary (Arithmetic Overflow)
+ * TEST 1.4: uint32 Boundary
  *
- * Note: under the current premix32 design, this tier is also expected to expose
- * the uint32 domain boundary of the mixer. False positives here are not
- * necessarily a regression in the MPHF logic; they can simply reflect inputs
- * that fall outside the supported premix domain.
+ * Validates correct behavior near the uint32 domain boundary of premix32.
  *
- * Validates correct behavior with overflow of uint64_t in hash function.
- *
- * Hash function is h_j(x) = (a_j * x + b_j) mod p_j.
- * If x is very large and a_j is also large, a_j * x overflows 64 bits.
- *
- * While C++ has defined behavior (modulo 2^64), this could:
- * - Break biyectivity if code doesn't handle overflow correctly
- * - Cause bugs in quotient calculation q = x / p_j near UINT64_MAX
- * - Expose problems in comparisons with extreme values
- *
- * Setup: Use exact boundary values (not randoms) to expose overflow bugs
+ * Setup: Use exact boundary values near UINT32_MAX to expose edge-case bugs
+ * in premix32, quotient calculation, and hash function near domain limits.
  */
-TestResult test_64bit_boundary() {
-    TestResult result("Tier1.4: 64-bit Boundary");
+TestResult test_uint32_boundary() {
+    TestResult result("Tier1.4: uint32 Boundary");
     Timer timer;
 
     try {
         std::cout << "\nRunning: " << result.test_name << "...\n";
 
         std::vector<uint64_t> edge_keys = {
-            UINT64_MAX,  // Maximum absolute value
-            UINT64_MAX - 1,  // Off-by-one from maximum
-            UINT64_MAX - 12345,  // Near maximum
-            (1ULL << 63),  // 2^63 (MSB change)
-            (1ULL << 63) + 1,  // Just after
-            (1ULL << 63) - 1,  // Just before
-            (1ULL << 32),  // 2^32 (uint32 boundary)
-            (1ULL << 32) - 1  // Maximum uint32
+            static_cast<uint64_t>(UINT32_MAX),
+            static_cast<uint64_t>(UINT32_MAX) - 1,
+            static_cast<uint64_t>(UINT32_MAX) - 12345,
+            (1ULL << 31),  // 2^31 (MSB of uint32)
+            (1ULL << 31) + 1,
+            (1ULL << 31) - 1,
+            (1ULL << 16),  // 2^16 (half-width boundary)
+            0
         };
 
         MPHF<GlGhStorage, policies::QuotientKey> mphf;
@@ -455,17 +437,16 @@ TestResult test_64bit_boundary() {
 
         // Verify neighbors not inserted
         std::vector<uint64_t> non_keys = {
-            UINT64_MAX - 2,
-            UINT64_MAX - 3,
-            (1ULL << 63) + 2,
-            (1ULL << 63) - 2,
-            (1ULL << 32) + 1,
-            (1ULL << 32) - 2,
-            0  // Zero is always a good edge case
+            static_cast<uint64_t>(UINT32_MAX) - 2,
+            static_cast<uint64_t>(UINT32_MAX) - 3,
+            (1ULL << 31) + 2,
+            (1ULL << 31) - 2,
+            (1ULL << 16) + 1,
+            (1ULL << 16) - 1,
+            1
         };
 
         for (uint64_t nk : non_keys) {
-            // Check if it's actually a non-key
             if (std::find(edge_keys.begin(), edge_keys.end(), nk) == edge_keys.end()) {
                 result.checks_run++;
                 if (mphf.contains(nk)) {
@@ -629,7 +610,7 @@ TestResult test_quotient_vs_fullkey() {
 
         // Verify random non-keys
         std::mt19937_64 rng(999);
-        std::uniform_int_distribution<uint64_t> dist(0, UINT64_MAX);
+        std::uniform_int_distribution<uint64_t> dist(0, UINT32_MAX);
 
         size_t non_key_tests = 0;
         while (non_key_tests < 100000) {
@@ -729,7 +710,7 @@ TestResult test_determinism() {
 
         // Verify non-keys match
         std::mt19937_64 rng(555);
-        std::uniform_int_distribution<uint64_t> dist(0, UINT64_MAX);
+        std::uniform_int_distribution<uint64_t> dist(0, UINT32_MAX);
 
         for (int i = 0; i < 10000; ++i) {
             uint64_t non_key = dist(rng);
@@ -833,7 +814,7 @@ int main(int argc, char** argv) {
     bool run_dopplerganger = false;
     bool run_zero_quotient = false;
     bool run_dense_cluster = false;
-    bool run_64bit_boundary = false;
+    bool run_uint32_boundary = false;
     bool run_remainder_zero = false;
     bool run_quotient_vs_fullkey = false;
     bool run_determinism = false;
@@ -842,7 +823,7 @@ int main(int argc, char** argv) {
     app.add_flag("--dopplerganger", run_dopplerganger, "Dopplergänger Attack (Tier 1)");
     app.add_flag("--zero-quotient", run_zero_quotient, "Zero-Quotient Edge Case (Tier 1)");
     app.add_flag("--dense-cluster", run_dense_cluster, "Dense Cluster Attack (Tier 1)");
-    app.add_flag("--64bit-boundary", run_64bit_boundary, "64-bit Boundary Test (Tier 1)");
+    app.add_flag("--uint32-boundary", run_uint32_boundary, "uint32 Boundary Test (Tier 1)");
     app.add_flag("--remainder-zero", run_remainder_zero, "Remainder-Zero Edge Case (Tier 2)");
     app.add_flag("--quotient-vs-fullkey", run_quotient_vs_fullkey, "QuotientKey vs FullKey (Tier 2)");
     app.add_flag("--determinism", run_determinism, "Determinism Test (Tier 3)");
@@ -851,7 +832,7 @@ int main(int argc, char** argv) {
     CLI11_PARSE(app, argc, argv);
 
     // Default to all if nothing specified
-    bool run_all = !run_dopplerganger && !run_zero_quotient && !run_dense_cluster && !run_64bit_boundary &&
+    bool run_all = !run_dopplerganger && !run_zero_quotient && !run_dense_cluster && !run_uint32_boundary &&
         !run_remainder_zero && !run_quotient_vs_fullkey && !run_determinism && !run_cross_segment;
 
     // Print header
@@ -875,8 +856,8 @@ int main(int argc, char** argv) {
     if (run_all || run_dense_cluster)
         report.add_result(test_dense_cluster_attack());
 
-    if (run_all || run_64bit_boundary)
-        report.add_result(test_64bit_boundary());
+    if (run_all || run_uint32_boundary)
+        report.add_result(test_uint32_boundary());
 
     if (run_all || run_remainder_zero)
         report.add_result(test_remainder_zero_edge_case());
