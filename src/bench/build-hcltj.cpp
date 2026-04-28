@@ -47,6 +47,7 @@ int main(int argc, char** argv) {
         uint32_t total_mphfs = 0;
         for (int i = 0; i < 6; i++) {
             index.get_trie(i)->build_hash_overlay(threshold, static_cast<uint32_t>(i));
+            index.get_trie(i)->reorder_louds_by_mphf();
             uint32_t n = static_cast<uint32_t>(index.get_trie(i)->mphf_count());
             std::cout << "  trie " << i << ": " << n << " MPHFs" << std::endl;
             total_mphfs += n;
