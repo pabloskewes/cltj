@@ -171,12 +171,23 @@ class ltj_iterator_metatrie_hash {
         size_type beg, end;
         beg = trie->first_child(0);
         end = beg + cnt - 1;
-        auto p = trie->binary_search_seek(m_path_label[m_nfixed - 1], beg, end);
+        std::pair<uint32_t, uint32_t> p;
+        if (trie->node_has_hash(0)) {
+            auto [found, slot] = trie->hash_locate(0, m_path_label[m_nfixed - 1]);
+            p = {m_path_label[m_nfixed - 1], beg + slot};
+        } else {
+            p = trie->binary_search_seek(m_path_label[m_nfixed - 1], beg, end);
+        }
         size_type cur_node = trie->nodeselect(p.second);
         cnt = trie->children(cur_node);
         beg = trie->first_child(cur_node);
         end = beg + cnt - 1;
-        p = trie->binary_search_seek(m_path_label[m_nfixed - 2], beg, end);
+        if (trie->node_has_hash(cur_node)) {
+            auto [found, slot] = trie->hash_locate(cur_node, m_path_label[m_nfixed - 2]);
+            p = {m_path_label[m_nfixed - 2], beg + slot};
+        } else {
+            p = trie->binary_search_seek(m_path_label[m_nfixed - 2], beg, end);
+        }
         cur_node = trie->nodeselect(p.second);
         return cur_node;
     }
