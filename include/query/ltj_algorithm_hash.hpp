@@ -494,15 +494,13 @@ class ltj_algorithm_hash {
     };
 
     /**
-   *
-   * @param x_j   Variable
-   * @param c     Constant. If it is unknown the value is -1
-   * @return      The next constant that matches the intersection between the
-   * triples of x_j. If the intersection is empty, it returns 0.
+   * @brief Runs leapfrog seek over the provided iterator set for variable @p x_j.
+   * @param x_j   Variable being intersected
+   * @param itrs  Iterators that participate in the leapfrog
+   * @param c     Lower bound candidate. If unknown, use -1 to start from the minimum
+   * @return      The next constant in the intersection, or 0 if the intersection is empty
    */
-
-    value_type seek(const var_type x_j, value_type c = -1) {
-        vector<ltj_iter_type*>& itrs = m_var_to_iterators[x_j];
+    value_type seek_on_iterators(const var_type x_j, const vector<ltj_iter_type*>& itrs, value_type c = -1) {
         value_type c_i, c_prev = 0, i = 0, n_ok = 0;
 
         while (true) {
@@ -531,6 +529,19 @@ class ltj_algorithm_hash {
         for (auto& itr : itrs) {
             itr->leap_done();
         }
+    }
+
+    /**
+   *
+   * @param x_j   Variable
+   * @param c     Constant. If it is unknown the value is -1
+   * @return      The next constant that matches the intersection between the
+   * triples of x_j. If the intersection is empty, it returns 0.
+   */
+
+    value_type seek(const var_type x_j, value_type c = -1) {
+        vector<ltj_iter_type*>& itrs = m_var_to_iterators[x_j];
+        return seek_on_iterators(x_j, itrs, c);
     }
 
     void print_veo(unordered_map<uint8_t, string>& ht) {
