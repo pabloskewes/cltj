@@ -423,8 +423,7 @@ class ltj_iterator_metatrie_hash {
         choose_trie(state);
         const auto* trie = m_ptr_index->get_trie(m_trie_i);
 
-        if (m_nfixed == 1 && m_status_i == 1) {
-            // const auto* trie_aux = m_ptr_index->get_trie(m_trie_i-1);
+        if (m_nfixed == 1 && m_status_i == 1) {  // Partial trie path (SOP/PSO/OPS)
             size_type beg, end;
             size_type node = trie->nodeselect(m_status[m_nfixed].beg - 1);
             auto cnt = trie->children(node);
@@ -467,6 +466,7 @@ class ltj_iterator_metatrie_hash {
             }
         }
 
+        // General case path: full trie or depth > 1
         size_type beg, end;
         auto cnt = trie->children(parent());
         beg = trie->first_child(parent());
