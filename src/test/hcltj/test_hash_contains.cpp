@@ -145,8 +145,10 @@ int main(int argc, char** argv) {
 
     for (uint32_t threshold : thresholds) {
         std::cout << "\n=== threshold=" << threshold << " ===" << std::endl;
-        for (int i = 0; i < 6; i++)
+        for (int i = 0; i < 6; i++) {
             index.get_trie(i)->build_hash_overlay(threshold);
+            index.get_trie(i)->reorder_louds_by_mphf();
+        }
 
         for (int t = 0; t < 6; t++)
             total_failures += test_trie(index.get_trie(t), tries[t], threshold);
