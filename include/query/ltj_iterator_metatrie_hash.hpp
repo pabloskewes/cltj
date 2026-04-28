@@ -20,6 +20,7 @@
 #ifndef LTJ_ITERATOR_METATRIE_HASH_HPP
 #define LTJ_ITERATOR_METATRIE_HASH_HPP
 
+#include <cassert>
 #include <cltj_config.hpp>
 #include <cltj_utils.hpp>
 #include <string>
@@ -530,6 +531,7 @@ class ltj_iterator_metatrie_hash {
                     break;
             }
         }
+        assert(!trie->node_has_hash(parent()));
 
         size_type beg, end;
         // std::cout << "Leap redo n_fixed:" << m_nfixed << std::endl;
