@@ -432,6 +432,17 @@ class ltj_iterator_metatrie_hash {
             auto cnt = trie->children(node);
             beg = trie->first_child(node);
             end = beg + cnt - 1;
+            if (trie->node_has_hash(node)) {
+                auto [found, slot] = trie->hash_locate(node, c);
+                if (!found)
+                    return false;
+                m_status[m_nfixed + 1].beg = beg + slot;
+                m_status[m_nfixed + 1].end = end;
+                m_status[m_nfixed + 1].cnt = cnt;
+                m_redo[m_nfixed] = false;
+                return true;
+            }
+
             auto p = trie->binary_search_seek(c, beg, end);
             if (p.second > end or p.first != c)
                 return false;
@@ -461,6 +472,18 @@ class ltj_iterator_metatrie_hash {
         auto cnt = trie->children(parent());
         beg = trie->first_child(parent());
         end = beg + cnt - 1;
+
+        if (trie->node_has_hash(parent())) {
+            auto [found, slot] = trie->hash_locate(parent(), c);
+            if (!found)
+                return false;
+            m_status[m_nfixed + 1].beg = beg + slot;
+            m_status[m_nfixed + 1].end = end;
+            m_status[m_nfixed + 1].cnt = cnt;
+            m_redo[m_nfixed] = false;
+            return true;
+        }
+
         auto p = trie->binary_search_seek(c, beg, end);
         if (p.second > end or p.first != c)
             return false;
