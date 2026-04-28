@@ -28,8 +28,8 @@ class compact_metatrie_hash {
   private:
     using mphf_type = hashing::MPHF<hashing::GlGhStorage, hashing::policies::QuotientKey>;
 
-    sdsl::bit_vector m_bv;
-    sdsl::int_vector<> m_seq;
+    sdsl::bit_vector m_bv;  // LOUDS bitvector (B)
+    sdsl::int_vector<> m_seq;  // Trie labels (L)
     // sdsl::rank_support_v<1> m_rank1;
     cds::succ_support_v<0> m_succ0;
     sdsl::select_support_mcl<0> m_select0;
@@ -49,6 +49,18 @@ class compact_metatrie_hash {
     /*inline size_type rank0(const size_type i) const {
       return i - m_rank1(i);
   }*/
+
+    /**
+     * @brief O(n) count of bits equal to @p bit in @p bv.
+     *        Use when a rank support structure is not available or not worth building.
+     */
+    static size_type count_bits(const sdsl::bit_vector& bv, bool bit) {
+        size_type n = 0;
+        for (size_type i = 0; i < bv.size(); i++)
+            if (static_cast<bool>(bv[i]) == bit)
+                n++;
+        return n;
+    }
 
   public:
     const sdsl::int_vector<>& seq = m_seq;
@@ -163,10 +175,7 @@ class compact_metatrie_hash {
     std::map<size_type, size_type> children_histogram() const {
         std::map<size_type, size_type> hist;
 
-        size_type num_zeros = 0;
-        for (size_type i = 0; i < m_bv.size(); i++)
-            if (!m_bv[i])
-                num_zeros++;
+        size_type num_zeros = count_bits(m_bv, 0);
 
         std::vector<size_type> current_level = {0};
         while (!current_level.empty()) {
@@ -213,10 +222,7 @@ class compact_metatrie_hash {
         hashing::MphfBuildTracer<COLLECT_MPHF_BUILD_TRACE> tracer("mphf_trace.jsonl");
         hashing::KeyDumper<DUMP_MPHF_KEYS> dumper(".");
 
-        size_type num_zeros = 0;
-        for (size_type i = 0; i < m_bv.size(); i++)
-            if (!m_bv[i])
-                num_zeros++;
+        size_type num_zeros = count_bits(m_bv, 0);
 
         std::vector<size_type> current_level = {0};
         while (!current_level.empty()) {
@@ -256,6 +262,96 @@ class compact_metatrie_hash {
     }
 
     /**
+     * @brief Rebuilds m_bv and m_seq so that children of hashed nodes appear
+     *        in MPHF slot order instead of sorted order.
+     *
+     * Must be called after build_hash_overlay().  The MPHFs and m_mphfs vector
+     * are not modified; only the physical layout (m_bv, m_seq) and the
+     * positional metadata (m_has_hash, m_hash_rank, supports) are rebuilt.
+     *
+     * For non-hashed nodes children remain in their original (sorted) order.
+     */
+    void reorder_louds_by_mphf() {
+        if (m_mphfs.empty())
+            return;
+
+        // 1. Init variables
+        const size_type bv_len = m_bv.size();
+        const size_type seq_len = m_seq.size();
+
+        sdsl::bit_vector new_bv(bv_len, 0);
+        sdsl::int_vector<> new_seq(seq_len);
+        sdsl::bit_vector new_has_hash(bv_len, 0);
+
+        size_type bv_cursor = 0;
+        size_type seq_cursor = 0;
+        size_type mphf_idx = 0;
+
+        size_type num_zeros = count_bits(m_bv, 0);
+
+        // 2. BFS reconstruction
+        std::vector<size_type> current_level = {0};
+        while (!current_level.empty()) {
+            std::vector<size_type> next_level;
+            for (auto old_pos : current_level) {
+                size_type new_pos = bv_cursor;
+                size_type n_children = children(old_pos);
+
+                // Build permutation
+                std::vector<size_type> perm(n_children);
+                bool is_hashed = m_has_hash[old_pos];
+                if (is_hashed) {
+                    // When hashed, build perm in MPHF-order
+                    for (size_type i = 0; i < n_children; i++) {
+                        uint64_t key = static_cast<uint64_t>(m_seq[old_pos + i]);
+                        uint32_t slot = m_mphfs[mphf_idx].locate(key).second;
+                        perm[slot] = i;
+                    }
+                    new_has_hash[new_pos] = 1;
+                    mphf_idx++;
+                } else {
+                    // When not hashed, perm is the identity
+                    for (size_type i = 0; i < n_children; i++)
+                        perm[i] = i;
+                }
+
+                // Emit children in the chosen order
+                for (size_type i = 0; i < n_children; i++) {
+                    new_bv[bv_cursor + i] = 1;
+                    new_seq[seq_cursor + i] = m_seq[old_pos + perm[i]];
+                }
+                bv_cursor += n_children + 1;
+                seq_cursor += n_children;
+
+                // Enqueue internal children in the chosen (permuted) order.
+                for (size_type i = 0; i < n_children; i++) {
+                    size_type old_child_num = perm[i] + 1;  // 1-based original child index
+                    if (old_pos + 1 + old_child_num > num_zeros)
+                        continue;  // select0(old_pos + 1 + old_child_num) would be out of bounds
+                    size_type child_pos = child(old_pos, old_child_num);
+                    if (child_pos + 1 < m_bv.size())
+                        next_level.push_back(child_pos);
+                }
+            }
+            current_level = std::move(next_level);
+        }
+
+        assert(bv_cursor == bv_len);
+        assert(seq_cursor == seq_len);
+
+        // 3. Install new arrays and rebuild supports
+        m_bv.swap(new_bv);
+        m_seq.swap(new_seq);
+        sdsl::util::bit_compress(m_seq);
+        sdsl::util::init_support(m_succ0, &m_bv);
+        sdsl::util::init_support(m_select0, &m_bv);
+
+        m_has_hash.swap(new_has_hash);
+        sdsl::util::init_support(m_hash_rank, &m_has_hash);
+        m_root_degree = m_succ0(1);
+    }
+
+    /**
      * @brief Returns one NodeInfo per node in BFS order, including leaf nodes.
      *
      * Each entry's parent field is the 0-based row index of its parent in
@@ -277,10 +373,7 @@ class compact_metatrie_hash {
     std::vector<NodeInfo> dump_nodes() const {
         std::vector<NodeInfo> nodes;
 
-        size_type num_zeros = 0;
-        for (size_type i = 0; i < m_bv.size(); i++)
-            if (!m_bv[i])
-                num_zeros++;
+        size_type num_zeros = count_bits(m_bv, 0);
 
         struct BFSEntry {
             size_type louds_pos;
