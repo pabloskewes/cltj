@@ -280,9 +280,7 @@ class ltj_iterator_metatrie_hash {
      * Used to scan children sequentially without allocating a vector.
      * Assumes the trie has been selected (e.g. via current_node_has_hash).
      */
-    value_type child_value_at(size_type pos) const {
-        return resolve_trie()->seq[pos];
-    }
+    value_type child_value_at(size_type pos) const { return resolve_trie()->seq[pos]; }
 
     /**
      * @brief Directly sets the next-level status frame, skipping binary search.
@@ -432,6 +430,7 @@ class ltj_iterator_metatrie_hash {
             auto cnt = trie->children(node);
             beg = trie->first_child(node);
             end = beg + cnt - 1;
+
             if (trie->node_has_hash(node)) {
                 auto [found, slot] = trie->hash_locate(node, c);
                 if (!found)
