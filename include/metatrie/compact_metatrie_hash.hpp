@@ -279,13 +279,11 @@ class compact_metatrie_hash {
         const size_type bv_len = m_bv.size();
         const size_type seq_len = m_seq.size();
 
-        sdsl::bit_vector new_bv(bv_len, 0);
+        sdsl::bit_vector new_bv(bv_len, 1);
         sdsl::int_vector<> new_seq(seq_len);
         sdsl::bit_vector new_has_hash(bv_len, 0);
 
-        size_type bv_cursor = 0;
         size_type seq_cursor = 0;
-        size_type mphf_idx = 0;
 
         size_type num_zeros = count_bits(m_bv, 0);
 
@@ -294,21 +292,22 @@ class compact_metatrie_hash {
         while (!current_level.empty()) {
             std::vector<size_type> next_level;
             for (auto old_pos : current_level) {
-                size_type new_pos = bv_cursor;
+                size_type new_pos = seq_cursor;
                 size_type n_children = children(old_pos);
 
                 // Build permutation
                 std::vector<size_type> perm(n_children);
                 bool is_hashed = m_has_hash[old_pos];
+
                 if (is_hashed) {
                     // When hashed, build perm in MPHF-order
+                    size_type mphf_idx = m_hash_rank(old_pos);
                     for (size_type i = 0; i < n_children; i++) {
                         uint64_t key = static_cast<uint64_t>(m_seq[old_pos + i]);
-                        uint32_t slot = m_mphfs[mphf_idx].locate(key).second;
+                        auto [found, slot] = m_mphfs[mphf_idx].locate(key);
                         perm[slot] = i;
                     }
                     new_has_hash[new_pos] = 1;
-                    mphf_idx++;
                 } else {
                     // When not hashed, perm is the identity
                     for (size_type i = 0; i < n_children; i++)
@@ -316,11 +315,10 @@ class compact_metatrie_hash {
                 }
 
                 // Emit children in the chosen order
+                new_bv[new_pos] = 0;
                 for (size_type i = 0; i < n_children; i++) {
-                    new_bv[bv_cursor + i] = 1;
-                    new_seq[seq_cursor + i] = m_seq[old_pos + perm[i]];
+                    new_seq[new_pos + i] = m_seq[old_pos + perm[i]];
                 }
-                bv_cursor += n_children + 1;
                 seq_cursor += n_children;
 
                 // Enqueue internal children in the chosen (permuted) order.
@@ -336,8 +334,7 @@ class compact_metatrie_hash {
             current_level = std::move(next_level);
         }
 
-        assert(bv_cursor == bv_len);
-        assert(seq_cursor == seq_len);
+        assert(seq_cursor + 1 == seq_len);
 
         // 3. Install new arrays and rebuild supports
         m_bv.swap(new_bv);
