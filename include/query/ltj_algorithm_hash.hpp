@@ -398,12 +398,7 @@ class ltj_algorithm_hash {
                 std::vector<size_type> children_sizes(itrs.size());
                 size_type min_idx = 0;
                 for (size_type i = 0; i < itrs.size(); ++i) {
-                    state_type state = o;
-                    if (itrs[i]->is_variable_subject(x_j))
-                        state = s;
-                    else if (itrs[i]->is_variable_predicate(x_j))
-                        state = p;
-                    children_sizes[i] = itrs[i]->children(state);
+                    children_sizes[i] = itrs[i]->children(state_for(itrs[i], x_j));
                     if (children_sizes[i] < children_sizes[min_idx])
                         min_idx = i;
                 }
@@ -415,40 +410,30 @@ class ltj_algorithm_hash {
                     stats.list_sizes.assign(children_sizes.begin(), children_sizes.end());
                 }
 
-                if (itrs[min_idx]->current_node_has_hash(x_j)) {
-                    // HASH PATH: scan smallest list, O(1) membership check on others
+                // Partition iterators by whether their current node supports hash.
+                std::vector<ltj_iter_type*> sorted_itrs, hashed_itrs;
+                for (ltj_iter_type* iter : itrs) {
+                    if (iter->current_node_has_hash(x_j))
+                        hashed_itrs.push_back(iter);
+                    else
+                        sorted_itrs.push_back(iter);
+                }
+
+                if (sorted_itrs.empty()) {
+                    // All iterators hashed: Pure hash path.
                     auto [beg, end_pos] = itrs[min_idx]->children_range();
 
                     for (size_type pos = beg; pos < end_pos; ++pos) {
                         value_type c = itrs[min_idx]->child_value_at(pos);
 
-                        bool in_all = true;
-                        for (size_type i = 0; i < itrs.size(); ++i) {
-                            if (i == min_idx)
-                                continue;
-                            if (!itrs[i]->hash_contains(x_j, c)) {
-                                in_all = false;
-                                break;
-                            }
-                        }
-
-                        if (in_all) {
-                            if constexpr (COLLECT_QUERY_STATS) stats.result_size++;
+                        if (candidate_in_hashed_iterators(x_j, c, hashed_itrs, itrs[min_idx])) {
+                            if constexpr (COLLECT_QUERY_STATS)
+                                stats.result_size++;
                             tuple[j] = {x_j, c};
 
                             // min_iter: position already known from scan, skip binary search
                             itrs[min_idx]->set_level_status(pos, beg, end_pos - beg);
-                            // TODO: avoid exists() for non-min iterators too, as it costs O(log n)
-                            for (size_type i = 0; i < itrs.size(); ++i) {
-                                if (i == min_idx)
-                                    continue;
-                                state_type st = o;
-                                if (itrs[i]->is_variable_subject(x_j))
-                                    st = s;
-                                else if (itrs[i]->is_variable_predicate(x_j))
-                                    st = p;
-                                itrs[i]->exists(st, c);
-                            }
+                            position_hashed_iterators(x_j, c, hashed_itrs, itrs[min_idx]);
                             for (ltj_iter_type* iter : itrs) {
                                 iter->down(x_j, c);
                             }
@@ -463,23 +448,27 @@ class ltj_algorithm_hash {
                         }
                     }
                 } else {
-                    // LEAPFROG PATH: unchanged
-                    value_type c = seek(x_j);
+                    // At least one iterator is sorted: leapfrog on sorted_itrs, hash-filter on hashed_itrs.
+                    value_type c = seek_on_iterators(x_j, sorted_itrs);
                     while (c != 0) {  // If empty c=0
-                        if constexpr (COLLECT_QUERY_STATS) stats.result_size++;
-                        tuple[j] = {x_j, c};
-                        for (ltj_iter_type* iter : itrs) {
-                            iter->down(x_j, c);
+                        if (candidate_in_hashed_iterators(x_j, c, hashed_itrs)) {
+                            if constexpr (COLLECT_QUERY_STATS)
+                                stats.result_size++;
+                            tuple[j] = {x_j, c};
+                            position_hashed_iterators(x_j, c, hashed_itrs);
+                            for (ltj_iter_type* iter : itrs) {
+                                iter->down(x_j, c);
+                            }
+                            m_veo.down();
+                            ok = search(j + 1, tuple, res, start, limit_results, timeout_seconds);
+                            if (!ok)
+                                return false;
+                            for (ltj_iter_type* iter : itrs) {
+                                iter->up(x_j);
+                            }
+                            m_veo.up();
                         }
-                        m_veo.down();
-                        ok = search(j + 1, tuple, res, start, limit_results, timeout_seconds);
-                        if (!ok)
-                            return false;
-                        for (ltj_iter_type* iter : itrs) {
-                            iter->up(x_j);
-                        }
-                        m_veo.up();
-                        c = seek(x_j, c + 1);
+                        c = seek_on_iterators(x_j, sorted_itrs, c + 1);
                     }
                 }
 
@@ -492,6 +481,52 @@ class ltj_algorithm_hash {
         }
         return true;
     };
+
+    /**
+   * @brief Returns which component of the triple pattern variable @p x_j refers to.
+   */
+    state_type state_for(ltj_iter_type* iter, const var_type x_j) {
+        state_type state = o;
+        if (iter->is_variable_subject(x_j))
+            state = s;
+        else if (iter->is_variable_predicate(x_j))
+            state = p;
+        return state;
+    }
+
+    /**
+   * @brief Checks whether candidate @p c is contained in all hashed iterators.
+   */
+    bool candidate_in_hashed_iterators(
+        const var_type x_j,
+        const value_type c,
+        const vector<ltj_iter_type*>& hashed_itrs,
+        ltj_iter_type* skip = nullptr
+    ) {
+        for (ltj_iter_type* iter : hashed_itrs) {
+            if (iter == skip)
+                continue;
+            if (!iter->hash_contains(x_j, c))
+                return false;
+        }
+        return true;
+    }
+
+    /**
+   * @brief Positions hashed iterators at candidate @p c so down() can descend.
+   */
+    void position_hashed_iterators(
+        const var_type x_j,
+        const value_type c,
+        const vector<ltj_iter_type*>& hashed_itrs,
+        ltj_iter_type* skip = nullptr
+    ) {
+        for (ltj_iter_type* iter : hashed_itrs) {
+            if (iter == skip)
+                continue;
+            iter->exists(state_for(iter, x_j), c);
+        }
+    }
 
     /**
    * @brief Runs leapfrog seek over the provided iterator set for variable @p x_j.
