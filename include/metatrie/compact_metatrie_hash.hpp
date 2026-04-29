@@ -314,9 +314,11 @@ class compact_metatrie_hash {
 
         size_type num_zeros = count_bits(m_bv, 0);
 
-        // 2. BFS reconstruction
+        // 2. Initialize "current_level" queue for BFS
+        const bool is_partial_trie = !root_perm.empty();
         std::vector<size_type> current_level;
-        if (!root_perm.empty()) {  // Partial trie: must use the same permutation as its full trie counterpart
+        if (is_partial_trie) {
+            // Partial trie: must use the same permutation as its full trie counterpart
             std::vector<size_type> top_level_nodes;
             top_level_nodes.reserve(num_zeros - 1);
             top_level_nodes.push_back(0);  // first implicit first-level node
@@ -327,20 +329,23 @@ class compact_metatrie_hash {
             for (size_type slot = 0; slot < root_perm.size(); slot++)
                 current_level.push_back(top_level_nodes[root_perm[slot]]);
         } else {
+            // Full trie: start BFS from the root
             current_level = {0};
         }
-        bool external_top_level_phase = !root_perm.empty();
+
+        // 3. Reconstruct the LOUDS layout in BFS order
+        bool in_partial_trie_first_level = is_partial_trie;
         while (!current_level.empty()) {
             std::vector<size_type> next_level;
             for (auto old_pos : current_level) {
                 size_type new_pos = seq_cursor;
                 size_type n_children = children(old_pos);
 
-                // Build permutation
+                // 3.1. Build permutation
                 std::vector<size_type> perm(n_children);
                 bool is_hashed = m_has_hash[old_pos];
-
                 if (is_hashed) {
+                    // Hashed node: build permutation from MPHF
                     size_type mphf_idx = m_hash_rank(old_pos);
                     for (size_type i = 0; i < n_children; i++) {
                         uint64_t key = static_cast<uint64_t>(m_seq[old_pos + i]);
@@ -355,18 +360,18 @@ class compact_metatrie_hash {
                         perm[i] = i;
                 }
 
-                // Emit children in the chosen order
+                // 3.2. Emit children in the chosen ("permuted") order
                 new_bv[new_pos] = 0;
                 for (size_type i = 0; i < n_children; i++) {
                     new_seq[new_pos + i] = m_seq[old_pos + perm[i]];
                 }
                 seq_cursor += n_children;
 
-                // Enqueue internal children in the chosen (permuted) order.
-                // For partial tries with external root_perm, the reordered
-                // top-level nodes are the only explicit level; their children
-                // are leaves encoded only in m_seq, so there is no deeper BFS.
-                if (!external_top_level_phase) {
+                // 3.3. Enqueue internal children in the chosen (permuted) order.
+                // In a partial trie the first-level nodes have no subtrees in the
+                // BFS sense (their children are leaves encoded only in m_seq),
+                // so we skip enqueuing during the first iteration.
+                if (!in_partial_trie_first_level) {
                     for (size_type i = 0; i < n_children; i++) {
                         size_type old_child_num = perm[i] + 1;  // 1-based original child index
                         if (old_pos + 1 + old_child_num > num_zeros)
@@ -378,13 +383,13 @@ class compact_metatrie_hash {
                 }
             }
             current_level = std::move(next_level);
-            external_top_level_phase = false;
+            in_partial_trie_first_level = false;
         }
 
         assert(seq_cursor + 1 == seq_len);
         new_bv[seq_cursor] = 0;  // Restore the trailing LOUDS sentinel after the last explicit node.
 
-        // 3. Install new arrays and rebuild supports
+        // 4. Install new arrays and rebuild supports
         m_bv.swap(new_bv);
         m_seq.swap(new_seq);
         sdsl::util::bit_compress(m_seq);
