@@ -154,6 +154,27 @@ class compact_metatrie_hash {
         return m_mphfs[mphf_idx].locate(static_cast<uint64_t>(key));
     }
 
+    /**
+     * @brief Extracts the MPHF-induced permutation for the root's children.
+     *
+     * Must be called before reorder_louds_by_mphf() (which changes m_seq layout).
+     * Returns perm such that perm[slot] = old_child_index.
+     * If the root is not hashed, returns an empty vector (identity is implied).
+     */
+    std::vector<size_type> extract_root_permutation() const {
+        if (!m_has_hash[0])
+            return {};
+        size_type d = children(0);
+        size_type mphf_idx = m_hash_rank(0);
+        std::vector<size_type> perm(d);
+        for (size_type i = 0; i < d; i++) {
+            uint64_t key = static_cast<uint64_t>(m_seq[i]);
+            auto [found, slot] = m_mphfs[mphf_idx].locate(key);
+            perm[slot] = i;
+        }
+        return perm;
+    }
+
     /*
       Receives index of current node and the child that is required
       Returns index of the nth child of current node
@@ -270,9 +291,15 @@ class compact_metatrie_hash {
      * positional metadata (m_has_hash, m_hash_rank, supports) are rebuilt.
      *
      * For non-hashed nodes children remain in their original (sorted) order.
+     *
+     * @param root_perm  If non-empty, use this permutation for the root's
+     *                   children instead of the root's own MPHF.  This is
+     *                   needed for partial tries that must share the same
+     *                   first-level order as their paired full trie.
+     *                   perm[slot] = old_child_index.
      */
-    void reorder_louds_by_mphf() {
-        if (m_mphfs.empty())
+    void reorder_louds_by_mphf(const std::vector<size_type>& root_perm = {}) {
+        if (m_mphfs.empty() && root_perm.empty())
             return;
 
         // 1. Init variables
@@ -299,8 +326,11 @@ class compact_metatrie_hash {
                 std::vector<size_type> perm(n_children);
                 bool is_hashed = m_has_hash[old_pos];
 
-                if (is_hashed) {
-                    // When hashed, build perm in MPHF-order
+                if (old_pos == 0 && !root_perm.empty()) {
+                    // Partial trie: use the shared permutation from its full trie counterpart
+                    perm = root_perm;
+                    new_has_hash[new_pos] = is_hashed ? 1 : 0;
+                } else if (is_hashed) {
                     size_type mphf_idx = m_hash_rank(old_pos);
                     for (size_type i = 0; i < n_children; i++) {
                         uint64_t key = static_cast<uint64_t>(m_seq[old_pos + i]);
