@@ -3,10 +3,8 @@
 
 #include <cds/succ_support_v.hpp>
 #include <cltj_config.hpp>
-#include <fstream>
 #include <iostream>
 #include <map>
-#include <queue>
 #include <sdsl/select_support_mcl.hpp>
 #include <sdsl/vectors.hpp>
 #include <string>
@@ -309,13 +307,29 @@ class compact_metatrie_hash {
         sdsl::bit_vector new_bv(bv_len, 1);
         sdsl::int_vector<> new_seq(seq_len);
         sdsl::bit_vector new_has_hash(bv_len, 0);
+        std::vector<mphf_type> new_mphfs;
+        new_mphfs.reserve(m_mphfs.size());
 
         size_type seq_cursor = 0;
 
         size_type num_zeros = count_bits(m_bv, 0);
 
         // 2. BFS reconstruction
-        std::vector<size_type> current_level = {0};
+        std::vector<size_type> current_level;
+        if (!root_perm.empty()) {  // Partial trie: must use the same permutation as its full trie counterpart
+            std::vector<size_type> top_level_nodes;
+            top_level_nodes.reserve(num_zeros - 1);
+            top_level_nodes.push_back(0);  // first implicit first-level node
+            for (size_type i = 0; i + 1 < num_zeros - 1; i++)
+                top_level_nodes.push_back(nodeselect(i));
+
+            current_level.reserve(root_perm.size());
+            for (size_type slot = 0; slot < root_perm.size(); slot++)
+                current_level.push_back(top_level_nodes[root_perm[slot]]);
+        } else {
+            current_level = {0};
+        }
+        bool external_top_level_phase = !root_perm.empty();
         while (!current_level.empty()) {
             std::vector<size_type> next_level;
             for (auto old_pos : current_level) {
@@ -326,11 +340,7 @@ class compact_metatrie_hash {
                 std::vector<size_type> perm(n_children);
                 bool is_hashed = m_has_hash[old_pos];
 
-                if (old_pos == 0 && !root_perm.empty()) {
-                    // Partial trie: use the shared permutation from its full trie counterpart
-                    perm = root_perm;
-                    new_has_hash[new_pos] = is_hashed ? 1 : 0;
-                } else if (is_hashed) {
+                if (is_hashed) {
                     size_type mphf_idx = m_hash_rank(old_pos);
                     for (size_type i = 0; i < n_children; i++) {
                         uint64_t key = static_cast<uint64_t>(m_seq[old_pos + i]);
@@ -338,6 +348,7 @@ class compact_metatrie_hash {
                         perm[slot] = i;
                     }
                     new_has_hash[new_pos] = 1;
+                    new_mphfs.push_back(std::move(m_mphfs[mphf_idx]));
                 } else {
                     // When not hashed, perm is the identity
                     for (size_type i = 0; i < n_children; i++)
@@ -352,19 +363,26 @@ class compact_metatrie_hash {
                 seq_cursor += n_children;
 
                 // Enqueue internal children in the chosen (permuted) order.
-                for (size_type i = 0; i < n_children; i++) {
-                    size_type old_child_num = perm[i] + 1;  // 1-based original child index
-                    if (old_pos + 1 + old_child_num > num_zeros)
-                        continue;  // select0(old_pos + 1 + old_child_num) would be out of bounds
-                    size_type child_pos = child(old_pos, old_child_num);
-                    if (child_pos + 1 < m_bv.size())
-                        next_level.push_back(child_pos);
+                // For partial tries with external root_perm, the reordered
+                // top-level nodes are the only explicit level; their children
+                // are leaves encoded only in m_seq, so there is no deeper BFS.
+                if (!external_top_level_phase) {
+                    for (size_type i = 0; i < n_children; i++) {
+                        size_type old_child_num = perm[i] + 1;  // 1-based original child index
+                        if (old_pos + 1 + old_child_num > num_zeros)
+                            continue;  // select0(old_pos + 1 + old_child_num) would be out of bounds
+                        size_type child_pos = child(old_pos, old_child_num);
+                        if (child_pos + 1 < m_bv.size())
+                            next_level.push_back(child_pos);
+                    }
                 }
             }
             current_level = std::move(next_level);
+            external_top_level_phase = false;
         }
 
         assert(seq_cursor + 1 == seq_len);
+        new_bv[seq_cursor] = 0;  // Restore the trailing LOUDS sentinel after the last explicit node.
 
         // 3. Install new arrays and rebuild supports
         m_bv.swap(new_bv);
@@ -373,6 +391,7 @@ class compact_metatrie_hash {
         sdsl::util::init_support(m_succ0, &m_bv);
         sdsl::util::init_support(m_select0, &m_bv);
 
+        m_mphfs.swap(new_mphfs);
         m_has_hash.swap(new_has_hash);
         sdsl::util::init_support(m_hash_rank, &m_has_hash);
         m_root_degree = m_succ0(1);
