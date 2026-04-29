@@ -367,23 +367,24 @@ class compact_metatrie_hash {
                 }
                 seq_cursor += n_children;
 
-                // 3.3. Enqueue internal children in the chosen (permuted) order.
                 // In a partial trie the first-level nodes have no subtrees in the
-                // BFS sense (their children are leaves encoded only in m_seq),
-                // so we skip enqueuing during the first iteration.
-                if (!in_partial_trie_first_level) {
-                    for (size_type i = 0; i < n_children; i++) {
-                        size_type old_child_num = perm[i] + 1;  // 1-based original child index
-                        if (old_pos + 1 + old_child_num > num_zeros)
-                            continue;  // select0(old_pos + 1 + old_child_num) would be out of bounds
-                        size_type child_pos = child(old_pos, old_child_num);
-                        if (child_pos + 1 < m_bv.size())
-                            next_level.push_back(child_pos);
-                    }
+                // BFS sense (their children are leaves encoded only in m_seq).
+                // So we skip enqueuing during the first iteration.
+                if (in_partial_trie_first_level)
+                    continue;
+
+                // 3.3. Enqueue internal children in the chosen (permuted) order.
+                for (size_type i = 0; i < n_children; i++) {
+                    size_type old_child_num = perm[i] + 1;  // 1-based original child index
+                    if (old_pos + 1 + old_child_num > num_zeros)
+                        continue;  // select0(old_pos + 1 + old_child_num) would be out of bounds
+                    size_type child_pos = child(old_pos, old_child_num);
+                    if (child_pos + 1 < m_bv.size())
+                        next_level.push_back(child_pos);
                 }
             }
-            current_level = std::move(next_level);
             in_partial_trie_first_level = false;
+            current_level = std::move(next_level);
         }
 
         assert(seq_cursor + 1 == seq_len);
