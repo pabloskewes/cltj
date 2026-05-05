@@ -45,11 +45,26 @@ int main(int argc, char** argv) {
         std::cout << "Building hash overlay (threshold=" << threshold << ")..." << std::endl;
         start = timer::now();
         uint32_t total_mphfs = 0;
-        for (int i = 0; i < 6; i++) {
-            index.get_trie(i)->build_hash_overlay(threshold, static_cast<uint32_t>(i));
-            uint32_t n = static_cast<uint32_t>(index.get_trie(i)->mphf_count());
-            std::cout << "  trie " << i << ": " << n << " MPHFs" << std::endl;
-            total_mphfs += n;
+
+        // Process tries in full/partial pairs so they share the same
+        // first-level permutation (required for cross-trie navigation).
+        constexpr int pairs[][2] = {{0, 1}, {2, 3}, {4, 5}};
+        for (auto [full_i, part_i] : pairs) {
+            auto* full = index.get_trie(full_i);
+            auto* part = index.get_trie(part_i);
+
+            full->build_hash_overlay(threshold, static_cast<uint32_t>(full_i));
+            auto root_perm = full->extract_root_permutation();
+            full->reorder_louds_by_mphf();
+
+            part->build_hash_overlay(threshold, static_cast<uint32_t>(part_i));
+            part->reorder_louds_by_mphf(root_perm);
+
+            for (int i : {full_i, part_i}) {
+                uint32_t n = static_cast<uint32_t>(index.get_trie(i)->mphf_count());
+                std::cout << "  trie " << i << ": " << n << " MPHFs" << std::endl;
+                total_mphfs += n;
+            }
         }
         stop = timer::now();
         std::cout << "Hash overlay: " << total_mphfs << " MPHFs total, "

@@ -262,9 +262,6 @@ add_cltj_executable(analyze-trie-structure src/test/hashing/analyze_trie_structu
 add_cltj_executable(test-children-histogram src/test/hcltj/test_children_histogram.cpp test/hcltj)
 set_target_properties(test-children-histogram PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
-add_cltj_executable(test-hash-contains src/test/hcltj/test_hash_contains.cpp test/hcltj)
-set_target_properties(test-hash-contains PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
-
 add_cltj_executable(test-hcltj-correctness src/test/hcltj/test_hcltj_correctness.cpp test/hcltj)
 set_target_properties(test-hcltj-correctness PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 

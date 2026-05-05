@@ -17,6 +17,7 @@
 #include <sdsl/rank_support_v.hpp>
 #include <sdsl/structure_tree.hpp>
 #include <sdsl/util.hpp>
+#include <utility>
 #include <vector>
 #include <type_traits>
 
@@ -380,32 +381,44 @@ class MPHF {
     }
 
     /**
-     * @brief Check if a key is in the set (only enabled if KeyPolicy supports it).
+     * @brief Check if a key is in the set and return the slot (only enabled if KeyPolicy supports it).
+     * Returns {true, slot} if key is in the set, {false, 0} otherwise.
+     * For peeled keys, slot is the BDZ rank; for fallback keys, slot is n_peeled_ + offset.
      */
     template <typename K = KeyPolicy>
-    std::enable_if_t<K::supports_contains, bool> contains(uint64_t key) const {
+    std::enable_if_t<K::supports_contains, std::pair<bool, uint32_t>> locate(uint64_t key) const {
         if (n_ == 0)
-            return false;
+            return {false, 0};
 
         auto triple = compute_triple(key);
 
         // Fallback path: check residual keys via binary search.
         if (!residual_keys_.empty()) {
             uint32_t mixed_key_u32 = static_cast<uint32_t>(triple.mixed_key);
-            if (std::binary_search(residual_keys_.begin(), residual_keys_.end(), mixed_key_u32))
-                return true;
+            auto it = std::lower_bound(residual_keys_.begin(), residual_keys_.end(), mixed_key_u32);
+            if (it != residual_keys_.end() && *it == mixed_key_u32)
+                return {true, n_peeled_ + static_cast<uint32_t>(it - residual_keys_.begin())};
         }
 
         // Peeled BDZ path.
         int which_h = determine_which_h(triple.v0, triple.v1, triple.v2);
         uint32_t selected_vertex = triple.v(which_h);
-        if (!storage_.is_vertex_occupied(selected_vertex)) {
-            return false;
-        }
+        if (!storage_.is_vertex_occupied(selected_vertex))
+            return {false, 0};
         uint32_t idx = storage_.rank(selected_vertex);
         if (idx >= n_peeled_)
-            return false;
-        return key_policy_.verify(idx, triple.mixed_key, which_h);
+            return {false, 0};
+        if (!key_policy_.verify(idx, triple.mixed_key, which_h))
+            return {false, 0};
+        return {true, idx};
+    }
+
+    /**
+     * @brief Check if a key is in the set (only enabled if KeyPolicy supports it).
+     */
+    template <typename K = KeyPolicy>
+    std::enable_if_t<K::supports_contains, bool> contains(uint64_t key) const {
+        return locate(key).first;
     }
 
   private:

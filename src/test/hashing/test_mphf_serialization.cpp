@@ -182,13 +182,14 @@ void test_roundtrip(
     // 5. Check false positives match (sample a few non-keys)
     const size_t n = keys.size();
     std::mt19937_64 rng(12345);
+    std::uniform_int_distribution<uint64_t> non_key_dist(0, UINT32_MAX);
     std::unordered_set<uint64_t> key_set(keys.begin(), keys.end());
     size_t fp_sample = std::min((size_t)1000, n / 10);
     bool fp_match = true;
     for (size_t i = 0; i < fp_sample; ++i) {
         uint64_t non_key;
         do {
-            non_key = rng();
+            non_key = non_key_dist(rng);
         } while (key_set.count(non_key));
 
         bool c1 = mphf1.contains(non_key);

@@ -3,13 +3,12 @@
 
 #include <cds/succ_support_v.hpp>
 #include <cltj_config.hpp>
-#include <fstream>
 #include <iostream>
 #include <map>
-#include <queue>
 #include <sdsl/select_support_mcl.hpp>
 #include <sdsl/vectors.hpp>
 #include <string>
+#include <utility>
 #include <vector>
 #include <hashing/key_dumper.hpp>
 #include <hashing/mphf_bdz.hpp>
@@ -27,8 +26,8 @@ class compact_metatrie_hash {
   private:
     using mphf_type = hashing::MPHF<hashing::GlGhStorage, hashing::policies::QuotientKey>;
 
-    sdsl::bit_vector m_bv;
-    sdsl::int_vector<> m_seq;
+    sdsl::bit_vector m_bv;  // LOUDS bitvector (B)
+    sdsl::int_vector<> m_seq;  // Trie labels (L)
     // sdsl::rank_support_v<1> m_rank1;
     cds::succ_support_v<0> m_succ0;
     sdsl::select_support_mcl<0> m_select0;
@@ -48,6 +47,18 @@ class compact_metatrie_hash {
     /*inline size_type rank0(const size_type i) const {
       return i - m_rank1(i);
   }*/
+
+    /**
+     * @brief O(n) count of bits equal to @p bit in @p bv.
+     *        Use when a rank support structure is not available or not worth building.
+     */
+    static size_type count_bits(const sdsl::bit_vector& bv, bool bit) {
+        size_type n = 0;
+        for (size_type i = 0; i < bv.size(); i++)
+            if (static_cast<bool>(bv[i]) == bit)
+                n++;
+        return n;
+    }
 
   public:
     const sdsl::int_vector<>& seq = m_seq;
@@ -112,11 +123,54 @@ class compact_metatrie_hash {
 
     size_type mphf_count() const { return m_mphfs.size(); }
 
+    /** 
+     * @brief True iff the node at LOUDS position @p node_pos has an MPHF overlay.
+     * @param node_pos LOUDS position of the node to check
+     * @return True if the node has an MPHF overlay, false otherwise.
+     */
     bool node_has_hash(size_type node_pos) const { return m_has_hash[node_pos]; }
 
+    /** 
+     * @brief O(1) membership check: is @p key a child of the hashed node at @p node_pos?
+     * @param node_pos LOUDS position of the node to check
+     * @param key The key to check
+     * @return True if @p key is a child, false otherwise.
+     */
     bool hash_contains(size_type node_pos, value_type key) const {
         size_type mphf_idx = m_hash_rank(node_pos);
         return m_mphfs[mphf_idx].contains(static_cast<uint64_t>(key));
+    }
+
+    /** 
+     * @brief Membership + slot in one pass: 
+     * @param node_pos LOUDS position of the node to check
+     * @param key The key to check
+     * @return {true, slot} if @p key is a child, {false, 0} otherwise.
+     */
+    std::pair<bool, uint32_t> hash_locate(size_type node_pos, value_type key) const {
+        size_type mphf_idx = m_hash_rank(node_pos);
+        return m_mphfs[mphf_idx].locate(static_cast<uint64_t>(key));
+    }
+
+    /**
+     * @brief Extracts the MPHF-induced permutation for the root's children.
+     *
+     * Must be called before reorder_louds_by_mphf() (which changes m_seq layout).
+     * Returns perm such that perm[slot] = old_child_index.
+     * If the root is not hashed, returns an empty vector (identity is implied).
+     */
+    std::vector<size_type> extract_root_permutation() const {
+        if (!m_has_hash[0])
+            return {};
+        size_type d = children(0);
+        size_type mphf_idx = m_hash_rank(0);
+        std::vector<size_type> perm(d);
+        for (size_type i = 0; i < d; i++) {
+            uint64_t key = static_cast<uint64_t>(m_seq[i]);
+            auto [found, slot] = m_mphfs[mphf_idx].locate(key);
+            perm[slot] = i;
+        }
+        return perm;
     }
 
     /*
@@ -140,10 +194,7 @@ class compact_metatrie_hash {
     std::map<size_type, size_type> children_histogram() const {
         std::map<size_type, size_type> hist;
 
-        size_type num_zeros = 0;
-        for (size_type i = 0; i < m_bv.size(); i++)
-            if (!m_bv[i])
-                num_zeros++;
+        size_type num_zeros = count_bits(m_bv, 0);
 
         std::vector<size_type> current_level = {0};
         while (!current_level.empty()) {
@@ -190,10 +241,7 @@ class compact_metatrie_hash {
         hashing::MphfBuildTracer<COLLECT_MPHF_BUILD_TRACE> tracer("mphf_trace.jsonl");
         hashing::KeyDumper<DUMP_MPHF_KEYS> dumper(".");
 
-        size_type num_zeros = 0;
-        for (size_type i = 0; i < m_bv.size(); i++)
-            if (!m_bv[i])
-                num_zeros++;
+        size_type num_zeros = count_bits(m_bv, 0);
 
         std::vector<size_type> current_level = {0};
         while (!current_level.empty()) {
@@ -233,6 +281,129 @@ class compact_metatrie_hash {
     }
 
     /**
+     * @brief Rebuilds m_bv and m_seq so that children of hashed nodes appear
+     *        in MPHF slot order instead of sorted order.
+     *
+     * Must be called after build_hash_overlay().  The MPHFs and m_mphfs vector
+     * are not modified; only the physical layout (m_bv, m_seq) and the
+     * positional metadata (m_has_hash, m_hash_rank, supports) are rebuilt.
+     *
+     * For non-hashed nodes children remain in their original (sorted) order.
+     *
+     * @param root_perm  If non-empty, use this permutation for the root's
+     *                   children instead of the root's own MPHF.  This is
+     *                   needed for partial tries that must share the same
+     *                   first-level order as their paired full trie.
+     *                   perm[slot] = old_child_index.
+     */
+    void reorder_louds_by_mphf(const std::vector<size_type>& root_perm = {}) {
+        if (m_mphfs.empty() && root_perm.empty())
+            return;
+
+        // 1. Init variables
+        const size_type bv_len = m_bv.size();
+        const size_type seq_len = m_seq.size();
+
+        sdsl::bit_vector new_bv(bv_len, 1);
+        sdsl::int_vector<> new_seq(seq_len);
+        sdsl::bit_vector new_has_hash(bv_len, 0);
+        std::vector<mphf_type> new_mphfs;
+        new_mphfs.reserve(m_mphfs.size());
+
+        size_type seq_cursor = 0;
+
+        size_type num_zeros = count_bits(m_bv, 0);
+
+        // 2. Initialize "current_level" queue for BFS
+        const bool is_partial_trie = !root_perm.empty();
+        std::vector<size_type> current_level;
+        if (is_partial_trie) {
+            // Partial trie: must use the same permutation as its full trie counterpart
+            std::vector<size_type> top_level_nodes;
+            top_level_nodes.reserve(num_zeros - 1);
+            top_level_nodes.push_back(0);  // first implicit first-level node
+            for (size_type i = 0; i + 1 < num_zeros - 1; i++)
+                top_level_nodes.push_back(nodeselect(i));
+
+            current_level.reserve(root_perm.size());
+            for (size_type slot = 0; slot < root_perm.size(); slot++)
+                current_level.push_back(top_level_nodes[root_perm[slot]]);
+        } else {
+            // Full trie: start BFS from the root
+            current_level = {0};
+        }
+
+        // 3. Reconstruct the LOUDS layout in BFS order
+        bool in_partial_trie_first_level = is_partial_trie;
+        while (!current_level.empty()) {
+            std::vector<size_type> next_level;
+            for (auto old_pos : current_level) {
+                size_type new_pos = seq_cursor;
+                size_type n_children = children(old_pos);
+
+                // 3.1. Build permutation
+                std::vector<size_type> perm(n_children);
+                bool is_hashed = m_has_hash[old_pos];
+                if (is_hashed) {
+                    // Hashed node: build permutation from MPHF
+                    size_type mphf_idx = m_hash_rank(old_pos);
+                    for (size_type i = 0; i < n_children; i++) {
+                        uint64_t key = static_cast<uint64_t>(m_seq[old_pos + i]);
+                        auto [found, slot] = m_mphfs[mphf_idx].locate(key);
+                        perm[slot] = i;
+                    }
+                    new_has_hash[new_pos] = 1;
+                    new_mphfs.push_back(std::move(m_mphfs[mphf_idx]));
+                } else {
+                    // When not hashed, perm is the identity
+                    for (size_type i = 0; i < n_children; i++)
+                        perm[i] = i;
+                }
+
+                // 3.2. Emit children in the chosen ("permuted") order
+                new_bv[new_pos] = 0;
+                for (size_type i = 0; i < n_children; i++) {
+                    new_seq[new_pos + i] = m_seq[old_pos + perm[i]];
+                }
+                seq_cursor += n_children;
+
+                // In a partial trie the first-level nodes have no subtrees in the
+                // BFS sense (their children are leaves encoded only in m_seq).
+                // So we skip enqueuing during the first iteration.
+                if (in_partial_trie_first_level)
+                    continue;
+
+                // 3.3. Enqueue internal children in the chosen (permuted) order.
+                for (size_type i = 0; i < n_children; i++) {
+                    size_type old_child_num = perm[i] + 1;  // 1-based original child index
+                    if (old_pos + 1 + old_child_num > num_zeros)
+                        continue;  // select0(old_pos + 1 + old_child_num) would be out of bounds
+                    size_type child_pos = child(old_pos, old_child_num);
+                    if (child_pos + 1 < m_bv.size())
+                        next_level.push_back(child_pos);
+                }
+            }
+            in_partial_trie_first_level = false;
+            current_level = std::move(next_level);
+        }
+
+        assert(seq_cursor + 1 == seq_len);
+        new_bv[seq_cursor] = 0;  // Restore the trailing LOUDS sentinel after the last explicit node.
+
+        // 4. Install new arrays and rebuild supports
+        m_bv.swap(new_bv);
+        m_seq.swap(new_seq);
+        sdsl::util::bit_compress(m_seq);
+        sdsl::util::init_support(m_succ0, &m_bv);
+        sdsl::util::init_support(m_select0, &m_bv);
+
+        m_mphfs.swap(new_mphfs);
+        m_has_hash.swap(new_has_hash);
+        sdsl::util::init_support(m_hash_rank, &m_has_hash);
+        m_root_degree = m_succ0(1);
+    }
+
+    /**
      * @brief Returns one NodeInfo per node in BFS order, including leaf nodes.
      *
      * Each entry's parent field is the 0-based row index of its parent in
@@ -254,10 +425,7 @@ class compact_metatrie_hash {
     std::vector<NodeInfo> dump_nodes() const {
         std::vector<NodeInfo> nodes;
 
-        size_type num_zeros = 0;
-        for (size_type i = 0; i < m_bv.size(); i++)
-            if (!m_bv[i])
-                num_zeros++;
+        size_type num_zeros = count_bits(m_bv, 0);
 
         struct BFSEntry {
             size_type louds_pos;

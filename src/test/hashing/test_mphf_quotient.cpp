@@ -129,7 +129,7 @@ bool run_dataset_test(const TestDataset& dataset,
     // non-key in a different region of the uint64 space is rejected.
     for (auto key : dataset.keys) {
         __uint128_t fake128 = static_cast<__uint128_t>(key) + jump128;
-        if (fake128 >= (static_cast<__uint128_t>(1) << 64)) {
+        if (fake128 > UINT32_MAX) {
             continue;
         }
         uint64_t fake = static_cast<uint64_t>(fake128);

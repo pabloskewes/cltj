@@ -20,6 +20,7 @@
 #ifndef LTJ_ITERATOR_METATRIE_HASH_HPP
 #define LTJ_ITERATOR_METATRIE_HASH_HPP
 
+#include <cassert>
 #include <cltj_config.hpp>
 #include <cltj_utils.hpp>
 #include <string>
@@ -171,12 +172,23 @@ class ltj_iterator_metatrie_hash {
         size_type beg, end;
         beg = trie->first_child(0);
         end = beg + cnt - 1;
-        auto p = trie->binary_search_seek(m_path_label[m_nfixed - 1], beg, end);
+        std::pair<uint32_t, uint32_t> p;
+        if (trie->node_has_hash(0)) {
+            auto [found, slot] = trie->hash_locate(0, m_path_label[m_nfixed - 1]);
+            p = {m_path_label[m_nfixed - 1], beg + slot};
+        } else {
+            p = trie->binary_search_seek(m_path_label[m_nfixed - 1], beg, end);
+        }
         size_type cur_node = trie->nodeselect(p.second);
         cnt = trie->children(cur_node);
         beg = trie->first_child(cur_node);
         end = beg + cnt - 1;
-        p = trie->binary_search_seek(m_path_label[m_nfixed - 2], beg, end);
+        if (trie->node_has_hash(cur_node)) {
+            auto [found, slot] = trie->hash_locate(cur_node, m_path_label[m_nfixed - 2]);
+            p = {m_path_label[m_nfixed - 2], beg + slot};
+        } else {
+            p = trie->binary_search_seek(m_path_label[m_nfixed - 2], beg, end);
+        }
         cur_node = trie->nodeselect(p.second);
         return cur_node;
     }
@@ -280,9 +292,7 @@ class ltj_iterator_metatrie_hash {
      * Used to scan children sequentially without allocating a vector.
      * Assumes the trie has been selected (e.g. via current_node_has_hash).
      */
-    value_type child_value_at(size_type pos) const {
-        return resolve_trie()->seq[pos];
-    }
+    value_type child_value_at(size_type pos) const { return resolve_trie()->seq[pos]; }
 
     /**
      * @brief Directly sets the next-level status frame, skipping binary search.
@@ -425,13 +435,24 @@ class ltj_iterator_metatrie_hash {
         choose_trie(state);
         const auto* trie = m_ptr_index->get_trie(m_trie_i);
 
-        if (m_nfixed == 1 && m_status_i == 1) {
-            // const auto* trie_aux = m_ptr_index->get_trie(m_trie_i-1);
+        if (m_nfixed == 1 && m_status_i == 1) {  // Partial trie path (SOP/PSO/OPS)
             size_type beg, end;
             size_type node = trie->nodeselect(m_status[m_nfixed].beg - 1);
             auto cnt = trie->children(node);
             beg = trie->first_child(node);
             end = beg + cnt - 1;
+
+            if (trie->node_has_hash(node)) {
+                auto [found, slot] = trie->hash_locate(node, c);
+                if (!found)
+                    return false;
+                m_status[m_nfixed + 1].beg = beg + slot;
+                m_status[m_nfixed + 1].end = end;
+                m_status[m_nfixed + 1].cnt = cnt;
+                m_redo[m_nfixed] = false;
+                return true;
+            }
+
             auto p = trie->binary_search_seek(c, beg, end);
             if (p.second > end or p.first != c)
                 return false;
@@ -457,10 +478,23 @@ class ltj_iterator_metatrie_hash {
             }
         }
 
+        // General case path: full trie or depth > 1
         size_type beg, end;
         auto cnt = trie->children(parent());
         beg = trie->first_child(parent());
         end = beg + cnt - 1;
+
+        if (trie->node_has_hash(parent())) {
+            auto [found, slot] = trie->hash_locate(parent(), c);
+            if (!found)
+                return false;
+            m_status[m_nfixed + 1].beg = beg + slot;
+            m_status[m_nfixed + 1].end = end;
+            m_status[m_nfixed + 1].cnt = cnt;
+            m_redo[m_nfixed] = false;
+            return true;
+        }
+
         auto p = trie->binary_search_seek(c, beg, end);
         if (p.second > end or p.first != c)
             return false;
@@ -497,6 +531,7 @@ class ltj_iterator_metatrie_hash {
                     break;
             }
         }
+        assert(!trie->node_has_hash(parent()));
 
         size_type beg, end;
         // std::cout << "Leap redo n_fixed:" << m_nfixed << std::endl;
