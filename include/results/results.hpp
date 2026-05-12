@@ -6,7 +6,8 @@
 #define RESULTS_HPP
 
 #include <results/results_collector.hpp>
+#include <results/results_counter.hpp>
 #include <results/results_printer.hpp>
 #include <results/results_writer.hpp>
 
-#endif // RESULTS_HPP
+#endif  // RESULTS_HPP
