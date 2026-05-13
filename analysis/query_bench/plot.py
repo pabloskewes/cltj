@@ -131,6 +131,49 @@ def plot_median_by_type(
     return fig
 
 
+def plot_mean_by_type(
+    summary: pd.DataFrame,
+    savepath: str | Path | None = None,
+) -> plt.Figure:
+    """Grouped bar chart: mean query time (µs) per type for X-CLTJ and H-CLTJ.
+
+    Means are sensitive to heavy tails (e.g. timeout caps, ultra-dense queries).
+    """
+    types = summary.index.tolist()
+    x = np.arange(len(types))
+    width = 0.35
+
+    fig, ax = plt.subplots(figsize=(7, 5))
+    ax.bar(
+        x - width / 2,
+        summary["mean_time_us_xcltj"],
+        width,
+        label="X-CLTJ",
+        color="#4c72b0",
+    )
+    ax.bar(
+        x + width / 2,
+        summary["mean_time_us_hcltj"],
+        width,
+        label="H-CLTJ",
+        color="#dd8452",
+    )
+
+    ax.set_yscale("log")
+    ax.set_xticks(x)
+    ax.set_xticklabels(types)
+    ax.set_xlabel("Query type")
+    ax.set_ylabel("Mean query time (µs, log scale)")
+    ax.set_title("Mean query time by type: X-CLTJ vs H-CLTJ")
+    ax.legend()
+    ax.grid(True, axis="y", ls=":", alpha=0.4)
+
+    fig.tight_layout()
+    if savepath:
+        fig.savefig(savepath, dpi=150, bbox_inches="tight")
+    return fig
+
+
 def plot_speedup_boxplot(
     df: pd.DataFrame,
     savepath: str | Path | None = None,

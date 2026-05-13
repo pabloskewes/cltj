@@ -13,7 +13,11 @@ The tools are organized into self-contained modules by topic. Each module has it
 ### MPHF Strategy Evaluation
 - [`hashing/`](hashing/): Performance comparison of different MPHF families (BDZ, GlGh, PTHash) and storage policies (Quotienting) in isolation.
 
-### H-CLTJ Integration & Debugging
+### Query benchmark (X-CLTJ vs H-CLTJ)
+
+- [`query_bench/`](query_bench/): CLI `main.py` merges `bench-xcltj.csv` / `bench-hcltj.csv`, writes `comparison.csv`, summaries, `report.txt`, and figures under `figures/`: `time_scatter.png`, `median_by_type.png`, `mean_by_type.png` (mean times per query type; sensitive to tails/timeouts), `speedup_boxplot.png`.
+
+## Setup
 - [`children_histogram/`](children_histogram/): Analyzes trie node size distributions to determine optimal hashing thresholds.
 - [`trie_viz/`](trie_viz/): Visualizes the metatrie structure (full vs partial tries) from node dumps.
 - [`mphf_trace/`](mphf_trace/): Analyzes MPHF build traces to diagnose peeling failures, retry distributions, and residual 2-cores.

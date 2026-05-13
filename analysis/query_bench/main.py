@@ -14,6 +14,7 @@ Outputs inside ``outdir`` (default: ``<results_dir>/analysis/query_bench``):
   - ``report.txt``             plain-text report with the same stats
   - ``figures/time_scatter.png``
   - ``figures/median_by_type.png``
+  - ``figures/mean_by_type.png``
   - ``figures/speedup_boxplot.png``
 """
 
@@ -24,7 +25,12 @@ import os
 from pathlib import Path
 
 from load import load_comparison
-from plot import plot_median_by_type, plot_speedup_boxplot, plot_time_scatter
+from plot import (
+    plot_mean_by_type,
+    plot_median_by_type,
+    plot_speedup_boxplot,
+    plot_time_scatter,
+)
 from stats import add_speedup, summary_by_type, summary_overall
 
 
@@ -125,6 +131,7 @@ def main() -> None:
     specs = [
         ("time_scatter.png", lambda p: plot_time_scatter(df, savepath=p)),
         ("median_by_type.png", lambda p: plot_median_by_type(by_type, savepath=p)),
+        ("mean_by_type.png", lambda p: plot_mean_by_type(by_type, savepath=p)),
         ("speedup_boxplot.png", lambda p: plot_speedup_boxplot(df, savepath=p)),
     ]
     for fname, fn in specs:
