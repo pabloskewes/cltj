@@ -121,6 +121,8 @@ class compact_metatrie_hash {
 
     size_type root_degree() const { return m_root_degree; }
 
+    size_type louds_size() const { return m_bv.size(); }
+
     size_type mphf_count() const { return m_mphfs.size(); }
 
     /** 
