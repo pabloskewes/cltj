@@ -20,6 +20,7 @@
 #ifndef RING_LTJ_ALGORITHM_HASH_HPP
 #define RING_LTJ_ALGORITHM_HASH_HPP
 
+#include <cassert>
 #include <triple_pattern.hpp>
 // #include <ltj_iterator.hpp>
 #include <dict/dict_map.hpp>
@@ -415,7 +416,8 @@ class ltj_algorithm_hash {
                     stats.list_sizes.assign(children_sizes.begin(), children_sizes.end());
                 }
 
-                if (itrs[min_idx]->current_node_has_hash(x_j)) {
+                // DIAG: force leapfrog path to bisect hash-path bug (revert after EXP-007a)
+                if (false && itrs[min_idx]->current_node_has_hash(x_j)) {
                     // HASH PATH: scan smallest list, O(1) membership check on others
                     auto [beg, end_pos] = itrs[min_idx]->children_range();
 
@@ -447,7 +449,8 @@ class ltj_algorithm_hash {
                                     st = s;
                                 else if (itrs[i]->is_variable_predicate(x_j))
                                     st = p;
-                                itrs[i]->exists(st, c);
+                                bool found = itrs[i]->exists(st, c);
+                                assert(found && "hash_contains true but exists() false: wrong MPHF?");
                             }
                             for (ltj_iter_type* iter : itrs) {
                                 iter->down(x_j, c);
