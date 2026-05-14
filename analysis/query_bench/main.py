@@ -16,6 +16,9 @@ Outputs inside ``outdir`` (default: ``<results_dir>/analysis/query_bench``):
   - ``figures/median_by_type.png``
   - ``figures/mean_by_type.png``
   - ``figures/speedup_boxplot.png``
+  - ``figures/winrate_by_type.png``
+  - ``figures/timeout_heatmap.png``
+  - ``figures/summary_card.png``
 """
 
 from __future__ import annotations
@@ -29,7 +32,10 @@ from plot import (
     plot_mean_by_type,
     plot_median_by_type,
     plot_speedup_boxplot,
+    plot_summary_card,
     plot_time_scatter,
+    plot_timeout_heatmap,
+    plot_winrate_by_type,
 )
 from stats import add_speedup, summary_by_type, summary_overall
 
@@ -133,6 +139,9 @@ def main() -> None:
         ("median_by_type.png", lambda p: plot_median_by_type(by_type, savepath=p)),
         ("mean_by_type.png", lambda p: plot_mean_by_type(by_type, savepath=p)),
         ("speedup_boxplot.png", lambda p: plot_speedup_boxplot(df, savepath=p)),
+        ("winrate_by_type.png", lambda p: plot_winrate_by_type(df, savepath=p)),
+        ("timeout_heatmap.png", lambda p: plot_timeout_heatmap(df, savepath=p)),
+        ("summary_card.png", lambda p: plot_summary_card(df, overall, by_type, savepath=p)),
     ]
     for fname, fn in specs:
         path = figdir / fname

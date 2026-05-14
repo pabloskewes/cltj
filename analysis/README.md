@@ -15,7 +15,7 @@ The tools are organized into self-contained modules by topic. Each module has it
 
 ### Query benchmark (X-CLTJ vs H-CLTJ)
 
-- [`query_bench/`](query_bench/): CLI `main.py` merges `bench-xcltj.csv` / `bench-hcltj.csv`, writes `comparison.csv`, summaries, `report.txt`, and figures under `figures/`: `time_scatter.png`, `median_by_type.png`, `mean_by_type.png` (mean times per query type; sensitive to tails/timeouts), `speedup_boxplot.png`.
+- [`query_bench/`](query_bench/): CLI `main.py` merges `bench-xcltj.csv` / `bench-hcltj.csv`, writes `comparison.csv`, summaries, `report.txt`, and figures under `figures/`: `time_scatter.png`, `median_by_type.png`, `mean_by_type.png` (mean times per query type; sensitive to tails/timeouts), `speedup_boxplot.png`, `winrate_by_type.png` (stacked bar of win-rate per type), `timeout_heatmap.png` (timeouts per engine/type), `summary_card.png` (dashboard with key metrics).
 
 ## Setup
 - [`children_histogram/`](children_histogram/): Analyzes trie node size distributions to determine optimal hashing thresholds.
