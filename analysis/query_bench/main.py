@@ -2,6 +2,7 @@
 
 Usage:
     python main.py <results_dir> [--outdir DIR] [--types PATH]
+    python main.py <results_dir> --xcltj-csv X.csv --hcltj-csv H.csv
 
 Inputs inside ``results_dir``:
   - ``bench-xcltj.csv``
@@ -27,16 +28,7 @@ import argparse
 import os
 from pathlib import Path
 
-from load import load_comparison
-from plot import (
-    plot_mean_by_type,
-    plot_median_by_type,
-    plot_speedup_boxplot,
-    plot_summary_card,
-    plot_time_scatter,
-    plot_timeout_heatmap,
-    plot_winrate_by_type,
-)
+from compare import load_comparison
 from stats import add_speedup, summary_by_type, summary_overall
 
 
@@ -48,6 +40,8 @@ def _write_report(
     report_path: Path,
     results_dir: Path,
     types_path: Path,
+    xcltj_path: Path,
+    hcltj_path: Path,
     comparison_rows: int,
     overall,
     by_type,
@@ -57,6 +51,8 @@ def _write_report(
         "========================",
         "",
         f"results_dir: {results_dir}",
+        f"xcltj_csv:   {xcltj_path}",
+        f"hcltj_csv:   {hcltj_path}",
         f"types_path:  {types_path}",
         f"n_queries:   {comparison_rows}",
         "",
@@ -87,6 +83,14 @@ def main() -> None:
         help="Path to types.txt (default: repo-root/Queries/types.txt)",
     )
     parser.add_argument(
+        "--xcltj-csv",
+        help="Path to X-CLTJ benchmark CSV (default: <results_dir>/bench-xcltj.csv)",
+    )
+    parser.add_argument(
+        "--hcltj-csv",
+        help="Path to H-CLTJ benchmark CSV (default: <results_dir>/bench-hcltj.csv)",
+    )
+    parser.add_argument(
         "--no-figures",
         action="store_true",
         help="Skip figure generation and only write CSV/text outputs",
@@ -102,8 +106,16 @@ def main() -> None:
     figdir = outdir / "figures"
     types_path = Path(args.types).resolve() if args.types else _default_types_path()
 
-    xcltj_path = results_dir / "bench-xcltj.csv"
-    hcltj_path = results_dir / "bench-hcltj.csv"
+    xcltj_path = (
+        Path(args.xcltj_csv).resolve()
+        if args.xcltj_csv
+        else results_dir / "bench-xcltj.csv"
+    )
+    hcltj_path = (
+        Path(args.hcltj_csv).resolve()
+        if args.hcltj_csv
+        else results_dir / "bench-hcltj.csv"
+    )
 
     outdir.mkdir(parents=True, exist_ok=True)
     if not args.no_figures:
@@ -124,7 +136,16 @@ def main() -> None:
     df.to_csv(comparison_path, index=False)
     overall.to_csv(overall_path, index=False)
     by_type.to_csv(by_type_path)
-    _write_report(report_path, results_dir, types_path, len(df), overall, by_type)
+    _write_report(
+        report_path,
+        results_dir,
+        types_path,
+        xcltj_path,
+        hcltj_path,
+        len(df),
+        overall,
+        by_type,
+    )
 
     print(f"Saved {comparison_path}")
     print(f"Saved {overall_path}")
@@ -133,6 +154,16 @@ def main() -> None:
 
     if args.no_figures:
         return
+
+    from plot import (
+        plot_mean_by_type,
+        plot_median_by_type,
+        plot_speedup_boxplot,
+        plot_summary_card,
+        plot_time_scatter,
+        plot_timeout_heatmap,
+        plot_winrate_by_type,
+    )
 
     specs = [
         ("time_scatter.png", lambda p: plot_time_scatter(df, savepath=p)),
