@@ -1,8 +1,11 @@
 #pragma once
 
+#include <cerrno>
 #include <cstdint>
 #include <cstdlib>
 #include <fstream>
+#include <string>
+#include <sys/stat.h>
 #include <vector>
 
 #include <util/instrument.hpp>
@@ -18,8 +21,9 @@ inline constexpr uint64_t CANDIDATE_FRAME_VALUE_LIMIT = 100;
  * Controlled by CMake option ``CLTJ_TRACE_QUERY`` -> ``cltj::TRACE_QUERY``.
  * When disabled, all methods are empty inlines (zero overhead).
  *
- * Output path: env var ``CLTJ_QUERY_TRACE_FILE`` if set,
- * otherwise the ``fallback_path`` given to the constructor.
+ * Output directory: env var ``CLTJ_QUERY_TRACE_DIR`` if set,
+ * otherwise the ``fallback_dir`` given to the constructor.
+ * One trace file is written per query as `query-<qid>.jsonl`.
  */
 template <bool Enabled>
 struct QueryTracer {
@@ -48,20 +52,83 @@ struct QueryTracer<true> {
     static constexpr bool is_enabled = true;
 
     std::ofstream out_;
+    std::string trace_dir_;
     uint64_t query_id_ = 0;
+    bool has_active_query_ = false;
+    uint64_t exists_true_count_ = 0;
+    uint64_t exists_false_count_ = 0;
 
-    static const char* resolve_path(const char* fallback_path) {
-        const char* env_path = std::getenv("CLTJ_QUERY_TRACE_FILE");
-        if (env_path != nullptr && env_path[0] != '\0')
-            return env_path;
-        return fallback_path;
+    static std::string resolve_dir(const char* fallback_dir) {
+        const char* env_dir = std::getenv("CLTJ_QUERY_TRACE_DIR");
+        if (env_dir != nullptr && env_dir[0] != '\0')
+            return env_dir;
+        if (fallback_dir != nullptr && fallback_dir[0] != '\0')
+            return fallback_dir;
+        return "query_traces";
     }
 
-    explicit QueryTracer(const char* fallback_path) : out_(resolve_path(fallback_path), std::ios::app) {}
+    static bool ensure_dir(const std::string& dir) {
+        if (dir.empty())
+            return false;
+        return mkdir(dir.c_str(), 0755) == 0 || errno == EEXIST;
+    }
 
-    void set_query_id(uint64_t qid) { query_id_ = qid; }
+    explicit QueryTracer(const char* fallback_dir) : trace_dir_(resolve_dir(fallback_dir)) {}
+
+    ~QueryTracer() { finalize_query(); }
+
+    void reset_exists_counts() {
+        exists_true_count_ = 0;
+        exists_false_count_ = 0;
+    }
+
+    void write_exists_summary() {
+        if (!out_.is_open())
+            return;
+        out_ << "{\"type\":\"exists_summary\""
+             << ",\"query_id\":" << query_id_
+             << ",\"found_true_count\":" << exists_true_count_
+             << ",\"found_false_count\":" << exists_false_count_
+             << "}\n";
+    }
+
+    void finalize_query() {
+        if (!has_active_query_)
+            return;
+        write_exists_summary();
+        out_.flush();
+        out_.close();
+        has_active_query_ = false;
+    }
+
+    void open_query_file() {
+        if (!ensure_dir(trace_dir_))
+            return;
+        const std::string file_path = trace_dir_ + "/query-" + std::to_string(query_id_) + ".jsonl";
+        out_.open(file_path.c_str(), std::ios::out | std::ios::trunc);
+        if (!out_.is_open())
+            return;
+        has_active_query_ = true;
+        reset_exists_counts();
+    }
+
+    void ensure_query_file_open() {
+        if (!has_active_query_)
+            open_query_file();
+    }
+
+    void set_query_id(uint64_t qid) {
+        if (has_active_query_ && qid == query_id_)
+            return;
+        finalize_query();
+        query_id_ = qid;
+        open_query_file();
+    }
 
     void on_session_start(const char* note) {
+        ensure_query_file_open();
+        if (!has_active_query_)
+            return;
         out_ << "{\"type\":\"session_start\"";
         if (note != nullptr && note[0] != '\0')
             out_ << ",\"note\":\"" << note << "\"";
@@ -72,6 +139,9 @@ struct QueryTracer<true> {
     void on_pure_hash_frame(
         uint64_t depth, uint64_t var_id, const std::vector<uint64_t>& children_sizes, uint64_t min_iter_idx
     ) {
+        ensure_query_file_open();
+        if (!has_active_query_)
+            return;
         out_ << "{\"type\":\"pure_hash_frame\""
              << ",\"query_id\":" << query_id_ << ",\"depth\":" << depth << ",\"var_id\":" << var_id
              << ",\"min_iter_idx\":" << min_iter_idx << ",\"children_sizes\":[";
@@ -105,6 +175,9 @@ struct QueryTracer<true> {
         uint64_t candidate_count,
         const std::vector<uint64_t>& candidates
     ) {
+        ensure_query_file_open();
+        if (!has_active_query_)
+            return;
         out_ << "{\"type\":\"candidate_frame\""
              << ",\"mode\":\"" << mode << "\""
              << ",\"query_id\":" << query_id_
@@ -136,6 +209,14 @@ struct QueryTracer<true> {
         uint64_t iter_idx,
         bool found
     ) {
+        ensure_query_file_open();
+        if (!has_active_query_)
+            return;
+        if (found) {
+            ++exists_true_count_;
+            return;
+        }
+        ++exists_false_count_;
         out_ << "{\"type\":\"exists_result\""
              << ",\"query_id\":" << query_id_
              << ",\"depth\":" << depth
@@ -147,7 +228,10 @@ struct QueryTracer<true> {
         flush();
     }
 
-    void flush() { out_.flush(); }
+    void flush() {
+        if (has_active_query_)
+            out_.flush();
+    }
 };
 
 template <bool Enabled, class Tuple>

@@ -66,7 +66,7 @@ class ltj_algorithm_hash {
     var_to_iterators_type m_var_to_iterators;
     bool m_is_empty = false;
     std::vector<IntersectionStats> m_stats;
-    cltj::query::QueryTracer<cltj::TRACE_QUERY> m_tracer{"query_trace.jsonl"};
+    cltj::query::QueryTracer<cltj::TRACE_QUERY> m_tracer{"query_traces"};
 
     void copy(const ltj_algorithm_hash& o) {
         m_ptr_triple_patterns = o.m_ptr_triple_patterns;
