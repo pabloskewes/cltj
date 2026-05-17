@@ -425,6 +425,9 @@ class ltj_algorithm_hash {
                     // HASH PATH: scan smallest list, O(1) membership check on others
                     auto [beg, end_pos] = itrs[min_idx]->children_range();
                     m_tracer.on_pure_hash_frame(j, x_j, children_sizes, min_idx);
+                    cltj::query::CandidateFrame<TRACE_QUERY, tuple_type> frame(
+                        m_tracer, "hash", j, x_j, tuple
+                    );
 
                     for (size_type pos = beg; pos < end_pos; ++pos) {
                         value_type c = itrs[min_idx]->child_value_at(pos);
@@ -442,6 +445,7 @@ class ltj_algorithm_hash {
                         if (in_all) {
                             if constexpr (COLLECT_QUERY_STATS) stats.result_size++;
                             tuple[j] = {x_j, c};
+                            frame.add(c);
 
                             // min_iter: position already known from scan, skip binary search
                             itrs[min_idx]->set_level_status(pos, beg, end_pos - beg);
@@ -455,7 +459,7 @@ class ltj_algorithm_hash {
                                 else if (itrs[i]->is_variable_predicate(x_j))
                                     st = p;
                                 bool found = itrs[i]->exists(st, c);
-                                m_tracer.on_exists_result(c, i, found);
+                                m_tracer.on_exists_result(j, x_j, tuple, c, i, found);
                             }
                             for (ltj_iter_type* iter : itrs) {
                                 iter->down(x_j, c);
@@ -470,12 +474,17 @@ class ltj_algorithm_hash {
                             m_veo.up();
                         }
                     }
+                    frame.emit();
                 } else {
                     // LEAPFROG PATH: unchanged
                     value_type c = seek(x_j);
+                    cltj::query::CandidateFrame<TRACE_QUERY, tuple_type> frame(
+                        m_tracer, "leapfrog", j, x_j, tuple
+                    );
                     while (c != 0) {  // If empty c=0
                         if constexpr (COLLECT_QUERY_STATS) stats.result_size++;
                         tuple[j] = {x_j, c};
+                        frame.add(c);
                         for (ltj_iter_type* iter : itrs) {
                             iter->down(x_j, c);
                         }
@@ -489,6 +498,7 @@ class ltj_algorithm_hash {
                         m_veo.up();
                         c = seek(x_j, c + 1);
                     }
+                    frame.emit();
                 }
 
                 if constexpr (COLLECT_QUERY_STATS) {

@@ -10,8 +10,10 @@
 namespace cltj {
 namespace query {
 
+inline constexpr uint64_t CANDIDATE_FRAME_VALUE_LIMIT = 100;
+
 /**
- * @brief JSONL tracer for query-time diagnostics (hash path).
+ * @brief JSONL tracer for query-time diagnostics.
  *
  * Controlled by CMake option ``CLTJ_TRACE_QUERY`` -> ``cltj::TRACE_QUERY``.
  * When disabled, all methods are empty inlines (zero overhead).
@@ -30,7 +32,13 @@ struct QueryTracer {
 
     void on_pure_hash_frame(uint64_t, uint64_t, const std::vector<uint64_t>&, uint64_t) {}
 
-    void on_exists_result(uint64_t, uint64_t, bool) {}
+    template <class Tuple>
+    void on_candidate_frame(
+        const char*, uint64_t, uint64_t, const Tuple&, uint64_t, const std::vector<uint64_t>&
+    ) {}
+
+    template <class Tuple>
+    void on_exists_result(uint64_t, uint64_t, const Tuple&, uint64_t, uint64_t, bool) {}
 
     void flush() {}
 };
@@ -76,13 +84,108 @@ struct QueryTracer<true> {
         flush();
     }
 
-    void on_exists_result(uint64_t candidate, uint64_t iter_idx, bool found) {
+    template <class Tuple>
+    void write_prefix(const Tuple& prefix, uint64_t depth) {
+        out_ << "\"prefix\":[";
+        for (uint64_t i = 0; i < depth; ++i) {
+            if (i)
+                out_ << ',';
+            out_ << "{\"var\":" << static_cast<uint64_t>(prefix[i].first)
+                 << ",\"value\":" << static_cast<uint64_t>(prefix[i].second) << "}";
+        }
+        out_ << "]";
+    }
+
+    template <class Tuple>
+    void on_candidate_frame(
+        const char* mode,
+        uint64_t depth,
+        uint64_t var_id,
+        const Tuple& prefix,
+        uint64_t candidate_count,
+        const std::vector<uint64_t>& candidates
+    ) {
+        out_ << "{\"type\":\"candidate_frame\""
+             << ",\"mode\":\"" << mode << "\""
+             << ",\"query_id\":" << query_id_
+             << ",\"depth\":" << depth
+             << ",\"var_id\":" << var_id << ",";
+        write_prefix(prefix, depth);
+        out_ << ",\"candidate_count\":" << candidate_count;
+        if (candidate_count <= CANDIDATE_FRAME_VALUE_LIMIT) {
+            out_ << ",\"candidates\":[";
+            for (size_t i = 0; i < candidates.size(); ++i) {
+                if (i)
+                    out_ << ',';
+                out_ << candidates[i];
+            }
+            out_ << "]";
+        } else {
+            out_ << ",\"candidates_omitted\":true";
+        }
+        out_ << "}\n";
+        flush();
+    }
+
+    template <class Tuple>
+    void on_exists_result(
+        uint64_t depth,
+        uint64_t var_id,
+        const Tuple& prefix,
+        uint64_t candidate,
+        uint64_t iter_idx,
+        bool found
+    ) {
         out_ << "{\"type\":\"exists_result\""
-             << ",\"query_id\":" << query_id_ << ",\"c\":" << candidate << ",\"iter\":" << iter_idx
+             << ",\"query_id\":" << query_id_
+             << ",\"depth\":" << depth
+             << ",\"var_id\":" << var_id << ",";
+        write_prefix(prefix, depth);
+        out_ << ",\"c\":" << candidate
+             << ",\"iter\":" << iter_idx
              << ",\"found\":" << (found ? "true" : "false") << "}\n";
+        flush();
     }
 
     void flush() { out_.flush(); }
+};
+
+template <bool Enabled, class Tuple>
+struct CandidateFrame {
+    CandidateFrame(QueryTracer<Enabled>&, const char*, uint64_t, uint64_t, const Tuple&) {}
+
+    void add(uint64_t) {}
+    void emit() {}
+};
+
+template <class Tuple>
+struct CandidateFrame<true, Tuple> {
+    QueryTracer<true>& tracer_;
+    const char* mode_;
+    uint64_t depth_;
+    uint64_t var_id_;
+    const Tuple& prefix_;
+    uint64_t count_ = 0;
+    std::vector<uint64_t> candidates_;
+
+    CandidateFrame(
+        QueryTracer<true>& tracer,
+        const char* mode,
+        uint64_t depth,
+        uint64_t var_id,
+        const Tuple& prefix
+    )
+        : tracer_(tracer), mode_(mode), depth_(depth), var_id_(var_id), prefix_(prefix) {}
+
+    void add(uint64_t candidate) {
+        ++count_;
+        if (candidates_.size() <= CANDIDATE_FRAME_VALUE_LIMIT)
+            candidates_.push_back(candidate);
+    }
+
+    void emit() {
+        tracer_.on_candidate_frame(mode_, depth_, var_id_, prefix_, count_, candidates_);
+    }
 };
 
 }  // namespace query
