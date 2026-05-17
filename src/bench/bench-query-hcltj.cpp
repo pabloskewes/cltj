@@ -27,6 +27,7 @@
 #include <util/file_util.hpp>
 #include <util/time_util.hpp>
 #include <utility>
+#include <query/query_tracer.hpp>
 
 using namespace std;
 

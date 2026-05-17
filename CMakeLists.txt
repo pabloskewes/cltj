@@ -16,6 +16,7 @@ option(CLTJ_USE_LIBCXX "Force -stdlib=libc++ (needed mainly on macOS)" ON)
 option(CLTJ_COLLECT_QUERY_STATS "Collect intersection stats (disable for clean benchmarks)" OFF)
 option(CLTJ_COLLECT_MPHF_BUILD_TRACE "Trace MPHF build per-node (JSONL output)" OFF)
 option(CLTJ_DUMP_MPHF_KEYS "Dump key sets for failed MPHF builds (binary)" OFF)
+option(CLTJ_TRACE_QUERY "Emit query-time diagnostics to JSONL (QueryTracer)" OFF)
 set(CLTJ_LEGACY_CXX_STANDARD 11 CACHE STRING "C++ standard for legacy targets")
 set_property(CACHE CLTJ_LEGACY_CXX_STANDARD PROPERTY STRINGS 11 14 17)
 
@@ -39,6 +40,9 @@ if(CLTJ_COLLECT_MPHF_BUILD_TRACE)
 endif()
 if(CLTJ_DUMP_MPHF_KEYS)
   target_compile_definitions(cltj_core INTERFACE CLTJ_DUMP_MPHF_KEYS_ENABLED)
+endif()
+if(CLTJ_TRACE_QUERY)
+  target_compile_definitions(cltj_core INTERFACE CLTJ_TRACE_QUERY_ENABLED)
 endif()
 
 # Logging interface target wired through cltj_core

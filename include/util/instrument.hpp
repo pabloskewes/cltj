@@ -24,4 +24,10 @@ inline constexpr bool DUMP_MPHF_KEYS = true;
 inline constexpr bool DUMP_MPHF_KEYS = false;
 #endif
 
+#ifdef CLTJ_TRACE_QUERY_ENABLED
+inline constexpr bool TRACE_QUERY = true;
+#else
+inline constexpr bool TRACE_QUERY = false;
+#endif
+
 }  // namespace cltj
