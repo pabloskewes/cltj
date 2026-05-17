@@ -28,6 +28,7 @@
 #include <query/ltj_iterator_basic.hpp>
 #include <query/ltj_iterator_lite.hpp>
 #include <query/ltj_iterator_metatrie_hash.hpp>
+#include <query/query_tracer.hpp>
 #include <results/results.hpp>
 #include <util/rdf_util.hpp>
 #include <veo/veo_adaptive.hpp>
@@ -36,6 +37,8 @@
 #define EXPT_TIME_SOL 0
 
 namespace ltj {
+
+using cltj::TRACE_QUERY;
 
 template <
     class iterator_t = ltj_iterator_lite<cltj::compact_ltj, uint8_t, uint64_t>,
@@ -63,6 +66,7 @@ class ltj_algorithm_hash {
     var_to_iterators_type m_var_to_iterators;
     bool m_is_empty = false;
     std::vector<IntersectionStats> m_stats;
+    cltj::query::QueryTracer<cltj::TRACE_QUERY> m_tracer{"query_trace.jsonl"};
 
     void copy(const ltj_algorithm_hash& o) {
         m_ptr_triple_patterns = o.m_ptr_triple_patterns;
@@ -102,6 +106,8 @@ class ltj_algorithm_hash {
 
   public:
     const std::vector<IntersectionStats>& get_stats() const { return m_stats; }
+
+    void set_query_id(uint64_t qid) { m_tracer.set_query_id(qid); }
 
     ltj_algorithm_hash() = default;
 
@@ -418,6 +424,7 @@ class ltj_algorithm_hash {
                 if (itrs[min_idx]->current_node_has_hash(x_j)) {
                     // HASH PATH: scan smallest list, O(1) membership check on others
                     auto [beg, end_pos] = itrs[min_idx]->children_range();
+                    m_tracer.on_pure_hash_frame(j, x_j, children_sizes, min_idx);
 
                     for (size_type pos = beg; pos < end_pos; ++pos) {
                         value_type c = itrs[min_idx]->child_value_at(pos);
@@ -447,7 +454,8 @@ class ltj_algorithm_hash {
                                     st = s;
                                 else if (itrs[i]->is_variable_predicate(x_j))
                                     st = p;
-                                itrs[i]->exists(st, c);
+                                bool found = itrs[i]->exists(st, c);
+                                m_tracer.on_exists_result(c, i, found);
                             }
                             for (ltj_iter_type* iter : itrs) {
                                 iter->down(x_j, c);

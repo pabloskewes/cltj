@@ -79,6 +79,7 @@ void query(
 
             auto start = std::chrono::high_resolution_clock::now();
             algorithm_type ltj(&query, &graph);
+            ltj.set_query_id(nQ);
             ltj.join(res, limit, timeout);
             auto stop = std::chrono::high_resolution_clock::now();
             auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(stop - start).count();
