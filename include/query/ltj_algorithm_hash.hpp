@@ -20,6 +20,7 @@
 #ifndef RING_LTJ_ALGORITHM_HASH_HPP
 #define RING_LTJ_ALGORITHM_HASH_HPP
 
+#include <cassert>
 #include <triple_pattern.hpp>
 // #include <ltj_iterator.hpp>
 #include <dict/dict_map.hpp>
@@ -453,6 +454,10 @@ class ltj_algorithm_hash {
                             tuple[j] = {x_j, c};
                             frame.add(c);
 
+                            assert(
+                                itrs[min_idx]->resolve_trie() == scan_trie
+                                && "BUGFIX-2b: min_idx trie corrupted during hash scan"
+                            );
                             // min_iter: position already known from scan, skip binary search
                             itrs[min_idx]->set_level_status(pos, beg, end_pos - beg);
                             // TODO: avoid exists() for non-min iterators too, as it costs O(log n)

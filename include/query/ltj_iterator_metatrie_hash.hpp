@@ -373,6 +373,7 @@ class ltj_iterator_metatrie_hash {
     }
 
     void down(state_type state) {
+        choose_trie(state);
         ++m_nfixed;
         m_fixed[m_nfixed - 1] = state;
 
