@@ -474,6 +474,9 @@ class ltj_algorithm_hash {
                             m_veo.up();
                         }
                     }
+                    for (ltj_iter_type* iter : itrs) {
+                        iter->leap_done();
+                    }
                     frame.emit();
                 } else {
                     // LEAPFROG PATH: unchanged
