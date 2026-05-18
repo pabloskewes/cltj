@@ -429,13 +429,14 @@ class ltj_algorithm_hash {
                 if (itrs[min_idx]->current_node_has_hash(x_j)) {
                     // HASH PATH: scan smallest list, O(1) membership check on others
                     auto [beg, end_pos] = itrs[min_idx]->children_range();
+                    const auto* scan_trie = itrs[min_idx]->resolve_trie();
                     m_tracer.on_pure_hash_frame(j, x_j, children_sizes, min_idx);
                     cltj::query::CandidateFrame<TRACE_QUERY, tuple_type> frame(
                         m_tracer, "hash", j, x_j, tuple
                     );
 
                     for (size_type pos = beg; pos < end_pos; ++pos) {
-                        value_type c = itrs[min_idx]->child_value_at(pos);
+                        value_type c = scan_trie->seq[pos];
 
                         bool in_all = true;
                         for (size_type i = 0; i < itrs.size(); ++i) {

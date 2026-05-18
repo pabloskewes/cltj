@@ -181,6 +181,25 @@ class ltj_iterator_metatrie_hash {
         return cur_node;
     }
 
+  public:
+    /*
+      Returns the key of the current position of the iterator
+  */
+    const size_type& nfixed = m_nfixed;
+
+    inline bool is_variable_subject(var_type var) {
+        return m_ptr_triple_pattern->term_s.is_variable && var == m_ptr_triple_pattern->term_s.value;
+    }
+
+    inline bool is_variable_predicate(var_type var) {
+        return m_ptr_triple_pattern->term_p.is_variable && var == m_ptr_triple_pattern->term_p.value;
+    }
+
+    inline bool is_variable_object(var_type var) {
+        return m_ptr_triple_pattern->term_o.is_variable && var == m_ptr_triple_pattern->term_o.value;
+    }
+    inline const bool is_empty() { return m_is_empty; }
+
     /**
      * @brief Returns the effective trie for the current iterator state.
      *
@@ -206,25 +225,6 @@ class ltj_iterator_metatrie_hash {
         }
         return trie;
     }
-
-  public:
-    /*
-      Returns the key of the current position of the iterator
-  */
-    const size_type& nfixed = m_nfixed;
-
-    inline bool is_variable_subject(var_type var) {
-        return m_ptr_triple_pattern->term_s.is_variable && var == m_ptr_triple_pattern->term_s.value;
-    }
-
-    inline bool is_variable_predicate(var_type var) {
-        return m_ptr_triple_pattern->term_p.is_variable && var == m_ptr_triple_pattern->term_p.value;
-    }
-
-    inline bool is_variable_object(var_type var) {
-        return m_ptr_triple_pattern->term_o.is_variable && var == m_ptr_triple_pattern->term_o.value;
-    }
-    inline const bool is_empty() { return m_is_empty; }
 
     /**
      * True iff the current LOUDS node for @p var has an MPHF overlay.
@@ -280,9 +280,7 @@ class ltj_iterator_metatrie_hash {
      * Used to scan children sequentially without allocating a vector.
      * Assumes the trie has been selected (e.g. via current_node_has_hash).
      */
-    value_type child_value_at(size_type pos) const {
-        return resolve_trie()->seq[pos];
-    }
+    value_type child_value_at(size_type pos) const { return resolve_trie()->seq[pos]; }
 
     /**
      * @brief Directly sets the next-level status frame, skipping binary search.
