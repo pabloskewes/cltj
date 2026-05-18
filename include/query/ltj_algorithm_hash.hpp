@@ -382,12 +382,16 @@ class ltj_algorithm_hash {
             if (itrs.size() == 1 && itrs[0]->in_last_level()) {  // Lonely variables
                 // cout << "Seeking (last level)" << endl;
                 auto results = itrs[0]->seek_all(x_j);
+                cltj::query::CandidateFrame<TRACE_QUERY, tuple_type> frame(
+                    m_tracer, "lonely", j, x_j, tuple
+                );
                 // cout << "Results: " << results.size() << endl;
                 // cout << "Seek (last level): (" << (uint64_t) x_j << ": size=" <<
                 // results.size() << ")" <<endl;
                 for (const auto& c : results) {
                     // 1. Adding result to tuple
                     tuple[j] = {x_j, c};
+                    frame.add(c);
                     // 2. Going down in the trie by setting x_j = c (\mu(t_i) in paper)
                     itrs[0]->down(x_j, c);
                     m_veo.down();
@@ -399,6 +403,7 @@ class ltj_algorithm_hash {
                     itrs[0]->up(x_j);
                     m_veo.up();
                 }
+                frame.emit();
             } else {
                 // Compute children sizes
                 std::vector<size_type> children_sizes(itrs.size());
