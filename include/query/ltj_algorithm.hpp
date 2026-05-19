@@ -28,6 +28,7 @@
 #include <query/ltj_iterator_basic.hpp>
 #include <query/ltj_iterator_lite.hpp>
 #include <query/ltj_iterator_metatrie.hpp>
+#include <query/query_tracer.hpp>
 #include <results/results.hpp>
 #include <util/rdf_util.hpp>
 #include <veo/veo_adaptive.hpp>
@@ -36,6 +37,8 @@
 #define EXPT_TIME_SOL 0
 
 namespace ltj {
+
+using cltj::TRACE_QUERY;
 
 template <
     class iterator_t = ltj_iterator_lite<cltj::compact_ltj, uint8_t, uint64_t>,
@@ -65,6 +68,7 @@ private:
   var_to_iterators_type m_var_to_iterators;
   bool m_is_empty = false;
   std::vector<IntersectionStats> m_stats;
+  cltj::query::QueryTracer<cltj::TRACE_QUERY> m_tracer{"query_traces"};
 
   void copy(const ltj_algorithm &o) {
     m_ptr_triple_patterns = o.m_ptr_triple_patterns;
@@ -106,6 +110,10 @@ private:
 public:
   const std::vector<IntersectionStats> &get_stats() const {
     return m_stats;
+  }
+
+  void set_query_id(uint64_t qid) {
+    m_tracer.set_query_id(qid);
   }
 
   ltj_algorithm() = default;
@@ -284,12 +292,15 @@ public:
       if (itrs.size() == 1 && itrs[0]->in_last_level()) { // Lonely variables
         // cout << "Seeking (last level)" << endl;
         auto results = itrs[0]->seek_all(x_j);
+        cltj::query::CandidateFrame<TRACE_QUERY, tuple_type> frame(
+            m_tracer, "lonely", j, x_j, tuple);
         // cout << "Results: " << results.size() << endl;
         // cout << "Seek (last level): (" << (uint64_t) x_j << ": size=" <<
         // results.size() << ")" <<endl;
         for (const auto &c : results) {
           // 1. Adding result to tuple
           tuple[j] = {x_j, c};
+          frame.add(c);
           // 2. Going down in the trie by setting x_j = c (\mu(t_i) in paper)
           itrs[0]->down(x_j, c);
           m_veo.down();
@@ -304,6 +315,7 @@ public:
           itrs[0]->up(x_j);
           m_veo.up();
         }
+        frame.emit();
       } else {
         value_type c = seek(x_j);
         // cout << "Seek (init): (" << (uint64_t) x_j << ": " << c << ")"
@@ -431,6 +443,8 @@ public:
         }
 
         value_type c = seek(x_j);
+        cltj::query::CandidateFrame<TRACE_QUERY, tuple_type> frame(
+            m_tracer, "leapfrog", j, x_j, tuple);
         // cout << "Seek (init): (" << (uint64_t) x_j << ": " << c << ")"
         // <<endl;
         while (c != 0) { // If empty c=0
@@ -438,6 +452,7 @@ public:
 
           // 1. Adding result to tuple
           tuple[j] = {x_j, c};
+          frame.add(c);
           // 2. Going down in the tries by setting x_j = c (\mu(t_i) in paper)
           for (ltj_iter_type *iter : itrs) {
             iter->down(x_j, c);
@@ -457,6 +472,7 @@ public:
           // cout << "Seek (bucle): (" << (uint64_t) x_j << ": " << c << ")"
           // <<endl;
         }
+        frame.emit();
 
         if constexpr (COLLECT_QUERY_STATS) {
           stats.alternation_complexity =
