@@ -4,6 +4,7 @@
 data/
 .vscode/
 .cursor/
+.pi/
 *intersection_statistics*
 notes/
 
