@@ -20,6 +20,7 @@
 #ifndef RING_LTJ_ALGORITHM_HASH_HPP
 #define RING_LTJ_ALGORITHM_HASH_HPP
 
+#include <cassert>
 #include <triple_pattern.hpp>
 // #include <ltj_iterator.hpp>
 #include <dict/dict_map.hpp>
@@ -28,6 +29,7 @@
 #include <query/ltj_iterator_basic.hpp>
 #include <query/ltj_iterator_lite.hpp>
 #include <query/ltj_iterator_metatrie_hash.hpp>
+#include <query/query_tracer.hpp>
 #include <results/results.hpp>
 #include <util/rdf_util.hpp>
 #include <veo/veo_adaptive.hpp>
@@ -36,6 +38,8 @@
 #define EXPT_TIME_SOL 0
 
 namespace ltj {
+
+using cltj::TRACE_QUERY;
 
 template <
     class iterator_t = ltj_iterator_lite<cltj::compact_ltj, uint8_t, uint64_t>,
@@ -63,6 +67,7 @@ class ltj_algorithm_hash {
     var_to_iterators_type m_var_to_iterators;
     bool m_is_empty = false;
     std::vector<IntersectionStats> m_stats;
+    cltj::query::QueryTracer<cltj::TRACE_QUERY> m_tracer{"query_traces"};
 
     void copy(const ltj_algorithm_hash& o) {
         m_ptr_triple_patterns = o.m_ptr_triple_patterns;
@@ -102,6 +107,8 @@ class ltj_algorithm_hash {
 
   public:
     const std::vector<IntersectionStats>& get_stats() const { return m_stats; }
+
+    void set_query_id(uint64_t qid) { m_tracer.set_query_id(qid); }
 
     ltj_algorithm_hash() = default;
 
@@ -265,12 +272,16 @@ class ltj_algorithm_hash {
             if (itrs.size() == 1 && itrs[0]->in_last_level()) {  // Lonely variables
                 // cout << "Seeking (last level)" << endl;
                 auto results = itrs[0]->seek_all(x_j);
+                cltj::query::CandidateFrame<TRACE_QUERY, tuple_type> frame(
+                    m_tracer, "lonely", j, x_j, tuple
+                );
                 // cout << "Results: " << results.size() << endl;
                 // cout << "Seek (last level): (" << (uint64_t) x_j << ": size=" <<
                 // results.size() << ")" <<endl;
                 for (const auto& c : results) {
                     // 1. Adding result to tuple
                     tuple[j] = {x_j, c};
+                    frame.add(c);
                     // 2. Going down in the trie by setting x_j = c (\mu(t_i) in paper)
                     itrs[0]->down(x_j, c);
                     m_veo.down();
@@ -284,6 +295,7 @@ class ltj_algorithm_hash {
                     itrs[0]->up(x_j);
                     m_veo.up();
                 }
+                frame.emit();
             } else {
                 // TODO: add hash path here (same as search()) if join_str() needs it
                 value_type c = seek(x_j);
@@ -422,15 +434,25 @@ class ltj_algorithm_hash {
                 if (sorted_itrs.empty()) {
                     // All iterators hashed: Pure hash path.
                     auto [beg, end_pos] = itrs[min_idx]->children_range();
+                    const auto* scan_trie = itrs[min_idx]->resolve_trie();
+                    m_tracer.on_pure_hash_frame(j, x_j, children_sizes, min_idx);
+                    cltj::query::CandidateFrame<TRACE_QUERY, tuple_type> frame(
+                        m_tracer, "hash", j, x_j, tuple
+                    );
 
                     for (size_type pos = beg; pos < end_pos; ++pos) {
-                        value_type c = itrs[min_idx]->child_value_at(pos);
+                        value_type c = scan_trie->seq[pos];
 
                         if (candidate_in_hashed_iterators(x_j, c, hashed_itrs, itrs[min_idx])) {
                             if constexpr (COLLECT_QUERY_STATS)
                                 stats.result_size++;
                             tuple[j] = {x_j, c};
+                            frame.add(c);
 
+                            assert(
+                                itrs[min_idx]->resolve_trie() == scan_trie
+                                && "min iterator trie changed during hash scan"
+                            );
                             // min_iter: position already known from scan, skip binary search
                             itrs[min_idx]->set_level_status(pos, beg, end_pos - beg);
                             position_hashed_iterators(x_j, c, hashed_itrs, itrs[min_idx]);
@@ -447,14 +469,22 @@ class ltj_algorithm_hash {
                             m_veo.up();
                         }
                     }
+                    for (ltj_iter_type* iter : itrs) {
+                        iter->leap_done();
+                    }
+                    frame.emit();
                 } else {
                     // At least one iterator is sorted: leapfrog on sorted_itrs, hash-filter on hashed_itrs.
                     value_type c = seek_on_iterators(x_j, sorted_itrs);
+                    cltj::query::CandidateFrame<TRACE_QUERY, tuple_type> frame(
+                        m_tracer, "hybrid", j, x_j, tuple
+                    );
                     while (c != 0) {  // If empty c=0
                         if (candidate_in_hashed_iterators(x_j, c, hashed_itrs)) {
                             if constexpr (COLLECT_QUERY_STATS)
                                 stats.result_size++;
                             tuple[j] = {x_j, c};
+                            frame.add(c);
                             position_hashed_iterators(x_j, c, hashed_itrs);
                             for (ltj_iter_type* iter : itrs) {
                                 iter->down(x_j, c);
@@ -470,6 +500,10 @@ class ltj_algorithm_hash {
                         }
                         c = seek_on_iterators(x_j, sorted_itrs, c + 1);
                     }
+                    for (ltj_iter_type* iter : hashed_itrs) {
+                        iter->leap_done();
+                    }
+                    frame.emit();
                 }
 
                 if constexpr (COLLECT_QUERY_STATS) {

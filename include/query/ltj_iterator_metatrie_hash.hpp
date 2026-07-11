@@ -193,11 +193,13 @@ class ltj_iterator_metatrie_hash {
         return cur_node;
     }
 
+  public:
     /**
      * @brief Returns the effective trie for the current iterator state.
      *
      * Applies the partial-to-full trie switch when needed
      * (`m_nfixed == 2 && m_status_i == 1`).
+     * Exposed so the hash path can pin the trie used to scan a node.
      */
     const typename index_scheme_type::trie_type* resolve_trie() const {
         const auto* trie = m_ptr_index->get_trie(m_trie_i);
@@ -219,7 +221,6 @@ class ltj_iterator_metatrie_hash {
         return trie;
     }
 
-  public:
     /*
       Returns the key of the current position of the iterator
   */
@@ -385,6 +386,7 @@ class ltj_iterator_metatrie_hash {
     }
 
     void down(state_type state) {
+        choose_trie(state);
         ++m_nfixed;
         m_fixed[m_nfixed - 1] = state;
 

@@ -4,6 +4,7 @@
 data/
 .vscode/
 .cursor/
+.pi/
 *intersection_statistics*
 notes/
 
@@ -42,7 +43,7 @@ cmake-build-debug/
 .idea/
 plots/
 build/
-results/
+/results/
 
 # Datasets
 /wikidata/
