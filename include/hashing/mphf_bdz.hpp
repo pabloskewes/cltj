@@ -32,7 +32,7 @@ namespace hashing {
  *   - used_pos_bytes : B bitvector marking used slots.
  *   - rank_bytes     : rank support over B.
  *   - q_bytes        : key payload (FullKey, QuotientKey, ...).
- *   - other_bytes    : serialized metadata (n, prime deltas, retry_count, n_peeled).
+ *   - other_bytes    : serialized metadata (n, prime deltas, retry_count, multipliers, biases, n_peeled).
  *   - fallback_bytes : fallback system residual array (sorted residual keys).
  */
 struct SizeBreakdown {
@@ -161,9 +161,11 @@ class MPHF {
         breakdown.used_pos_bytes = storage_breakdown.used_pos_bytes;
         breakdown.rank_bytes = storage_breakdown.rank_bytes;
         breakdown.q_bytes = key_policy_.size_in_bytes();
-        // Metadata: n (4) + 3×prime_deltas (3) + retry_count (1) + n_peeled (4) = 12 bytes
+        // Metadata: n (4) + 3×prime_deltas (3) + retry_count (1) + multipliers (24)
+        //           + biases (24) + n_peeled (4) = 60 bytes
         // Note: m_ and primes_ are not serialized (computed/reconstructed)
-        breakdown.other_bytes = sizeof(n_) + 3 * sizeof(uint8_t) + sizeof(retry_count_) + sizeof(n_peeled_);
+        breakdown.other_bytes = sizeof(n_) + 3 * sizeof(uint8_t) + sizeof(retry_count_) +
+            sizeof(multipliers_) + sizeof(biases_) + sizeof(n_peeled_);
         breakdown.fallback_bytes = sizeof(uint32_t)  // residual_count field
             + residual_keys_.size() * sizeof(uint32_t);
         return breakdown;
@@ -208,6 +210,15 @@ class MPHF {
         }
         written_bytes += sdsl::write_member(retry_count_, out, child, "retry_count_");
 
+        // Hash coefficients a_k, b_k.
+        for (int k = 0; k < 3; ++k) {
+            written_bytes +=
+                sdsl::write_member(multipliers_[k], out, child, "multiplier_" + std::to_string(k));
+        }
+        for (int k = 0; k < 3; ++k) {
+            written_bytes += sdsl::write_member(biases_[k], out, child, "bias_" + std::to_string(k));
+        }
+
         // KeyPolicy payload
         written_bytes += key_policy_.serialize(out, child, "key_policy_");
 
@@ -242,14 +253,20 @@ class MPHF {
         }
         sdsl::read_member(retry_count_, in);
 
+        // Hash coefficients a_k, b_k, stored directly (see serialize()).
+        for (int k = 0; k < 3; ++k) {
+            sdsl::read_member(multipliers_[k], in);
+        }
+        for (int k = 0; k < 3; ++k) {
+            sdsl::read_member(biases_[k], in);
+        }
+
         m_ = static_cast<uint32_t>(primes_[0] + primes_[1] + primes_[2]);
 
         // Rebuild derived hash state
         segment_starts_[0] = 0;
         segment_starts_[1] = primes_[0];
         segment_starts_[2] = primes_[0] + primes_[1];
-
-        regenerate_coefficients();
 
         // KeyPolicy only needs the hash parameters rebound before load().
         policies::KeyInitContext ctx{n_, primes_, multipliers_, biases_, segment_starts_, 0};
@@ -682,25 +699,6 @@ class MPHF {
     }
 
     // ========== HELPER FUNCTIONS ==========
-    /**
-     * @brief Regenerate multipliers and biases from retry_count using SplitMix64 mixer.
-     * Used during deserialization to avoid storing 48 bytes of coefficients.
-     */
-    void regenerate_coefficients() {
-        uint64_t final_seed = splitmix64(SEED ^ static_cast<uint64_t>(retry_count_));
-        std::mt19937_64 rng(final_seed);
-        for (int k = 0; k < 3; ++k) {
-            uint64_t p = primes_[static_cast<size_t>(k)];
-            std::uniform_int_distribution<uint64_t> distA(1, p - 1);
-            multipliers_[static_cast<size_t>(k)] = distA(rng);
-        }
-        for (int k = 0; k < 3; ++k) {
-            uint64_t p = primes_[static_cast<size_t>(k)];
-            std::uniform_int_distribution<uint64_t> distB(0, p - 1);
-            biases_[static_cast<size_t>(k)] = distB(rng);
-        }
-    }
-
     /**
      * @brief Compute hash function h_k(x) for k ∈ {0,1,2}
      * h_k(x) = d_k + ((a_k · x + b_k) mod r_k)
