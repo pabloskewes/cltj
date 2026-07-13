@@ -112,7 +112,7 @@ TestResult run_test_case(size_t n) {
         for (size_t i = 0; i < negative_sample_size; ++i) {
             uint64_t non_key;
             do {
-                non_key = rng();
+                non_key = static_cast<uint32_t>(rng());  // premix32 domain: keys must fit in uint32_t
             } while (key_set.count(non_key));  // Ensure it's not actually a key
 
             if (mphf.contains(non_key)) {
