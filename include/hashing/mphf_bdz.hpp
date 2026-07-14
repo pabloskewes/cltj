@@ -253,7 +253,7 @@ class MPHF {
         }
         sdsl::read_member(retry_count_, in);
 
-        // Hash coefficients a_k, b_k, stored directly (see serialize()).
+        // Hash coefficients a_k, b_k.
         for (int k = 0; k < 3; ++k) {
             sdsl::read_member(multipliers_[k], in);
         }
