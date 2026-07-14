@@ -54,8 +54,9 @@ std::vector<uint64_t> synthesize_fallback_fixture(
     for (size_t i = indexed_keys.size() - residual_count; i < indexed_keys.size(); ++i) {
         uint64_t key = indexed_keys[i].second;
         residual_keys.push_back(key);
-        mphf.residual_keys_.push_back(static_cast<uint32_t>(cltj::hashing::premix32(static_cast<uint32_t>(key)
-        )));
+        mphf.residual_keys_.push_back(
+            static_cast<uint32_t>(cltj::hashing::premix32(static_cast<uint32_t>(key)))
+        );
     }
     std::sort(mphf.residual_keys_.begin(), mphf.residual_keys_.end());
     mphf.n_peeled_ = static_cast<uint32_t>(keys.size() - residual_count);
@@ -139,6 +140,12 @@ void test_roundtrip(
     std::cout << "  [OK] Metadata preserved: m=" << original_m << " n=" << original_n
               << " retries=" << original_retries << " n_peeled=" << original_n_peeled
               << " residual=" << original_n_residual << std::endl;
+
+    // 1b. Hash coefficients must be reloaded byte-for-byte
+    assert(mphf2.get_multipliers() == mphf1.get_multipliers() && "multipliers_ mismatch after load");
+    assert(mphf2.get_biases() == mphf1.get_biases() && "biases_ mismatch after load");
+    assert(mphf2.get_primes() == mphf1.get_primes() && "primes_ mismatch after load");
+    std::cout << "  [OK] Hash coefficients (multipliers, biases, primes) preserved" << std::endl;
 
     // 2. Check that all query() results match
     bool queries_match = true;
