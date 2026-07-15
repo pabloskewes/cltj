@@ -20,7 +20,7 @@ namespace hashing {
 // ============================================================
 
 constexpr char DUMP_MAGIC[4] = {'M', 'K', 'E', 'Y'};
-constexpr uint32_t DUMP_VERSION = 1;
+constexpr uint32_t DUMP_VERSION = 2;
 
 /**
  * @brief On-disk header for MPHF key dump files (40 bytes, little-endian).
@@ -33,7 +33,7 @@ constexpr uint32_t DUMP_VERSION = 1;
  *   [8]  node_pos  uint64
  *   [8]  n_keys    uint64
  *   [8]  checksum  uint64 (FNV-1a 64-bit over the key array bytes)
- *   [n*8] keys     uint64_t[]
+ *   [n*4] keys     uint32_t[]
  */
 struct KeyDumpHeader {
     char magic[4];  // DUMP_MAGIC
@@ -47,15 +47,15 @@ struct KeyDumpHeader {
 static_assert(sizeof(KeyDumpHeader) == 40, "KeyDumpHeader must be 40 bytes");
 
 /**
- * @brief FNV-1a 64-bit checksum over the raw bytes of a uint64_t array.
+ * @brief FNV-1a 64-bit checksum over the raw bytes of a uint32_t array.
  * Reference: http://www.isthe.com/chongo/tech/comp/fnv/  (fnv_64a_buf)
  */
-inline uint64_t fnv1a64(const std::vector<uint64_t>& keys) {
+inline uint64_t fnv1a64(const std::vector<uint32_t>& keys) {
     constexpr uint64_t basis = 14695981039346656037ULL;
     constexpr uint64_t prime = 1099511628211ULL;
     uint64_t h = basis;
     const uint8_t* data = reinterpret_cast<const uint8_t*>(keys.data());
-    for (size_t i = 0; i < keys.size() * sizeof(uint64_t); ++i) {
+    for (size_t i = 0; i < keys.size() * sizeof(uint32_t); ++i) {
         h ^= data[i];
         h *= prime;
     }
@@ -67,7 +67,7 @@ inline uint64_t fnv1a64(const std::vector<uint64_t>& keys) {
  * Sets magic, version, trie_id, pad, node_pos, n_keys, and checksum.
  */
 inline KeyDumpHeader make_dump_header(
-    uint32_t trie_id, uint64_t node_pos, const std::vector<uint64_t>& keys
+    uint32_t trie_id, uint64_t node_pos, const std::vector<uint32_t>& keys
 ) {
     KeyDumpHeader hdr{};
     hdr.magic[0] = DUMP_MAGIC[0];
@@ -88,7 +88,7 @@ inline KeyDumpHeader make_dump_header(
  * @return true on success, false on I/O error.
  */
 inline bool write_dump_file(
-    const std::string& path, const KeyDumpHeader& hdr, const std::vector<uint64_t>& keys
+    const std::string& path, const KeyDumpHeader& hdr, const std::vector<uint32_t>& keys
 ) {
     std::ofstream out(path, std::ios::binary | std::ios::trunc);
     if (!out)
@@ -96,7 +96,7 @@ inline bool write_dump_file(
     out.write(reinterpret_cast<const char*>(&hdr), sizeof(KeyDumpHeader));
     out.write(
         reinterpret_cast<const char*>(keys.data()),
-        static_cast<std::streamsize>(keys.size() * sizeof(uint64_t))
+        static_cast<std::streamsize>(keys.size() * sizeof(uint32_t))
     );
     return out.good();
 }
@@ -106,7 +106,7 @@ inline bool write_dump_file(
  * @return Empty string on success; human-readable error on failure.
  * On success, hdr and keys are populated.
  */
-inline std::string read_dump_file(const std::string& path, KeyDumpHeader& hdr, std::vector<uint64_t>& keys) {
+inline std::string read_dump_file(const std::string& path, KeyDumpHeader& hdr, std::vector<uint32_t>& keys) {
     std::ifstream in(path, std::ios::binary);
     if (!in)
         return "cannot open '" + path + "'";
@@ -126,7 +126,7 @@ inline std::string read_dump_file(const std::string& path, KeyDumpHeader& hdr, s
 
     keys.resize(hdr.n_keys);
     in.read(
-        reinterpret_cast<char*>(keys.data()), static_cast<std::streamsize>(hdr.n_keys * sizeof(uint64_t))
+        reinterpret_cast<char*>(keys.data()), static_cast<std::streamsize>(hdr.n_keys * sizeof(uint32_t))
     );
     if (!in)
         return "failed to read " + std::to_string(hdr.n_keys) + " keys";
@@ -175,7 +175,7 @@ struct KeyDumper {
     static constexpr bool is_enabled = false;
 
     explicit KeyDumper(const char*) {}
-    void dump(const std::vector<uint64_t>&, uint32_t, uint64_t) {}
+    void dump(const std::vector<uint32_t>&, uint32_t, uint64_t) {}
 };
 
 /**
@@ -197,7 +197,7 @@ struct KeyDumper<true> {
         dump_log_.open(resolve_dump_jsonl(dir_), std::ios::app);
     }
 
-    void dump(const std::vector<uint64_t>& keys, uint32_t trie_id, uint64_t node_pos) {
+    void dump(const std::vector<uint32_t>& keys, uint32_t trie_id, uint64_t node_pos) {
         if (keys.empty())
             return;
 
@@ -207,8 +207,8 @@ struct KeyDumper<true> {
             "_n" + std::to_string(hdr.n_keys) + ".bin";
         write_dump_file(dir_ + "/" + fname, hdr, keys);
 
-        uint64_t key_min = keys[0], key_max = keys[0];
-        for (uint64_t k : keys) {
+        uint32_t key_min = keys[0], key_max = keys[0];
+        for (uint32_t k : keys) {
             if (k < key_min)
                 key_min = k;
             if (k > key_max)

@@ -55,7 +55,7 @@ int main(int argc, char** argv) {
 
     // --- Read and validate dump ---
     cltj::hashing::KeyDumpHeader hdr{};
-    std::vector<uint64_t> keys;
+    std::vector<uint32_t> keys;
     std::string err = cltj::hashing::read_dump_file(dump_file, hdr, keys);
     if (!err.empty()) {
         std::cerr << "error: " << err << "\n";
@@ -83,8 +83,8 @@ int main(int argc, char** argv) {
     }
 
     // Key-range diagnostics
-    uint64_t key_min = keys[0], key_max = keys[0];
-    for (uint64_t k : keys) {
+    uint32_t key_min = keys[0], key_max = keys[0];
+    for (uint32_t k : keys) {
         if (k < key_min)
             key_min = k;
         if (k > key_max)
