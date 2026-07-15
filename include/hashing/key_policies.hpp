@@ -22,7 +22,7 @@ struct KeyInitContext {
     const std::array<uint64_t, 3>& multipliers;
     const std::array<uint64_t, 3>& biases;
     const std::array<uint64_t, 3>& segment_starts;
-    uint64_t max_mixed_key;  // upper bound for the post-mixer key domain used by the policy
+    uint32_t max_mixed_key;  // upper bound for the post-mixer key domain used by the policy
 };
 
 struct NoKey {
@@ -31,7 +31,7 @@ struct NoKey {
 
     void init(const KeyInitContext&) {}
 
-    void store(size_t, uint64_t, const Triple&, int) {}
+    void store(size_t, uint32_t, const Triple&, int) {}
 
     size_t size_in_bytes() const { return 0; }
 
@@ -47,15 +47,15 @@ struct FullKey {
     static constexpr bool supports_contains = true;
     static constexpr bool needs_input_stats = false;
 
-    std::vector<uint64_t> keys_;
+    std::vector<uint32_t> keys_;
 
     void init(const KeyInitContext& ctx) { keys_.assign(ctx.n, 0); }
 
-    void store(size_t idx, uint64_t key, const Triple&, int) { keys_[idx] = key; }
+    void store(size_t idx, uint32_t key, const Triple&, int) { keys_[idx] = key; }
 
-    bool verify(size_t idx, uint64_t key, int) const { return keys_[idx] == key; }
+    bool verify(size_t idx, uint32_t key, int) const { return keys_[idx] == key; }
 
-    size_t size_in_bytes() const { return sizeof(uint64_t) * keys_.size(); }
+    size_t size_in_bytes() const { return sizeof(uint32_t) * keys_.size(); }
 
     // Context binding: FullKey does not depend on hash parameters.
     void bind_context(const KeyInitContext&) {}
@@ -70,9 +70,9 @@ struct FullKey {
         if (sz > 0) {
             out.write(
                 reinterpret_cast<const char*>(keys_.data()),
-                static_cast<std::streamsize>(sz * sizeof(uint64_t))
+                static_cast<std::streamsize>(sz * sizeof(uint32_t))
             );
-            written += sz * sizeof(uint64_t);
+            written += sz * sizeof(uint32_t);
         }
 
         sdsl::structure_tree::add_size(child, written);
@@ -85,7 +85,7 @@ struct FullKey {
         keys_.resize(static_cast<size_t>(sz));
         if (sz > 0) {
             in.read(
-                reinterpret_cast<char*>(keys_.data()), static_cast<std::streamsize>(sz * sizeof(uint64_t))
+                reinterpret_cast<char*>(keys_.data()), static_cast<std::streamsize>(sz * sizeof(uint32_t))
             );
         }
     }
@@ -122,13 +122,13 @@ struct QuotientKey {
         if (ctx.max_mixed_key > 0) {
             q_max = ctx.max_mixed_key / p_min;
         } else {
-            q_max = std::numeric_limits<uint64_t>::max() / p_min;
+            q_max = std::numeric_limits<uint32_t>::max() / p_min;
         }
         uint8_t quotient_width = (q_max == 0) ? 1 : static_cast<uint8_t>(sdsl::bits::hi(q_max) + 1);
         quotients_ = sdsl::int_vector<>(ctx.n, 0, quotient_width);
     }
 
-    void store(size_t idx, uint64_t mixed_key, const Triple&, int which_h) {
+    void store(size_t idx, uint32_t mixed_key, const Triple&, int which_h) {
         assert(idx < quotients_.size());
         assert(which_h >= 0 && which_h <= 2);
 
@@ -139,7 +139,7 @@ struct QuotientKey {
         quotients_[idx] = q;
     }
 
-    bool verify(size_t idx, uint64_t mixed_key, int which_h) const {
+    bool verify(size_t idx, uint32_t mixed_key, int which_h) const {
         if (idx >= quotients_.size())
             return false;
         if (which_h < 0 || which_h > 2)
