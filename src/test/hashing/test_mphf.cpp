@@ -19,15 +19,15 @@ using cltj::hashing::PackedTritStorage;
 using cltj::hashing::policies::FullKey;
 
 // Helper to generate a vector of unique random keys in a reasonable range.
-static std::vector<uint64_t> generate_reasonable_keys(size_t n, uint64_t seed) {
+static std::vector<uint32_t> generate_reasonable_keys(size_t n, uint64_t seed) {
     std::mt19937_64 rng(seed);
-    std::unordered_set<uint64_t> unique_keys;
+    std::unordered_set<uint32_t> unique_keys;
     // Generate keys in a range up to 100*n to reduce collisions during generation.
-    std::uniform_int_distribution<uint64_t> dist(1, n * 100);
+    std::uniform_int_distribution<uint32_t> dist(1, static_cast<uint32_t>(n * 100));
     while (unique_keys.size() < n) {
         unique_keys.insert(dist(rng));
     }
-    return std::vector<uint64_t>(unique_keys.begin(), unique_keys.end());
+    return std::vector<uint32_t>(unique_keys.begin(), unique_keys.end());
 }
 
 // A struct to hold all the results from a single test run.
@@ -106,13 +106,13 @@ TestResult run_test_case(size_t n) {
     // 3. Check for False Positives
     if (result.is_permutation) {
         size_t negative_sample_size = std::min((size_t)100000, n);  // Limit sample size
-        std::unordered_set<uint64_t> key_set(keys.begin(), keys.end());
+        std::unordered_set<uint32_t> key_set(keys.begin(), keys.end());
         std::mt19937_64 rng(12345 + n);  // Different seed from keygen
         size_t false_positives = 0;
         for (size_t i = 0; i < negative_sample_size; ++i) {
-            uint64_t non_key;
+            uint32_t non_key;
             do {
-                non_key = static_cast<uint32_t>(rng());  // premix32 domain: keys must fit in uint32_t
+                non_key = static_cast<uint32_t>(rng());
             } while (key_set.count(non_key));  // Ensure it's not actually a key
 
             if (mphf.contains(non_key)) {

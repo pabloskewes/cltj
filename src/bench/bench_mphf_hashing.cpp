@@ -12,6 +12,7 @@
 #include <chrono>
 #include <cstdint>
 #include <iostream>
+#include <limits>
 #include <random>
 #include <string>
 #include <unordered_set>
@@ -31,17 +32,19 @@ namespace ph = pthash;
 
 namespace {
 
-// Generate a vector of unique random keys in a reasonable range.
-static std::vector<uint64_t> generate_unique_keys(size_t n, uint64_t seed) {
+// Generate a vector of unique random keys in the uint32 domain.
+static std::vector<uint32_t> generate_unique_keys(size_t n, uint64_t seed) {
     std::mt19937_64 rng(seed);
-    std::unordered_set<uint64_t> unique_keys;
+    std::unordered_set<uint32_t> unique_keys;
     unique_keys.reserve(n * 2);
-    // Generate keys in a range up to 100*n to reduce collisions during generation.
-    std::uniform_int_distribution<uint64_t> dist(1, n * 100);
+    // Generate keys in a range up to 100*n to reduce collisions during generation,
+    // capped to the MPHF's uint32 domain for large n.
+    uint64_t max_key = std::min<uint64_t>(n * 100, std::numeric_limits<uint32_t>::max());
+    std::uniform_int_distribution<uint32_t> dist(1, static_cast<uint32_t>(max_key));
     while (unique_keys.size() < n) {
         unique_keys.insert(dist(rng));
     }
-    return std::vector<uint64_t>(unique_keys.begin(), unique_keys.end());
+    return std::vector<uint32_t>(unique_keys.begin(), unique_keys.end());
 }
 
 struct BenchConfig {
@@ -107,7 +110,7 @@ BenchResult run_bench_case(const std::string& strategy_name, size_t n, uint64_t 
     volatile uint64_t sink = 0;  // prevent the compiler from optimizing queries away
     auto start_query = std::chrono::high_resolution_clock::now();
     for (size_t rep = 0; rep < query_reps; ++rep) {
-        for (uint64_t k : keys) {
+        for (uint32_t k : keys) {
             uint32_t h = mphf.query(k);
             sink ^= h;
         }

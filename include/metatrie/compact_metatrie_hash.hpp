@@ -140,7 +140,7 @@ class compact_metatrie_hash {
      */
     bool hash_contains(size_type node_pos, value_type key) const {
         size_type mphf_idx = m_hash_rank(node_pos);
-        return m_mphfs[mphf_idx].contains(static_cast<uint64_t>(key));
+        return m_mphfs[mphf_idx].contains(key);
     }
 
     /** 
@@ -151,7 +151,7 @@ class compact_metatrie_hash {
      */
     std::pair<bool, uint32_t> hash_locate(size_type node_pos, value_type key) const {
         size_type mphf_idx = m_hash_rank(node_pos);
-        return m_mphfs[mphf_idx].locate(static_cast<uint64_t>(key));
+        return m_mphfs[mphf_idx].locate(key);
     }
 
     /**
@@ -168,7 +168,7 @@ class compact_metatrie_hash {
         size_type mphf_idx = m_hash_rank(0);
         std::vector<size_type> perm(d);
         for (size_type i = 0; i < d; i++) {
-            uint64_t key = static_cast<uint64_t>(m_seq[i]);
+            value_type key = m_seq[i];
             auto [found, slot] = m_mphfs[mphf_idx].locate(key);
             perm[slot] = i;
         }
@@ -251,10 +251,10 @@ class compact_metatrie_hash {
             for (auto node : current_level) {
                 size_type n_children = children(node);
                 if (n_children >= threshold) {
-                    std::vector<uint64_t> keys;
+                    std::vector<uint32_t> keys;
                     keys.reserve(n_children);
                     for (size_type k = 0; k < n_children; k++)
-                        keys.push_back(static_cast<uint64_t>(m_seq[node + k]));
+                        keys.push_back(m_seq[node + k]);
 
                     tracer.on_node_start(trie_id, node, n_children, threshold);
                     mphf_type mphf;
@@ -350,7 +350,7 @@ class compact_metatrie_hash {
                     // Hashed node: build permutation from MPHF
                     size_type mphf_idx = m_hash_rank(old_pos);
                     for (size_type i = 0; i < n_children; i++) {
-                        uint64_t key = static_cast<uint64_t>(m_seq[old_pos + i]);
+                        value_type key = m_seq[old_pos + i];
                         auto [found, slot] = m_mphfs[mphf_idx].locate(key);
                         perm[slot] = i;
                     }

@@ -11,6 +11,7 @@
 #include <cassert>
 #include <cmath>
 #include <cstdint>
+#include <limits>
 #include <queue>
 #include <random>
 #include <sdsl/bit_vectors.hpp>
@@ -114,7 +115,7 @@ class MPHF {
      * @brief Build MPHF for given keys (no tracing).
      * Delegates to the traced overload with a no-op tracer (zero overhead).
      */
-    bool build(const std::vector<uint64_t>& keys) {
+    bool build(const std::vector<uint32_t>& keys) {
         hashing::MphfBuildTracer<false> noop("");
         return build(keys, noop);
     }
@@ -125,7 +126,7 @@ class MPHF {
      * Timing is only measured when Tracer::is_enabled is true (zero-cost otherwise).
      */
     template <typename Tracer>
-    bool build(const std::vector<uint64_t>& keys, Tracer& tracer) {
+    bool build(const std::vector<uint32_t>& keys, Tracer& tracer) {
         n_ = keys.size();
         if (n_ == 0)
             return false;
@@ -298,7 +299,7 @@ class MPHF {
      *
      * @return true on full peel or accepted fallback; false to request a retry.
      */
-    bool try_build(const std::vector<uint64_t>& keys, int retry_count) {
+    bool try_build(const std::vector<uint32_t>& keys, int retry_count) {
         if (!initialize_hash_functions(keys, retry_count)) {
             return false;
         }
@@ -331,17 +332,17 @@ class MPHF {
             residual_keys_.reserve(residual_count);
             for (uint32_t i = 0; i < static_cast<uint32_t>(triples.size()); ++i) {
                 if (!edge_removed[i]) {
-                    residual_keys_.push_back(static_cast<uint32_t>(triples[i].mixed_key));
+                    residual_keys_.push_back(triples[i].mixed_key);
                 }
             }
             std::sort(residual_keys_.begin(), residual_keys_.end());
         }
 
         // Quotient width uses the max mixed key over the full input.
-        uint64_t max_mixed_key = 0;
+        uint32_t max_mixed_key = 0;
         if constexpr (KeyPolicy::needs_input_stats) {
             for (auto k : keys) {
-                uint64_t mixed_key = static_cast<uint64_t>(premix32(static_cast<uint32_t>(k)));
+                uint32_t mixed_key = premix32(k);
                 if (mixed_key > max_mixed_key)
                     max_mixed_key = mixed_key;
             }
@@ -375,14 +376,13 @@ class MPHF {
      * @param key Key to query
      * @return Hash value in range [0, n)
      */
-    uint32_t query(uint64_t key) const {
+    uint32_t query(uint32_t key) const {
         auto triple = compute_triple(key);
 
         // Residual keys bypass the BDZ path.
         if (!residual_keys_.empty()) {
-            uint32_t mixed_key_u32 = static_cast<uint32_t>(triple.mixed_key);
-            auto it = std::lower_bound(residual_keys_.begin(), residual_keys_.end(), mixed_key_u32);
-            if (it != residual_keys_.end() && *it == mixed_key_u32) {
+            auto it = std::lower_bound(residual_keys_.begin(), residual_keys_.end(), triple.mixed_key);
+            if (it != residual_keys_.end() && *it == triple.mixed_key) {
                 return n_peeled_ + static_cast<uint32_t>(it - residual_keys_.begin());
             }
         }
@@ -403,7 +403,7 @@ class MPHF {
      * For peeled keys, slot is the BDZ rank; for fallback keys, slot is n_peeled_ + offset.
      */
     template <typename K = KeyPolicy>
-    std::enable_if_t<K::supports_contains, std::pair<bool, uint32_t>> locate(uint64_t key) const {
+    std::enable_if_t<K::supports_contains, std::pair<bool, uint32_t>> locate(uint32_t key) const {
         if (n_ == 0)
             return {false, 0};
 
@@ -411,9 +411,8 @@ class MPHF {
 
         // Fallback path: check residual keys via binary search.
         if (!residual_keys_.empty()) {
-            uint32_t mixed_key_u32 = static_cast<uint32_t>(triple.mixed_key);
-            auto it = std::lower_bound(residual_keys_.begin(), residual_keys_.end(), mixed_key_u32);
-            if (it != residual_keys_.end() && *it == mixed_key_u32)
+            auto it = std::lower_bound(residual_keys_.begin(), residual_keys_.end(), triple.mixed_key);
+            if (it != residual_keys_.end() && *it == triple.mixed_key)
                 return {true, n_peeled_ + static_cast<uint32_t>(it - residual_keys_.begin())};
         }
 
@@ -434,7 +433,7 @@ class MPHF {
      * @brief Check if a key is in the set (only enabled if KeyPolicy supports it).
      */
     template <typename K = KeyPolicy>
-    std::enable_if_t<K::supports_contains, bool> contains(uint64_t key) const {
+    std::enable_if_t<K::supports_contains, bool> contains(uint32_t key) const {
         return locate(key).first;
     }
 
@@ -455,7 +454,7 @@ class MPHF {
      * primes near m/3, later retries bump one prime at a time and resample a_k, b_k
      * to vary the hypergraph while keeping m essentially constant.
      */
-    bool initialize_hash_functions(const std::vector<uint64_t>& keys, int retry_count) {
+    bool initialize_hash_functions(const std::vector<uint32_t>& keys, int retry_count) {
         const uint64_t target_segment = compute_target_segment();
 
         if (retry_count == 0) {
@@ -471,6 +470,11 @@ class MPHF {
             int idx = order[(retry_count - 1) % 3];
             primes_[static_cast<size_t>(idx)] = next_prime(primes_[static_cast<size_t>(idx)] + 1);
         }
+
+        assert(
+            std::max({primes_[0], primes_[1], primes_[2]}) <= std::numeric_limits<uint32_t>::max() &&
+            "p_k must fit in uint32_t so that a_k*x stays within uint64_t in hash_function"
+        );
 
         // Compute segment starts and total m
         segment_starts_[0] = 0;
@@ -512,7 +516,7 @@ class MPHF {
     /**
      * @brief Generate triples for all keys using the three hash functions
      */
-    std::vector<Triple> generate_triples(const std::vector<uint64_t>& keys) {
+    std::vector<Triple> generate_triples(const std::vector<uint32_t>& keys) {
         std::vector<Triple> triples;
         triples.reserve(keys.size());
         for (auto x : keys) {
@@ -625,14 +629,14 @@ class MPHF {
                 }
             }
 
-            uint64_t mixed_key_min = triples[0].mixed_key, mixed_key_max = triples[0].mixed_key;
+            uint32_t mixed_key_min = triples[0].mixed_key, mixed_key_max = triples[0].mixed_key;
             for (const auto& t : triples) {
                 if (t.mixed_key < mixed_key_min)
                     mixed_key_min = t.mixed_key;
                 if (t.mixed_key > mixed_key_max)
                     mixed_key_max = t.mixed_key;
             }
-            uint64_t mixed_key_range = mixed_key_max - mixed_key_min + 1;
+            uint64_t mixed_key_range = static_cast<uint64_t>(mixed_key_max) - mixed_key_min + 1;
             double density = static_cast<double>(triples.size()) / static_cast<double>(mixed_key_range);
 
             LOG_WARN(
@@ -703,11 +707,14 @@ class MPHF {
      * @brief Compute hash function h_k(x) for k ∈ {0,1,2}
      * h_k(x) = d_k + ((a_k · x + b_k) mod r_k)
      * with r_k = primes_[k], a_k = multipliers_[k], b_k = biases_[k], d_k = segment_starts_[k].
+     *
+     * Since a_k < p_k < 2^32, x < 2^32, the product a_k·x fits in uint64_t with no overflow.
+     * Reminder: p_k ≈ m/3, m = 1.25·n => p_k ≈ 0.4167·n, and n < 2^32 => p_k < 2^31.
      */
-    uint32_t hash_function(uint64_t x, int k) const {
+    uint32_t hash_function(uint32_t x, int k) const {
         const size_t i = static_cast<size_t>(k);
         const uint64_t r = primes_[i];
-        uint64_t mapped = mod_mul(x, multipliers_[i], r);  // in [0, r)
+        uint64_t mapped = (x * multipliers_[i]) % r;  // in [0, r)
         mapped += biases_[i];
         if (mapped >= r)
             mapped -= r;  // single correction instead of modulo
@@ -719,15 +726,9 @@ class MPHF {
      * Applies premix32 before hashing to destroy arithmetic structure.
      * triple.mixed_key stores the mixed value premix32(key); the key policy
      * operates on that mixed value (not the original key) so that quotienting remains valid.
-     * Precondition: key must fit in uint32_t, since premix32 is defined over
-     * the uint32 domain and larger inputs would truncate silently.
      */
-    Triple compute_triple(uint64_t key) const {
-        assert(
-            key <= static_cast<uint64_t>(UINT32_MAX) &&
-            "premix32 requires keys to fit in uint32_t; larger inputs would truncate"
-        );
-        uint64_t mixed_key = static_cast<uint64_t>(premix32(static_cast<uint32_t>(key)));
+    Triple compute_triple(uint32_t key) const {
+        uint32_t mixed_key = premix32(key);
         return Triple(
             mixed_key, hash_function(mixed_key, 0), hash_function(mixed_key, 1), hash_function(mixed_key, 2)
         );

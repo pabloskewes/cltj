@@ -120,15 +120,15 @@ class TestReport {
  * @param max_value Maximum value for keys (default: UINT32_MAX, because premix32 maps keys to [0, 2^32))
  * @param seed Random seed for reproducibility
  */
-std::vector<uint64_t> generate_random_keys(size_t n, uint64_t seed = 42, uint64_t max_value = UINT32_MAX) {
-    std::vector<uint64_t> keys;
+std::vector<uint32_t> generate_random_keys(size_t n, uint64_t seed = 42, uint32_t max_value = UINT32_MAX) {
+    std::vector<uint32_t> keys;
     keys.reserve(n);
 
     std::mt19937_64 rng(seed);
-    std::uniform_int_distribution<uint64_t> dist(0, max_value);
+    std::uniform_int_distribution<uint32_t> dist(0, max_value);
 
     // Use a set to ensure uniqueness
-    std::set<uint64_t> unique_keys;
+    std::set<uint32_t> unique_keys;
     while (unique_keys.size() < n) {
         unique_keys.insert(dist(rng));
     }
@@ -180,7 +180,7 @@ TestResult test_dopplerganger_attack() {
 
         // Setup: Build MPHF with random keys
         const size_t N = 10000;
-        std::vector<uint64_t> keys = generate_random_keys(N);
+        std::vector<uint32_t> keys = generate_random_keys(N);
 
         MPHF<GlGhStorage, policies::QuotientKey> mphf;
         if (!mphf.build(keys)) {
@@ -191,19 +191,19 @@ TestResult test_dopplerganger_attack() {
         auto primes = mphf.get_primes();
 
         // Attack: For each key, generate impostors with same remainder
-        for (uint64_t x : keys) {
+        for (uint32_t x : keys) {
             for (uint64_t p : primes) {
                 // Impostor up: x' = x + p (same r, q' = q+1)
-                uint64_t impostor_up = x + p;
+                uint64_t impostor_up = static_cast<uint64_t>(x) + p;
                 if (impostor_up <= UINT32_MAX) {
                     result.checks_run++;
-                    if (mphf.contains(impostor_up))
+                    if (mphf.contains(static_cast<uint32_t>(impostor_up)))
                         result.false_positives++;
                 }
 
                 // Impostor down: x' = x - p (same r, q' = q-1)
                 if (x >= p) {
-                    uint64_t impostor_down = x - p;
+                    uint32_t impostor_down = x - static_cast<uint32_t>(p);
                     result.checks_run++;
                     if (mphf.contains(impostor_down))
                         result.false_positives++;
@@ -212,7 +212,7 @@ TestResult test_dopplerganger_attack() {
         }
 
         // Verify: All stored keys should still be found
-        for (uint64_t x : keys) {
+        for (uint32_t x : keys) {
             result.checks_run++;
             if (!mphf.contains(x)) {
                 result.false_negatives++;
@@ -257,7 +257,7 @@ TestResult test_zero_quotient_edge_case() {
 
         // We'll use typical primes from a build to determine p_min
         // Build a small MPHF first to get actual primes
-        std::vector<uint64_t> probe_keys = {1, 2, 3};
+        std::vector<uint32_t> probe_keys = {1, 2, 3};
         MPHF<GlGhStorage, policies::QuotientKey> probe_mphf;
         if (!probe_mphf.build(probe_keys)) {
             result.error_message = "Failed to build probe MPHF";
@@ -267,9 +267,9 @@ TestResult test_zero_quotient_edge_case() {
         uint64_t p_min = std::min({primes[0], primes[1], primes[2]});
 
         // Generate keys guaranteed to have q=0
-        std::vector<uint64_t> small_keys;
+        std::vector<uint32_t> small_keys;
         const size_t N = std::min(static_cast<uint64_t>(10000), p_min);
-        for (uint64_t i = 0; i < N; ++i) {
+        for (uint32_t i = 0; i < N; ++i) {
             small_keys.push_back(i);
         }
 
@@ -280,7 +280,7 @@ TestResult test_zero_quotient_edge_case() {
         }
 
         // Verify all keys with q=0 are present
-        for (uint64_t k : small_keys) {
+        for (uint32_t k : small_keys) {
             result.checks_run++;
             if (!mphf.contains(k)) {
                 result.false_negatives++;
@@ -289,7 +289,7 @@ TestResult test_zero_quotient_edge_case() {
 
         // Verify non-keys with q=0 are rejected
         uint64_t test_limit = std::min(static_cast<uint64_t>(N) + 1000, p_min);
-        for (uint64_t i = N; i < test_limit; ++i) {
+        for (uint32_t i = static_cast<uint32_t>(N); i < test_limit; ++i) {
             result.checks_run++;
             if (mphf.contains(i)) {
                 result.false_positives++;
@@ -336,11 +336,11 @@ TestResult test_dense_cluster_attack() {
         std::cout << "\nRunning: " << result.test_name << "...\n";
 
         const size_t N = 20000;  // Reduced to 20K for BDZ to be able to construct
-        std::vector<uint64_t> dense_keys;
+        std::vector<uint32_t> dense_keys;
         dense_keys.reserve(N);
 
         // Insert consecutive keys
-        for (uint64_t i = 0; i < N; ++i) {
+        for (uint32_t i = 0; i < N; ++i) {
             dense_keys.push_back(i);
         }
 
@@ -351,7 +351,7 @@ TestResult test_dense_cluster_attack() {
         }
 
         // Verify all present
-        for (uint64_t k : dense_keys) {
+        for (uint32_t k : dense_keys) {
             result.checks_run++;
             if (!mphf.contains(k)) {
                 result.false_negatives++;
@@ -371,7 +371,7 @@ TestResult test_dense_cluster_attack() {
 
         // Verify random gaps beyond cluster
         std::mt19937_64 rng(42);
-        std::uniform_int_distribution<uint64_t> dist(N + 1, N + 100000);
+        std::uniform_int_distribution<uint32_t> dist(N + 1, N + 100000);
         for (int i = 0; i < 1000; ++i) {
             result.checks_run++;
             if (mphf.contains(dist(rng))) {
@@ -410,10 +410,10 @@ TestResult test_uint32_boundary() {
     try {
         std::cout << "\nRunning: " << result.test_name << "...\n";
 
-        std::vector<uint64_t> edge_keys = {
-            static_cast<uint64_t>(UINT32_MAX),
-            static_cast<uint64_t>(UINT32_MAX) - 1,
-            static_cast<uint64_t>(UINT32_MAX) - 12345,
+        std::vector<uint32_t> edge_keys = {
+            UINT32_MAX,
+            UINT32_MAX - 1,
+            UINT32_MAX - 12345,
             (1ULL << 31),  // 2^31 (MSB of uint32)
             (1ULL << 31) + 1,
             (1ULL << 31) - 1,
@@ -428,7 +428,7 @@ TestResult test_uint32_boundary() {
         }
 
         // Verify all present
-        for (uint64_t k : edge_keys) {
+        for (uint32_t k : edge_keys) {
             result.checks_run++;
             if (!mphf.contains(k)) {
                 result.false_negatives++;
@@ -436,9 +436,9 @@ TestResult test_uint32_boundary() {
         }
 
         // Verify neighbors not inserted
-        std::vector<uint64_t> non_keys = {
-            static_cast<uint64_t>(UINT32_MAX) - 2,
-            static_cast<uint64_t>(UINT32_MAX) - 3,
+        std::vector<uint32_t> non_keys = {
+            UINT32_MAX - 2,
+            UINT32_MAX - 3,
             (1ULL << 31) + 2,
             (1ULL << 31) - 2,
             (1ULL << 16) + 1,
@@ -446,7 +446,7 @@ TestResult test_uint32_boundary() {
             1
         };
 
-        for (uint64_t nk : non_keys) {
+        for (uint32_t nk : non_keys) {
             if (std::find(edge_keys.begin(), edge_keys.end(), nk) == edge_keys.end()) {
                 result.checks_run++;
                 if (mphf.contains(nk)) {
@@ -496,7 +496,7 @@ TestResult test_remainder_zero_edge_case() {
         std::cout << "\nRunning: " << result.test_name << "...\n";
 
         // Build a small MPHF to get primes
-        std::vector<uint64_t> probe_keys = {1, 2, 3};
+        std::vector<uint32_t> probe_keys = {1, 2, 3};
         MPHF<GlGhStorage, policies::QuotientKey> probe_mphf;
         if (!probe_mphf.build(probe_keys)) {
             result.error_message = "Failed to build probe MPHF";
@@ -506,10 +506,10 @@ TestResult test_remainder_zero_edge_case() {
         uint64_t p_min = std::min({primes[0], primes[1], primes[2]});
 
         // Generate keys guaranteed to have r=0 for at least one hash function
-        std::vector<uint64_t> remainder_zero_keys;
+        std::vector<uint32_t> remainder_zero_keys;
         const size_t N = 1000;
         for (uint64_t k = 1; k <= N; ++k) {
-            remainder_zero_keys.push_back(k * p_min);  // r=0, q=k
+            remainder_zero_keys.push_back(static_cast<uint32_t>(k * p_min));  // r=0, q=k
         }
 
         MPHF<GlGhStorage, policies::QuotientKey> mphf;
@@ -519,7 +519,7 @@ TestResult test_remainder_zero_edge_case() {
         }
 
         // Verify all present
-        for (uint64_t k : remainder_zero_keys) {
+        for (uint32_t k : remainder_zero_keys) {
             result.checks_run++;
             if (!mphf.contains(k)) {
                 result.false_negatives++;
@@ -529,7 +529,7 @@ TestResult test_remainder_zero_edge_case() {
         // Verify non-stored multiples are rejected
         for (uint64_t k = N + 1; k <= N + 100; ++k) {
             result.checks_run++;
-            if (mphf.contains(k * p_min)) {
+            if (mphf.contains(static_cast<uint32_t>(k * p_min))) {
                 result.false_positives++;
             }
         }
@@ -589,10 +589,10 @@ TestResult test_quotient_vs_fullkey() {
         }
 
         // Create unordered_set for O(1) lookup instead of O(n) linear search
-        std::unordered_set<uint64_t> key_set(test_keys.begin(), test_keys.end());
+        std::unordered_set<uint32_t> key_set(test_keys.begin(), test_keys.end());
 
         // Verify all positives
-        for (uint64_t k : test_keys) {
+        for (uint32_t k : test_keys) {
             result.checks_run++;
             bool q = mphf_quotient.contains(k);
             bool f = mphf_full.contains(k);
@@ -610,11 +610,11 @@ TestResult test_quotient_vs_fullkey() {
 
         // Verify random non-keys
         std::mt19937_64 rng(999);
-        std::uniform_int_distribution<uint64_t> dist(0, UINT32_MAX);
+        std::uniform_int_distribution<uint32_t> dist(0, UINT32_MAX);
 
         size_t non_key_tests = 0;
         while (non_key_tests < 100000) {
-            uint64_t non_key = dist(rng);
+            uint32_t non_key = dist(rng);
 
             // Ensure it's actually not a key (O(1) with unordered_set)
             if (key_set.find(non_key) != key_set.end()) {
@@ -695,7 +695,7 @@ TestResult test_determinism() {
         }
 
         // Verify all keys match
-        for (uint64_t k : keys) {
+        for (uint32_t k : keys) {
             result.checks_run++;
             bool r1 = mphf1.contains(k);
             bool r2 = mphf2.contains(k);
@@ -710,10 +710,10 @@ TestResult test_determinism() {
 
         // Verify non-keys match
         std::mt19937_64 rng(555);
-        std::uniform_int_distribution<uint64_t> dist(0, UINT32_MAX);
+        std::uniform_int_distribution<uint32_t> dist(0, UINT32_MAX);
 
         for (int i = 0; i < 10000; ++i) {
-            uint64_t non_key = dist(rng);
+            uint32_t non_key = dist(rng);
             if (std::find(keys.begin(), keys.end(), non_key) != keys.end()) {
                 continue;
             }
@@ -774,7 +774,7 @@ TestResult test_cross_segment_collision() {
 
         // Collect all indices
         std::unordered_set<uint32_t> indices;
-        for (uint64_t k : keys) {
+        for (uint32_t k : keys) {
             result.checks_run++;
 
             // Note: contains() doesn't return the index directly,

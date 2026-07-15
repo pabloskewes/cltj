@@ -25,38 +25,36 @@ using cltj::hashing::MPHF;
 using cltj::hashing::policies::FullKey;
 
 // Helper to generate unique random keys
-static std::vector<uint64_t> generate_keys(size_t n, uint64_t seed) {
+static std::vector<uint32_t> generate_keys(size_t n, uint64_t seed) {
     std::mt19937_64 rng(seed);
-    std::unordered_set<uint64_t> unique_keys;
-    std::uniform_int_distribution<uint64_t> dist(1, n * 100);
+    std::unordered_set<uint32_t> unique_keys;
+    std::uniform_int_distribution<uint32_t> dist(1, static_cast<uint32_t>(n * 100));
     while (unique_keys.size() < n) {
         unique_keys.insert(dist(rng));
     }
-    return std::vector<uint64_t>(unique_keys.begin(), unique_keys.end());
+    return std::vector<uint32_t>(unique_keys.begin(), unique_keys.end());
 }
 
 template <typename StorageStrategy>
-std::vector<uint64_t> synthesize_fallback_fixture(
-    MPHF<StorageStrategy, FullKey>& mphf, const std::vector<uint64_t>& keys, size_t residual_count
+std::vector<uint32_t> synthesize_fallback_fixture(
+    MPHF<StorageStrategy, FullKey>& mphf, const std::vector<uint32_t>& keys, size_t residual_count
 ) {
     assert(residual_count > 0 && residual_count < keys.size());
 
-    std::vector<std::pair<uint32_t, uint64_t>> indexed_keys;
+    std::vector<std::pair<uint32_t, uint32_t>> indexed_keys;
     indexed_keys.reserve(keys.size());
-    for (uint64_t key : keys) {
+    for (uint32_t key : keys) {
         indexed_keys.emplace_back(mphf.query(key), key);
     }
     std::sort(indexed_keys.begin(), indexed_keys.end());
 
-    std::vector<uint64_t> residual_keys;
+    std::vector<uint32_t> residual_keys;
     residual_keys.reserve(residual_count);
     mphf.residual_keys_.clear();
     for (size_t i = indexed_keys.size() - residual_count; i < indexed_keys.size(); ++i) {
-        uint64_t key = indexed_keys[i].second;
+        uint32_t key = indexed_keys[i].second;
         residual_keys.push_back(key);
-        mphf.residual_keys_.push_back(
-            static_cast<uint32_t>(cltj::hashing::premix32(static_cast<uint32_t>(key)))
-        );
+        mphf.residual_keys_.push_back(cltj::hashing::premix32(key));
     }
     std::sort(mphf.residual_keys_.begin(), mphf.residual_keys_.end());
     mphf.n_peeled_ = static_cast<uint32_t>(keys.size() - residual_count);
@@ -64,7 +62,7 @@ std::vector<uint64_t> synthesize_fallback_fixture(
     // The synthetic fixture should remain a valid MPHF for the original key set.
     std::unordered_set<uint32_t> indices;
     indices.reserve(keys.size());
-    for (uint64_t key : keys) {
+    for (uint32_t key : keys) {
         assert(mphf.contains(key));
         indices.insert(mphf.query(key));
     }
@@ -85,7 +83,7 @@ std::vector<uint64_t> synthesize_fallback_fixture(
  */
 template <typename StorageStrategy>
 void test_roundtrip(
-    const std::vector<uint64_t>& keys,
+    const std::vector<uint32_t>& keys,
     const std::string& strategy_name,
     const std::string& case_label,
     bool synthesize_fallback = false
@@ -100,7 +98,7 @@ void test_roundtrip(
     }
     std::cout << "  [OK] Built original MPHF" << std::endl;
 
-    std::vector<uint64_t> residual_fixture_keys;
+    std::vector<uint32_t> residual_fixture_keys;
     if (synthesize_fallback) {
         residual_fixture_keys = synthesize_fallback_fixture(mphf1, keys, 2);
         std::cout << "  [OK] Synthesized fallback-active fixture with residual=2" << std::endl;
@@ -174,7 +172,7 @@ void test_roundtrip(
     std::cout << "  [OK] All contains() results match" << std::endl;
 
     // 4. Check fallback-system queries explicitly
-    for (uint64_t key : residual_fixture_keys) {
+    for (uint32_t key : residual_fixture_keys) {
         uint32_t h1 = mphf1.query(key);
         uint32_t h2 = mphf2.query(key);
         assert(h1 == h2 && "Fallback query differs after deserialization");
@@ -189,12 +187,12 @@ void test_roundtrip(
     // 5. Check false positives match (sample a few non-keys)
     const size_t n = keys.size();
     std::mt19937_64 rng(12345);
-    std::uniform_int_distribution<uint64_t> non_key_dist(0, UINT32_MAX);
-    std::unordered_set<uint64_t> key_set(keys.begin(), keys.end());
+    std::uniform_int_distribution<uint32_t> non_key_dist(0, UINT32_MAX);
+    std::unordered_set<uint32_t> key_set(keys.begin(), keys.end());
     size_t fp_sample = std::min((size_t)1000, n / 10);
     bool fp_match = true;
     for (size_t i = 0; i < fp_sample; ++i) {
-        uint64_t non_key;
+        uint32_t non_key;
         do {
             non_key = non_key_dist(rng);
         } while (key_set.count(non_key));
