@@ -24,7 +24,7 @@ namespace {
 template <typename Storage, typename Policy>
 void analyze_strategy(
     const std::string& header,
-    const std::vector<uint64_t>& keys,
+    const std::vector<uint32_t>& keys,
     const std::string& g_label,
     const std::string& used_label,
     const std::string& rank_label
@@ -74,19 +74,19 @@ int main() {
         std::cout << "--- Analysis for n = " << n << " ---" << std::endl;
 
         // Generate test keys (30-bit keys for testing quotient width optimization)
-        constexpr uint64_t KEY_BITS = 30;
-        constexpr uint64_t MAX_KEY_VALUE = (1ULL << KEY_BITS) - 1;
+        constexpr uint32_t KEY_BITS = 30;
+        constexpr uint32_t MAX_KEY_VALUE = (1U << KEY_BITS) - 1;
         std::mt19937_64 rng(42);
 
         // Use set to ensure unique keys
-        std::unordered_set<uint64_t> unique_keys;
+        std::unordered_set<uint32_t> unique_keys;
         unique_keys.reserve(n);
         while (unique_keys.size() < n) {
-            unique_keys.insert(rng() & MAX_KEY_VALUE);
+            unique_keys.insert(static_cast<uint32_t>(rng()) & MAX_KEY_VALUE);
         }
 
         // Convert to vector for MPHF
-        std::vector<uint64_t> keys(unique_keys.begin(), unique_keys.end());
+        std::vector<uint32_t> keys(unique_keys.begin(), unique_keys.end());
 
         analyze_strategy<BaselineStorage, NoKey>(
             "[BaselineStorage]", keys, "G array (2-bit values)", "Used positions bitvector", "Rank support"

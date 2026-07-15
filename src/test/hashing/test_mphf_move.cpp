@@ -10,13 +10,13 @@
 
 using MPHF_type = cltj::hashing::MPHF<cltj::hashing::GlGhStorage, cltj::hashing::policies::QuotientKey>;
 
-static std::vector<uint64_t> make_keys(size_t n, uint64_t seed) {
+static std::vector<uint32_t> make_keys(size_t n, uint64_t seed) {
     std::mt19937_64 rng(seed);
-    std::unordered_set<uint64_t> seen;
-    std::uniform_int_distribution<uint64_t> dist(1, n * 100);
+    std::unordered_set<uint32_t> seen;
+    std::uniform_int_distribution<uint32_t> dist(1, static_cast<uint32_t>(n * 100));
     while (seen.size() < n)
         seen.insert(dist(rng));
-    return std::vector<uint64_t>(seen.begin(), seen.end());
+    return std::vector<uint32_t>(seen.begin(), seen.end());
 }
 
 int main() {
@@ -26,13 +26,13 @@ int main() {
     // Build N/1000 small MPHFs and push them into a vector.
     // The vector will reallocate and move elements internally.
     std::vector<MPHF_type> mphfs;
-    std::vector<std::vector<uint64_t>> all_keys;
+    std::vector<std::vector<uint32_t>> all_keys;
 
     const size_t num_mphfs = 5;
     const size_t keys_per_mphf = N / num_mphfs;
 
     for (size_t i = 0; i < num_mphfs; ++i) {
-        std::vector<uint64_t> chunk(keys.begin() + i * keys_per_mphf, keys.begin() + (i + 1) * keys_per_mphf);
+        std::vector<uint32_t> chunk(keys.begin() + i * keys_per_mphf, keys.begin() + (i + 1) * keys_per_mphf);
         all_keys.push_back(chunk);
 
         MPHF_type mphf;
@@ -47,7 +47,7 @@ int main() {
     // Verify each MPHF still works correctly after potential reallocation.
     int failures = 0;
     for (size_t i = 0; i < num_mphfs; ++i) {
-        for (uint64_t key : all_keys[i]) {
+        for (uint32_t key : all_keys[i]) {
             if (!mphfs[i].contains(key)) {
                 std::cerr << "FAIL: contains() returned false for key " << key << " in mphf " << i
                           << " (after move into vector)" << std::endl;
