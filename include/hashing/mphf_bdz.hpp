@@ -11,6 +11,7 @@
 #include <cassert>
 #include <cmath>
 #include <cstdint>
+#include <limits>
 #include <queue>
 #include <random>
 #include <sdsl/bit_vectors.hpp>
@@ -470,6 +471,11 @@ class MPHF {
             primes_[static_cast<size_t>(idx)] = next_prime(primes_[static_cast<size_t>(idx)] + 1);
         }
 
+        assert(
+            std::max({primes_[0], primes_[1], primes_[2]}) <= std::numeric_limits<uint32_t>::max() &&
+            "p_k must fit in uint32_t so that a_k*x stays within uint64_t in hash_function"
+        );
+
         // Compute segment starts and total m
         segment_starts_[0] = 0;
         segment_starts_[1] = primes_[0];
@@ -701,11 +707,14 @@ class MPHF {
      * @brief Compute hash function h_k(x) for k ∈ {0,1,2}
      * h_k(x) = d_k + ((a_k · x + b_k) mod r_k)
      * with r_k = primes_[k], a_k = multipliers_[k], b_k = biases_[k], d_k = segment_starts_[k].
+     *
+     * Since a_k < p_k < 2^32, x < 2^32, the product a_k·x fits in uint64_t with no overflow.
+     * Reminder: p_k ≈ m/3, m = 1.25·n => p_k ≈ 0.4167·n, and n < 2^32 => p_k < 2^31.
      */
-    uint32_t hash_function(uint64_t x, int k) const {
+    uint32_t hash_function(uint32_t x, int k) const {
         const size_t i = static_cast<size_t>(k);
         const uint64_t r = primes_[i];
-        uint64_t mapped = mod_mul(x, multipliers_[i], r);  // in [0, r)
+        uint64_t mapped = (x * multipliers_[i]) % r;  // in [0, r)
         mapped += biases_[i];
         if (mapped >= r)
             mapped -= r;  // single correction instead of modulo
