@@ -31,6 +31,7 @@ target_compile_options(cltj_core INTERFACE
 target_include_directories(cltj_core INTERFACE
   ${CMAKE_CURRENT_SOURCE_DIR}/include
   ${CMAKE_CURRENT_SOURCE_DIR}/lib/hybridBV/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/lib/fastmod/include
 )
 if(CLTJ_COLLECT_QUERY_STATS)
   target_compile_definitions(cltj_core INTERFACE CLTJ_COLLECT_QUERY_STATS_ENABLED)
@@ -276,3 +277,5 @@ add_cltj_executable(count-distinct-spo src/analysis/count_distinct_spo.cpp analy
 
 add_cltj_executable(bench-mphf-hashing src/bench/bench_mphf_hashing.cpp analysis)
 target_link_libraries(bench-mphf-hashing PRIVATE PTHASH)
+
+add_cltj_executable(bench-fastmod-micro src/bench/bench_fastmod_micro.cpp bench)
