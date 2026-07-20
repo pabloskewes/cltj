@@ -5,6 +5,7 @@
 #include "mphf_build_tracer.hpp"
 #include "storage/baseline.hpp"
 #include "key_policies.hpp"
+#include "mod_policies.hpp"
 #include <util/logger.hpp>
 #include <algorithm>
 #include <array>
@@ -64,14 +65,20 @@ struct SizeBreakdown {
  *
  * @tparam StorageStrategy  storage layout for G, B and rank support.
  * @tparam KeyPolicy        payload policy for membership / reconstruction.
+ * @tparam ModPolicy        modulo policy for the hash functions (native % or fastmod).
  */
-template <typename StorageStrategy = BaselineStorage, typename KeyPolicy = policies::NoKey>
+template <
+    typename StorageStrategy = BaselineStorage,
+    typename KeyPolicy = policies::NoKey,
+    typename ModPolicy = policies::NativeMod
+>
 class MPHF {
   private:
     // Core data structures
 
     StorageStrategy storage_;  // Unified storage for G array, bitvector B, and rank support
     KeyPolicy key_policy_;  // Policy for key-based payloads (membership, reconstruction)
+    [[no_unique_address]] ModPolicy mod_policy_;  // Modulo policy for the hash functions
     uint32_t m_;  // Size of G array (~1.23 * n)
     uint32_t n_;  // Number of keys
 
@@ -268,6 +275,7 @@ class MPHF {
         segment_starts_[0] = 0;
         segment_starts_[1] = primes_[0];
         segment_starts_[2] = primes_[0] + primes_[1];
+        mod_policy_.bind(primes_);
 
         // KeyPolicy only needs the hash parameters rebound before load().
         policies::KeyInitContext ctx{n_, primes_, multipliers_, biases_, segment_starts_, 0};
@@ -481,6 +489,7 @@ class MPHF {
         segment_starts_[1] = primes_[0];
         segment_starts_[2] = primes_[0] + primes_[1];
         m_ = static_cast<uint32_t>(primes_[0] + primes_[1] + primes_[2]);
+        mod_policy_.bind(primes_);
 
         // Use SplitMix64 mixer for better seed diversity
         uint64_t final_seed = splitmix64(SEED ^ static_cast<uint64_t>(retry_count));
@@ -714,7 +723,7 @@ class MPHF {
     uint32_t hash_function(uint32_t x, int k) const {
         const size_t i = static_cast<size_t>(k);
         const uint64_t r = primes_[i];
-        uint64_t mapped = (x * multipliers_[i]) % r;  // in [0, r)
+        uint64_t mapped = mod_policy_.mod(x * multipliers_[i], i, r);  // in [0, r)
         mapped += biases_[i];
         if (mapped >= r)
             mapped -= r;  // single correction instead of modulo
