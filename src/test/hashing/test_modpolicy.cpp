@@ -3,7 +3,6 @@
 #include <util/logger.hpp>
 
 #include <algorithm>
-#include <cassert>
 #include <cmath>
 #include <random>
 #include <sstream>
@@ -55,7 +54,7 @@ std::vector<uint32_t> make_non_keys(const std::vector<uint32_t>& keys, size_t n,
     return non_keys;
 }
 
-void test_fastmod_equivalence() {
+bool test_fastmod_equivalence() {
     LOG_INFO("Testing fastmod_u64 vs native % ...");
     size_t checked = 0;
     for (uint64_t n : {1000UL, 100000UL, 10000000UL}) {
@@ -72,35 +71,37 @@ void test_fastmod_equivalence() {
                 xs.push_back(premix32(distX(rng)));
             }
             for (uint64_t x : xs) {
-                assert(fastmod::fastmod_u64(x * a, M, p) == (x * a) % p);
+                if (fastmod::fastmod_u64(x * a, M, p) != (x * a) % p) return false;
                 ++checked;
             }
         }
     }
     LOG_INFO("fastmod_u64 == native % on " << checked << " cases");
+    return true;
 }
 
-void test_mphf_equivalence(const std::vector<uint32_t>& keys, const std::vector<uint32_t>& non_keys) {
+bool test_mphf_equivalence(const std::vector<uint32_t>& keys, const std::vector<uint32_t>& non_keys) {
     MPHFNative mphf_native;
     MPHFFast mphf_fast;
-    assert(mphf_native.build(keys));
-    assert(mphf_fast.build(keys));
+    if (!mphf_native.build(keys)) return false;
+    if (!mphf_fast.build(keys)) return false;
 
     for (uint32_t k : keys) {
-        assert(mphf_native.query(k) == mphf_fast.query(k));
+        if (mphf_native.query(k) != mphf_fast.query(k)) return false;
         auto ln = mphf_native.locate(k);
         auto lf = mphf_fast.locate(k);
-        assert(ln.first && lf.first);
-        assert(ln.second == lf.second);
+        if (!(ln.first && lf.first)) return false;
+        if (ln.second != lf.second) return false;
     }
     for (uint32_t nk : non_keys) {
-        assert(mphf_native.locate(nk) == mphf_fast.locate(nk));
+        if (mphf_native.locate(nk) != mphf_fast.locate(nk)) return false;
     }
+    return true;
 }
 
-void test_round_trip(const std::vector<uint32_t>& keys) {
+bool test_round_trip(const std::vector<uint32_t>& keys) {
     MPHFFast mphf;
-    assert(mphf.build(keys));
+    if (!mphf.build(keys)) return false;
 
     std::stringstream ss;
     mphf.serialize(ss);
@@ -108,21 +109,22 @@ void test_round_trip(const std::vector<uint32_t>& keys) {
     loaded.load(ss);
 
     for (uint32_t k : keys) {
-        assert(mphf.query(k) == loaded.query(k));
+        if (mphf.query(k) != loaded.query(k)) return false;
         auto lf = loaded.locate(k);
-        assert(lf.first && lf.second == mphf.locate(k).second);
+        if (!(lf.first && lf.second == mphf.locate(k).second)) return false;
     }
+    return true;
 }
 
 }  // namespace
 
 int main() {
-    test_fastmod_equivalence();
+    if (!test_fastmod_equivalence()) return 1;
 
     auto keys = make_random_keys(20000, 12345);
     auto non_keys = make_non_keys(keys, 20000, 999);
     LOG_INFO("Testing MPHF equivalence (random keys) ...");
-    test_mphf_equivalence(keys, non_keys);
+    if (!test_mphf_equivalence(keys, non_keys)) return 1;
 
     std::vector<uint32_t> consecutive(20000);
     for (uint32_t i = 0; i < consecutive.size(); ++i) {
@@ -130,11 +132,11 @@ int main() {
     }
     auto cons_non_keys = make_non_keys(consecutive, 20000, 555);
     LOG_INFO("Testing MPHF equivalence (consecutive keys) ...");
-    test_mphf_equivalence(consecutive, cons_non_keys);
+    if (!test_mphf_equivalence(consecutive, cons_non_keys)) return 1;
 
     LOG_INFO("Testing FastMod serialize/load round-trip ...");
-    test_round_trip(keys);
-    test_round_trip(consecutive);
+    if (!test_round_trip(keys)) return 1;
+    if (!test_round_trip(consecutive)) return 1;
 
     LOG_INFO("All mod policy tests passed successfully!");
     return 0;
