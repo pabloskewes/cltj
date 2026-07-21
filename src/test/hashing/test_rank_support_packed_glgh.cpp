@@ -4,6 +4,7 @@
 #include <cassert>
 #include <iostream>
 #include <random>
+#include <sstream>
 
 /**
  * @brief Build a pair (Gl, Gh, G) encoding the same random G values.
@@ -32,26 +33,33 @@ int main() {
     std::cout << "Testing rank_support_packed_glgh vs rank_support_glgh ...\n";
     int failures = 0;
 
-    // Random case.
+    // Random case, several sizes: a plain size, a superblock boundary (m%256==0),
+    // an odd size, and a size below one superblock.
     {
-        const size_t m = 50000;
-        DualVectors dv(m, 42);
+        bool ok = true;
+        for (size_t m : {50000ul, 65536ul, 49999ul, 511ul}) {
+            DualVectors dv(m, 42);
 
-        cltj::hashing::rank_support_glgh<> rank_glgh(&dv.Gl, &dv.Gh);
-        cltj::hashing::rank_support_packed_glgh rank_packed(&dv.G);
+            cltj::hashing::rank_support_glgh<> rank_glgh(&dv.Gl, &dv.Gh);
+            cltj::hashing::rank_support_packed_glgh rank_packed(&dv.G);
 
-        for (size_t v = 0; v <= m; ++v) {
-            if (rank_packed.rank(v) != rank_glgh.rank(v)) {
-                ++failures;
-                break;
+            for (size_t v = 0; v <= m; ++v) {
+                if (rank_packed.rank(v) != rank_glgh.rank(v)) {
+                    ok = false;
+                    break;
+                }
             }
+            if (!ok)
+                break;
         }
-
-        std::cout << "  random (m=" << m << "): " << (failures ? "FAIL" : "OK") << "\n";
+        if (!ok)
+            ++failures;
+        std::cout << "  random (multiple sizes): " << (ok ? "OK" : "FAIL") << "\n";
     }
 
-    // Edge: all occupied (no 3's, like a full MPHF).
+    // Edge: all occupied (no 3's, like a full MPHF). Here rank(v) must equal v.
     {
+        bool ok = true;
         const size_t m = 10000;
         sdsl::bit_vector Gl(m, 0);
         sdsl::bit_vector Gh(m, 0);
@@ -61,17 +69,20 @@ int main() {
         cltj::hashing::rank_support_packed_glgh rank_packed(&G);
 
         for (size_t v = 0; v <= m; ++v) {
-            if (rank_packed.rank(v) != rank_glgh.rank(v)) {
-                ++failures;
+            if (rank_packed.rank(v) != rank_glgh.rank(v) || rank_packed.rank(v) != v) {
+                ok = false;
                 break;
             }
         }
 
-        std::cout << "  all occupied (m=" << m << "): " << (failures ? "FAIL" : "OK") << "\n";
+        if (!ok)
+            ++failures;
+        std::cout << "  all occupied (m=" << m << "): " << (ok ? "OK" : "FAIL") << "\n";
     }
 
-    // Edge: all unassigned (all 3's).
+    // Edge: all unassigned (all 3's). Here rank(v) must be 0.
     {
+        bool ok = true;
         const size_t m = 10000;
         sdsl::bit_vector Gl(m, 1);
         sdsl::bit_vector Gh(m, 1);
@@ -81,17 +92,39 @@ int main() {
         cltj::hashing::rank_support_packed_glgh rank_packed(&G);
 
         for (size_t v = 0; v <= m; ++v) {
-            if (rank_packed.rank(v) != rank_glgh.rank(v)) {
-                ++failures;
-                break;
-            }
-            if (rank_packed.rank(v) != 0) {
-                ++failures;
+            if (rank_packed.rank(v) != rank_glgh.rank(v) || rank_packed.rank(v) != 0) {
+                ok = false;
                 break;
             }
         }
 
-        std::cout << "  all unassigned (m=" << m << "): " << (failures ? "FAIL" : "OK") << "\n";
+        if (!ok)
+            ++failures;
+        std::cout << "  all unassigned (m=" << m << "): " << (ok ? "OK" : "FAIL") << "\n";
+    }
+
+    // Serialize/load round-trip: a loaded rank must answer like the original.
+    {
+        bool ok = true;
+        const size_t m = 50000;
+        DualVectors dv(m, 7);
+        cltj::hashing::rank_support_packed_glgh rank_packed(&dv.G);
+
+        std::stringstream ss;
+        rank_packed.serialize(ss);
+        cltj::hashing::rank_support_packed_glgh<> loaded;
+        loaded.load(ss, &dv.G);
+
+        for (size_t v = 0; v <= m; ++v) {
+            if (loaded.rank(v) != rank_packed.rank(v)) {
+                ok = false;
+                break;
+            }
+        }
+
+        if (!ok)
+            ++failures;
+        std::cout << "  serialize/load round-trip (m=" << m << "): " << (ok ? "OK" : "FAIL") << "\n";
     }
 
     if (failures == 0)
