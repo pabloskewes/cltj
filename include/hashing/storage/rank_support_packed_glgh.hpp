@@ -47,8 +47,17 @@ namespace hashing {
  * counts add another 64/512 bits on top of each supported bit.
  * In total this results in 128/512=25% overhead.
  *
- * This modified version computes the bitvector B on-the-fly from Gl and Gh:
- * B[v] = ~(Gl[v] & Gh[v])
+ * This modified version computes the bitvector B on-the-fly from a packed
+ * int_vector<2> (instead of two separate bitvectors Gl and Gh). Each vertex
+ * takes 2 contiguous bits; a vertex is occupied (B[v]=1) when G[v] != 3.
+ * Detection across 32 vertices per 64-bit word uses SWAR:
+ *
+ *   compute_b_word(W) = (W & (W>>1) & 0x5555...) ^ 0x5555...
+ *
+ * Because each word covers 32 vertices instead of 64, all vertex-index
+ * constants in rank() are halved vs the GlGh version (superblock 256
+ * vertices, block 32 vertices, idx>>5 instead of idx>>6, etc.). The
+ * metadata layout (superblocks every 8 words, 9-bit deltas) is unchanged.
  *
  * \tparam t_b       Bit pattern `0`,`1`,`10`,`01` which should be ranked.
  * \tparam t_pat_len Length of the bit pattern.
@@ -76,6 +85,12 @@ class rank_support_packed_glgh
         // Pointer to the int_vector<2> from which B is computed on-the-fly.
         const packed_vector_type* m_g = nullptr;
 
+        /**
+         * @brief Compute the occupancy word for 32 vertices packed in 2-bit lanes.
+         *
+         * Returns a 64-bit mask where bit 2k = 1 iff lane k is occupied
+         * (G[k] != 3). This is the packed equivalent of ~(gl_word & gh_word) in GlGh
+         */
         static inline uint64_t compute_b_word(uint64_t W) {
             constexpr uint64_t EVEN = 0x5555555555555555ULL;
             return (W & (W >> 1) & EVEN) ^ EVEN;
@@ -130,6 +145,14 @@ class rank_support_packed_glgh
         rank_support_packed_glgh& operator=(rank_support_packed_glgh&&) = default;
 
 
+        /**
+         * @brief Rank of occupied vertices up to idx.
+         *
+         * Same Vigna superblock/block scheme as rank_support_glgh, but
+         * adapted for 32 vertices per 64-bit word: superblock is 256
+         * vertices (8 words), block is 32 vertices (1 word), and the
+         * partial-word mask uses 2*offset bits per lane.
+         */
         size_type rank(size_type idx) const {
             assert(m_g != nullptr);
             assert(idx <= m_g->size());
