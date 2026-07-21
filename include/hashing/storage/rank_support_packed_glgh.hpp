@@ -54,10 +54,11 @@ namespace hashing {
  *
  *   compute_b_word(W) = (W & (W>>1) & 0x5555...) ^ 0x5555...
  *
- * Because each word covers 32 vertices instead of 64, all vertex-index
- * constants in rank() are halved vs the GlGh version (superblock 256
- * vertices, block 32 vertices, idx>>5 instead of idx>>6, etc.). The
- * metadata layout (superblocks every 8 words, 9-bit deltas) is unchanged.
+ * A 64-bit word holds 32 vertices (2 bits each), so a 64-vertex logical
+ * word spans two consecutive physical words. The rank keeps the exact GlGh
+ * metadata (superblock 512 vertices, block 64 vertices, 9-bit deltas) by
+ * treating two physical words as one logical word, so the rank metadata
+ * stays the same size as GlGh (no space regression: 2.81 b/k total).
  *
  * \tparam t_b       Bit pattern `0`,`1`,`10`,`01` which should be ranked.
  * \tparam t_pat_len Length of the bit pattern.
@@ -95,6 +96,21 @@ class rank_support_packed_glgh
             constexpr uint64_t EVEN = 0x5555555555555555ULL;
             return (W & (W >> 1) & EVEN) ^ EVEN;
         }
+
+        /**
+         * @brief Count occupied vertices in a logical word (64 vertices).
+         *
+         * A logical word is two consecutive physical 64-bit words. The second
+         * may be absent when the array has an odd physical word count; then only
+         * the first contributes (matches GlGh's handling of the trailing word).
+         */
+        static inline uint64_t logical_cnt(const uint64_t* g, size_type lw,
+                                           size_type num_words) {
+            uint64_t c = sdsl::bits::cnt(compute_b_word(g[2 * lw]));
+            if (2 * lw + 1 < num_words)
+                c += sdsl::bits::cnt(compute_b_word(g[2 * lw + 1]));
+            return c;
+        }
     public:
         explicit rank_support_packed_glgh(const packed_vector_type* g = nullptr) {
             m_g = g;
@@ -105,19 +121,22 @@ class rank_support_packed_glgh
                 m_basic_block = sdsl::int_vector<64>(2,0);   // resize structure for basic_blocks
                 return;
             }
-            size_type basic_block_size = ((g->capacity() >> 9)+1)<<1;
+            // One superblock per 512 vertices (8 logical words), same as GlGh.
+            // capacity() is bits = 2*vertices, so >>10 gives vertices/512.
+            size_type basic_block_size = ((g->capacity() >> 10)+1)<<1;
             m_basic_block.resize(basic_block_size);   // resize structure for basic_blocks
             if (m_basic_block.empty())
                 return;
             const uint64_t* g_data = m_g->data();
+            size_type num_words = m_g->capacity() >> 6;      // physical 64-bit words
+            size_type num_logical = (num_words + 1) >> 1;    // 64-vertex logical words
             size_type i, j=0;
             m_basic_block[0] = m_basic_block[1] = 0;
 
-            // First word of B.
-            uint64_t sum = sdsl::bits::cnt(compute_b_word(*g_data));
+            // First logical word.
+            uint64_t sum = logical_cnt(g_data, 0, num_words);
             uint64_t second_level_cnt = 0;
-            for (i = 1; i < (m_g->capacity()>>6) ; ++i) {
-                uint64_t b_word = compute_b_word(g_data[i]);
+            for (i = 1; i < num_logical ; ++i) {
                 if (!(i&0x7)) {// if i%8==0
                     j += 2;
                     m_basic_block[j-1] = second_level_cnt;
@@ -126,7 +145,7 @@ class rank_support_packed_glgh
                 } else {
                     second_level_cnt |= sum<<(63-9*(i&0x7));//  54, 45, 36, 27, 18, 9, 0
                 }
-                sum += sdsl::bits::cnt(b_word);
+                sum += logical_cnt(g_data, i, num_words);
             }
             if (i&0x7) { // if i%8 != 0
                 second_level_cnt |= sum << (63-9*(i&0x7));
@@ -148,24 +167,30 @@ class rank_support_packed_glgh
         /**
          * @brief Rank of occupied vertices up to idx.
          *
-         * Same Vigna superblock/block scheme as rank_support_glgh, but
-         * adapted for 32 vertices per 64-bit word: superblock is 256
-         * vertices (8 words), block is 32 vertices (1 word), and the
-         * partial-word mask uses 2*offset bits per lane.
+         * Same Vigna superblock/block scheme and constants as rank_support_glgh
+         * (superblock 512 vertices, block 64 vertices). A 64-vertex logical word
+         * is two physical words; the partial count reads the first physical word
+         * and, if idx falls past its 32 vertices, the second one too. Masks use
+         * 2*offset bits because each vertex occupies a 2-bit lane.
          */
         size_type rank(size_type idx) const {
             assert(m_g != nullptr);
             assert(idx <= m_g->size());
             const uint64_t* p = m_basic_block.data()
-                                + ((idx>>7)&0xFFFFFFFFFFFFFFFEULL); // (idx/256)*2
-            size_type result = *p + ((*(p+1)>>(63 - 9*((idx&0xFF)>>5)))&0x1FF);
-            if (idx&0x1F) { // if (idx%32)!=0
-                // Add contribution of the remaining bits in the current 64-bit word.
-                size_type word_idx = idx >> 5;
-                uint8_t  offset    = idx & 0x1F;
-                uint64_t b_word     = compute_b_word(m_g->data()[word_idx]);
-                uint64_t mask      = sdsl::bits::lo_set[2 * offset];
-                result += sdsl::bits::cnt(b_word & mask);
+                                + ((idx>>8)&0xFFFFFFFFFFFFFFFEULL); // (idx/512)*2
+            size_type result = *p + ((*(p+1)>>(63 - 9*((idx&0x1FF)>>6)))&0x1FF);
+            if (idx&0x3F) { // if (idx%64)!=0
+                const uint64_t* g = m_g->data();
+                size_type lw     = idx >> 6;    // logical word (64 vertices, 2 physical words)
+                uint8_t   offset = idx & 0x3F;   // vertices into the logical word (0..63)
+                uint64_t  w0     = compute_b_word(g[2 * lw]);
+                if (offset <= 32) {
+                    result += sdsl::bits::cnt(w0 & sdsl::bits::lo_set[2 * offset]);
+                } else {
+                    uint64_t w1 = compute_b_word(g[2 * lw + 1]);
+                    result += sdsl::bits::cnt(w0)
+                            + sdsl::bits::cnt(w1 & sdsl::bits::lo_set[2 * (offset - 32)]);
+                }
             }
             return result;
         }
@@ -195,7 +220,7 @@ class rank_support_packed_glgh
         }
 
         void load(std::istream& in, const packed_vector_type* g=nullptr) {
-            m_g = g;
+            set_vector(g);
             m_basic_block.load(in);
         }
 

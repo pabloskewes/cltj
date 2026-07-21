@@ -1,6 +1,7 @@
 #include <hashing/mphf_bdz.hpp>
 #include <hashing/storage/packed_trit.hpp>
 #include <hashing/storage/glgh.hpp>
+#include <hashing/storage/packed_glgh.hpp>
 #include <hashing/key_policies.hpp>
 #include <iomanip>
 #include <sstream>
@@ -15,6 +16,7 @@ using cltj::hashing::BaselineStorage;
 using cltj::hashing::CompressedBitvector;
 using cltj::hashing::GlGhStorage;
 using cltj::hashing::MPHF;
+using cltj::hashing::PackedGlGhStorage;
 using cltj::hashing::PackedTritStorage;
 using cltj::hashing::policies::NoKey;
 using cltj::hashing::policies::QuotientKey;
@@ -104,7 +106,15 @@ int main() {
             "[GlGhStorage (Gl/Gh on-the-fly B)]",
             keys,
             "Gl + Gh bitvectors",
-            "B stored explicitly",
+            "B implicit (not stored)",
+            "Rank metadata (on-the-fly B)"
+        );
+
+        analyze_strategy<PackedGlGhStorage, NoKey>(
+            "[PackedGlGhStorage (single int_vector<2>, on-the-fly B)]",
+            keys,
+            "G array (2-bit lanes)",
+            "B implicit (not stored)",
             "Rank metadata (on-the-fly B)"
         );
 
@@ -112,7 +122,7 @@ int main() {
             "[GlGhStorage + QuotientKey payload]",
             keys,
             "Gl + Gh bitvectors",
-            "B stored explicitly",
+            "B implicit (not stored)",
             "Rank metadata (on-the-fly B)"
         );
 
