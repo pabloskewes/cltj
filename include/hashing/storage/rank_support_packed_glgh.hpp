@@ -15,20 +15,19 @@
     along with this program.  If not, see http://www.gnu.org/licenses/ .
 
     MODIFIED VERSION: Based on rank_support_v.hpp from SDSL.
-    Modified to support on-the-fly bitvector computation from Gl and Gh bitvectors
-    for the GlGhStorage MPHF strategy. The bitvector B is computed as B[v] = ~(Gl[v] & Gh[v])
-    on-the-fly instead of being stored explicitly.
+    Modified to support on-the-fly bitvector computation from a packed
+    int_vector<2> for the PackedGlGhStorage MPHF strategy. The bitvector B
+    is computed as B[v] = (G[v] != 3) on-the-fly instead of being stored
+    explicitly.
 */
-/*! \file rank_support_glgh.hpp
-    \brief rank_support_glgh.hpp contains rank_support_glgh (modified from rank_support_v).
+/*! \file rank_support_packed_glgh.hpp
+    \brief rank_support_packed_glgh.hpp contains rank_support_packed_glgh.
     \author Based on work by Simon Gog, modified for on-the-fly bitvector computation
 */
 // clang-format off
-#ifndef INCLUDED_CLTJ_RANK_SUPPORT_GLGH
-#define INCLUDED_CLTJ_RANK_SUPPORT_GLGH
+#ifndef INCLUDED_CLTJ_RANK_SUPPORT_PACKED_GLGH
+#define INCLUDED_CLTJ_RANK_SUPPORT_PACKED_GLGH
 
-#include <sdsl/rank_support.hpp>
-#include <sdsl/bit_vectors.hpp>
 #include <sdsl/int_vector.hpp>
 #include <sdsl/bits.hpp>
 
@@ -60,60 +59,50 @@ namespace hashing {
  *    WEA 2008: 154-168
  */
 template<uint8_t t_b=1, uint8_t t_pat_len=1>
-class rank_support_glgh : public sdsl::rank_support
+class rank_support_packed_glgh
 {
     private:
-        // For the GlGh MPHF storage we only need rank1 support.
+        // For the PackedGlGh MPHF storage we only need rank1 support.
         static_assert(t_b == 1u && t_pat_len == 1u,
-                      "rank_support_glgh only supports rank1 (t_b=1, t_pat_len=1)");
+                      "rank_support_packed_glgh only supports rank1");
     public:
-        typedef sdsl::bit_vector                          bit_vector_type;
-        typedef sdsl::rank_support_trait<t_b, t_pat_len>  trait_type;
+        typedef sdsl::int_vector<2>                       packed_vector_type;
         enum { bit_pat = t_b };
         enum { bit_pat_len = t_pat_len };
+        using size_type = size_t;
     private:
         // basic block for interleaved storage of superblockrank and blockrank
         sdsl::int_vector<64> m_basic_block;
-        // Pointers to Gl and Gh bitvectors from which B is computed on-the-fly.
-        const bit_vector_type* m_gl = nullptr;
-        const bit_vector_type* m_gh = nullptr;
+        // Pointer to the int_vector<2> from which B is computed on-the-fly.
+        const packed_vector_type* m_g = nullptr;
 
-        static inline uint64_t compute_b_word(uint64_t gl_word, uint64_t gh_word) {
-            return ~(gl_word & gh_word);
+        static inline uint64_t compute_b_word(uint64_t W) {
+            constexpr uint64_t EVEN = 0x5555555555555555ULL;
+            return (W & (W >> 1) & EVEN) ^ EVEN;
         }
     public:
-        explicit rank_support_glgh(const bit_vector_type* gl = nullptr,
-                                   const bit_vector_type* gh = nullptr) {
-            // m_v (from base) will point to Gl; we never store B explicitly.
-            m_gl = gl;
-            m_gh = gh;
-            m_v  = gl;
+        explicit rank_support_packed_glgh(const packed_vector_type* g = nullptr) {
+            m_g = g;
 
-            if (gl == nullptr || gh == nullptr) {
+            if (g == nullptr) {
                 return;
-            } else if (gl->empty()) {
+            } else if (g->empty()) {
                 m_basic_block = sdsl::int_vector<64>(2,0);   // resize structure for basic_blocks
                 return;
             }
-            size_type basic_block_size = ((gl->capacity() >> 9)+1)<<1;
+            size_type basic_block_size = ((g->capacity() >> 9)+1)<<1;
             m_basic_block.resize(basic_block_size);   // resize structure for basic_blocks
             if (m_basic_block.empty())
                 return;
-            const uint64_t* gl_data = m_gl->data();
-            const uint64_t* gh_data = m_gh->data();
+            const uint64_t* g_data = m_g->data();
             size_type i, j=0;
             m_basic_block[0] = m_basic_block[1] = 0;
 
-            // First word of B: B_word = ~(Gl_word & Gh_word).
-            uint64_t first_gl = *gl_data;
-            uint64_t first_gh = *gh_data;
-            uint64_t b_word   = compute_b_word(first_gl, first_gh);
-            uint64_t sum      = sdsl::bits::cnt(b_word);
+            // First word of B.
+            uint64_t sum = sdsl::bits::cnt(compute_b_word(*g_data));
             uint64_t second_level_cnt = 0;
-            for (i = 1; i < (m_gl->capacity()>>6) ; ++i) {
-                uint64_t word_gl = gl_data[i];
-                uint64_t word_gh = gh_data[i];
-                b_word = compute_b_word(word_gl, word_gh);
+            for (i = 1; i < (m_g->capacity()>>6) ; ++i) {
+                uint64_t b_word = compute_b_word(g_data[i]);
                 if (!(i&0x7)) {// if i%8==0
                     j += 2;
                     m_basic_block[j-1] = second_level_cnt;
@@ -135,26 +124,24 @@ class rank_support_glgh : public sdsl::rank_support
             }
         }
 
-        rank_support_glgh(const rank_support_glgh&)  = default;
-        rank_support_glgh(rank_support_glgh&&) = default;
-        rank_support_glgh& operator=(const rank_support_glgh&) = default;
-        rank_support_glgh& operator=(rank_support_glgh&&) = default;
+        rank_support_packed_glgh(const rank_support_packed_glgh&)  = default;
+        rank_support_packed_glgh(rank_support_packed_glgh&&) = default;
+        rank_support_packed_glgh& operator=(const rank_support_packed_glgh&) = default;
+        rank_support_packed_glgh& operator=(rank_support_packed_glgh&&) = default;
 
 
-        size_type rank(size_type idx) const override {
-            assert(m_gl != nullptr && m_gh != nullptr);
-            assert(idx <= m_gl->size());
+        size_type rank(size_type idx) const {
+            assert(m_g != nullptr);
+            assert(idx <= m_g->size());
             const uint64_t* p = m_basic_block.data()
-                                + ((idx>>8)&0xFFFFFFFFFFFFFFFEULL); // (idx/512)*2
-            size_type result = *p + ((*(p+1)>>(63 - 9*((idx&0x1FF)>>6)))&0x1FF);
-            if (idx&0x3F) { // if (idx%64)!=0
+                                + ((idx>>7)&0xFFFFFFFFFFFFFFFEULL); // (idx/256)*2
+            size_type result = *p + ((*(p+1)>>(63 - 9*((idx&0xFF)>>5)))&0x1FF);
+            if (idx&0x1F) { // if (idx%32)!=0
                 // Add contribution of the remaining bits in the current 64-bit word.
-                size_type word_idx = idx >> 6;
-                uint8_t  offset    = idx & 0x3F;
-                const uint64_t* gl_data = m_gl->data();
-                const uint64_t* gh_data = m_gh->data();
-                uint64_t b_word = compute_b_word(gl_data[word_idx], gh_data[word_idx]);
-                uint64_t mask   = sdsl::bits::lo_set[offset];
+                size_type word_idx = idx >> 5;
+                uint8_t  offset    = idx & 0x1F;
+                uint64_t b_word     = compute_b_word(m_g->data()[word_idx]);
+                uint64_t mask      = sdsl::bits::lo_set[2 * offset];
                 result += sdsl::bits::cnt(b_word & mask);
             }
             return result;
@@ -165,7 +152,7 @@ class rank_support_glgh : public sdsl::rank_support
         }
 
         size_type size()const {
-            return m_gl ? m_gl->size() : 0;
+            return m_g ? m_g->size() : 0;
         }
 
         size_type size_in_bytes() const {
@@ -184,22 +171,16 @@ class rank_support_glgh : public sdsl::rank_support
             return written_bytes;
         }
 
-        void load(std::istream& in, const sdsl::int_vector<1>* v=nullptr) {
-            set_vector(v);
+        void load(std::istream& in, const packed_vector_type* g=nullptr) {
+            m_g = g;
             m_basic_block.load(in);
         }
 
-        void set_vector(const bit_vector_type* v=nullptr) override {
-            // For compatibility with the base interface, treat v as Gl.
-            m_gl = v;
-            m_v  = v;
+        void set_vector(const packed_vector_type* g=nullptr) {
+            m_g = g;
         }
 
-        void set_gh(const bit_vector_type* gh=nullptr) {
-            m_gh = gh;
-        }
-
-        void swap(rank_support_glgh& rs) {
+        void swap(rank_support_packed_glgh& rs) {
             if (this != &rs) { // if rs and _this_ are not the same object
                 m_basic_block.swap(rs.m_basic_block);
             }
