@@ -246,6 +246,9 @@ set_target_properties(test-rank-support-glgh PROPERTIES CXX_STANDARD 17 CXX_STAN
 add_cltj_executable(test-rank-support-packed-glgh src/test/hashing/test_rank_support_packed_glgh.cpp test)
 set_target_properties(test-rank-support-packed-glgh PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
+add_cltj_executable(test-packed-glgh src/test/hashing/test_packed_glgh.cpp test)
+set_target_properties(test-packed-glgh PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+
 add_cltj_executable(test-storage-strategies src/test/hashing/test_storage_strategies.cpp test)
 set_target_properties(test-storage-strategies PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
