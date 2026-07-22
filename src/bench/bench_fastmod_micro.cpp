@@ -1,17 +1,6 @@
-// Micro-benchmark: fastmod_u64 vs native % in the MPHF hash regime.
-// Measures (a * x) % p with a < p < 2^32, x < 2^32, so a*x < 2^64.
-//
-// Design (why the bench is shaped this way):
-//  - p is runtime-variable per combo, so native % compiles to a real hardware divide.
-//    A compile-time-constant divisor would let the compiler emit its own magic-multiply
-//    (i.e. fastmod), making the comparison meaningless.
-//  - The key buffer is small and cache-resident: this bench isolates COMPUTE cost only.
-//    Out-of-cache / memory-bandwidth effects belong to the end-to-end --glgh benchmark,
-//    not here. `n` sizes the prime (matching the real regime), it does NOT size the buffer.
-//  - Anti-DCE via a single volatile store AFTER each timed loop, not one per iteration
-//    (a per-iteration volatile RMW adds fixed overhead that compresses the ratio).
-//  - Each measurement is warmed up, repeated `trials` times, and reported as the median;
-//    single-pass timings on this workload swing wildly (turbo ramp, scheduling).
+// micro-bench: fastmod_u64 vs native % in the real MPHF hash regime
+// p is runtime-variable per combo so native % emits a real divq (not a compiler
+// magic-multiply). Buffer is cache-resident: this should measures compute instead of memory. The median of several trials is reported.
 
 #include <hashing/mixers.hpp>
 #include <hashing/mphf_utils.hpp>
@@ -33,17 +22,14 @@ namespace {
 
 using hrc = std::chrono::high_resolution_clock;
 
-// One (p, a, key-buffer) combo. M is the fastmod reciprocal, precomputed once.
 struct Combo {
     uint64_t p;
     uint64_t a;
-    __uint128_t M;
-    std::vector<uint64_t> x;  // cache-resident buffer of premixed keys
+    __uint128_t M;  // fastmod reciprocal
+    std::vector<uint64_t> x;
 };
 
-// Prime magnitude for a logical N, mirroring MPHF::compute_target_segment:
-// m ~ 1.25*n slots split across 3 segments, so each prime ~ 0.42*n.
-uint64_t prime_base_for_n(size_t n) {
+uint64_t prime_base_for_n(size_t n) {  // mirrors MPHF::compute_target_segment
     uint64_t target_m = static_cast<uint64_t>(std::ceil(1.25 * static_cast<double>(n)));
     uint64_t target = std::max<uint64_t>(3, (target_m + 2) / 3);
     return cltj::hashing::next_prime(target);
@@ -75,7 +61,6 @@ std::vector<Combo> gen_combos(size_t n_for_prime, size_t keys, size_t batch, uin
     return combos;
 }
 
-// How many passes over the buffers to reach ~target_ops operations.
 size_t reps_for(size_t target_ops, size_t batch, size_t keys) {
     size_t per_pass = batch * keys;
     if (per_pass == 0)
@@ -83,8 +68,6 @@ size_t reps_for(size_t target_ops, size_t batch, size_t keys) {
     return std::max<size_t>((target_ops + per_pass - 1) / per_pass, 1);
 }
 
-// Per-rep salt (xor with the pass index) keeps xv < 2^32 while making each pass distinct,
-// so the compiler cannot hoist/CSE the inner work across the reps loop.
 double bench_native(const std::vector<Combo>& combos, size_t reps) {
     uint64_t acc = 0;
     auto start = hrc::now();
@@ -100,7 +83,7 @@ double bench_native(const std::vector<Combo>& combos, size_t reps) {
         }
     }
     auto end = hrc::now();
-    volatile uint64_t sink = acc;  // single anti-DCE store
+    volatile uint64_t sink = acc;
     (void)sink;
 
     double ns =
@@ -144,26 +127,19 @@ double median(std::vector<double> v) {
     return (n % 2) ? v[n / 2] : 0.5 * (v[n / 2 - 1] + v[n / 2]);
 }
 
-// Confirm fastmod == native % over the buffer plus boundary x values.
 bool verify(const std::vector<Combo>& combos) {
-    size_t checked = 0;
     for (const auto& c : combos) {
         std::vector<uint64_t> probes = {0, 1, 2, c.p - 1, c.p + 1, 0xFFFFFFFFull};
         probes.insert(probes.end(), c.x.begin(), c.x.end());
         for (uint64_t xraw : probes) {
-            const uint64_t x = static_cast<uint32_t>(xraw);  // mixed keys live in the 32-bit domain
+            const uint64_t x = static_cast<uint32_t>(xraw);
             const uint64_t prod = x * c.a;
-            const uint64_t expected = prod % c.p;
-            const uint64_t got = fastmod::fastmod_u64(prod, c.M, c.p);
-            if (expected != got) {
-                std::cerr << "MISMATCH: a=" << c.a << " x=" << x << " p=" << c.p << " native=" << expected
-                          << " fastmod=" << got << std::endl;
+            if (fastmod::fastmod_u64(prod, c.M, c.p) != prod % c.p) {
+                std::cerr << "MISMATCH: a=" << c.a << " x=" << x << " p=" << c.p << std::endl;
                 return false;
             }
-            ++checked;
         }
     }
-    std::cout << "Correctness: " << checked << " ops, all equal." << std::endl;
     return true;
 }
 
@@ -193,33 +169,29 @@ int run(const Config& cfg) {
 
     const size_t reps = reps_for(cfg.ops, cfg.batch, cfg.keys);
 
-    // Warm-up (untimed): spin up frequency, prime caches.
-    bench_native(combos, 1);
+    bench_native(combos, 1);  // warm-up
     bench_fastmod(combos, 1);
 
     std::vector<double> nat, fm;
     nat.reserve(cfg.trials);
     fm.reserve(cfg.trials);
     for (size_t t = 0; t < cfg.trials; ++t) {
-        nat.push_back(bench_native(combos, reps));  // alternate the two so drift hits both equally
+        nat.push_back(bench_native(combos, reps));
         fm.push_back(bench_fastmod(combos, reps));
     }
 
     const double nat_med = median(nat);
     const double fm_med = median(fm);
-    std::cout << "native %    median: " << nat_med << " ns/op  (min "
-              << *std::min_element(nat.begin(), nat.end()) << ", max "
-              << *std::max_element(nat.begin(), nat.end()) << ")" << std::endl;
-    std::cout << "fastmod_u64 median: " << fm_med << " ns/op  (min "
-              << *std::min_element(fm.begin(), fm.end()) << ", max "
-              << *std::max_element(fm.begin(), fm.end()) << ")" << std::endl;
+    std::cout << "native %    " << nat_med << " ns/op [" << *std::min_element(nat.begin(), nat.end()) << ", "
+              << *std::max_element(nat.begin(), nat.end()) << "]" << std::endl;
+    std::cout << "fastmod_u64 " << fm_med << " ns/op [" << *std::min_element(fm.begin(), fm.end()) << ", "
+              << *std::max_element(fm.begin(), fm.end()) << "]" << std::endl;
 
     const double ratio = fm_med / nat_med;
-    if (ratio < 1.0) {
-        std::cout << "fastmod wins: " << (1.0 / ratio) << "x faster" << std::endl;
-    } else {
-        std::cout << "native wins: " << ratio << "x faster" << std::endl;
-    }
+    if (ratio < 1.0)
+        std::cout << "fastmod " << (1.0 / ratio) << "x faster" << std::endl;
+    else
+        std::cout << "native " << ratio << "x faster" << std::endl;
     return 0;
 }
 
