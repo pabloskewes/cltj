@@ -31,6 +31,7 @@ target_compile_options(cltj_core INTERFACE
 target_include_directories(cltj_core INTERFACE
   ${CMAKE_CURRENT_SOURCE_DIR}/include
   ${CMAKE_CURRENT_SOURCE_DIR}/lib/hybridBV/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/lib/fastmod/include
 )
 if(CLTJ_COLLECT_QUERY_STATS)
   target_compile_definitions(cltj_core INTERFACE CLTJ_COLLECT_QUERY_STATS_ENABLED)
@@ -242,6 +243,15 @@ set_target_properties(test-trit-packed-array PROPERTIES CXX_STANDARD 17 CXX_STAN
 add_cltj_executable(test-rank-support-glgh src/test/hashing/test_rank_support_glgh.cpp test)
 set_target_properties(test-rank-support-glgh PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
+add_cltj_executable(test-rank-support-packed-glgh src/test/hashing/test_rank_support_packed_glgh.cpp test)
+set_target_properties(test-rank-support-packed-glgh PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+
+add_cltj_executable(test-packed-glgh src/test/hashing/test_packed_glgh.cpp test)
+set_target_properties(test-packed-glgh PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+
+add_cltj_executable(test-packed-glgh-mphf src/test/hashing/test_packed_glgh_mphf.cpp test)
+set_target_properties(test-packed-glgh-mphf PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+
 add_cltj_executable(test-storage-strategies src/test/hashing/test_storage_strategies.cpp test)
 set_target_properties(test-storage-strategies PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
@@ -256,6 +266,9 @@ set_target_properties(repro-mphf-build PROPERTIES CXX_STANDARD 17 CXX_STANDARD_R
 
 add_cltj_executable(test-mphf-serialization src/test/hashing/test_mphf_serialization.cpp test)
 set_target_properties(test-mphf-serialization PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+
+add_cltj_executable(test-modpolicy src/test/hashing/test_modpolicy.cpp test)
+set_target_properties(test-modpolicy PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
 add_cltj_executable(test-mphf-move src/test/hashing/test_mphf_move.cpp test)
 set_target_properties(test-mphf-move PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
@@ -276,3 +289,5 @@ add_cltj_executable(count-distinct-spo src/analysis/count_distinct_spo.cpp analy
 
 add_cltj_executable(bench-mphf-hashing src/bench/bench_mphf_hashing.cpp analysis)
 target_link_libraries(bench-mphf-hashing PRIVATE PTHASH)
+
+add_cltj_executable(bench-fastmod-micro src/bench/bench_fastmod_micro.cpp bench)
