@@ -121,15 +121,14 @@ class rank_support_packed_glgh
                 m_basic_block = sdsl::int_vector<64>(2,0);   // resize structure for basic_blocks
                 return;
             }
-            // One superblock per 512 vertices (8 logical words), same as GlGh.
-            // capacity() is bits = 2*vertices, so >>10 gives vertices/512.
-            size_type basic_block_size = ((g->capacity() >> 10)+1)<<1;
+            size_type num_words = m_g->capacity() >> 6;      // physical 64-bit words
+            size_type num_logical = (num_words + 1) >> 1;    // 64-vertex logical words
+            // Same metadata sizing as GlGh, but counted in logical words.
+            size_type basic_block_size = ((num_logical >> 3)+1)<<1;
             m_basic_block.resize(basic_block_size);   // resize structure for basic_blocks
             if (m_basic_block.empty())
                 return;
             const uint64_t* g_data = m_g->data();
-            size_type num_words = m_g->capacity() >> 6;      // physical 64-bit words
-            size_type num_logical = (num_words + 1) >> 1;    // 64-vertex logical words
             size_type i, j=0;
             m_basic_block[0] = m_basic_block[1] = 0;
 

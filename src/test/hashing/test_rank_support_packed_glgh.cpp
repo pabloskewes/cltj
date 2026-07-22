@@ -103,6 +103,28 @@ int main() {
         std::cout << "  all unassigned (m=" << m << "): " << (ok ? "OK" : "FAIL") << "\n";
     }
 
+    // Boundary near a rank superblock. With 2-bit lanes, m=449 rounds to
+    // 15 physical words, i.e. 8 logical 64-vertex words.
+    {
+        bool ok = true;
+        const size_t m = 449;
+        DualVectors dv(m, 123);
+
+        cltj::hashing::rank_support_glgh<> rank_glgh(&dv.Gl, &dv.Gh);
+        cltj::hashing::rank_support_packed_glgh<> rank_packed(&dv.G);
+
+        ok = rank_packed.size_in_bytes() == rank_glgh.size_in_bytes();
+        for (size_t v = 0; ok && v <= m; ++v) {
+            if (rank_packed.rank(v) != rank_glgh.rank(v)) {
+                ok = false;
+            }
+        }
+
+        if (!ok)
+            ++failures;
+        std::cout << "  boundary near superblock (m=" << m << "): " << (ok ? "OK" : "FAIL") << "\n";
+    }
+
     // Serialize/load round-trip: a loaded rank must answer like the original.
     {
         bool ok = true;
