@@ -1,4 +1,6 @@
 #include <cassert>
+#include <cstdint>
+#include <random>
 #include <hashing/mixers.hpp>
 #include <hashing/mphf_utils.hpp>
 #include <util/logger.hpp>
@@ -121,6 +123,30 @@ void test_mod_inverse() {
     LOG_INFO("mod_inverse tests passed!");
 }
 
+void test_premix32_inverse() {
+    LOG_INFO("Testing premix32 inverse...");
+
+    const std::vector<uint32_t> edge_cases = {
+        0,
+        1,
+        2,
+        0x7fffffffU,
+        0x80000000U,
+        0xfffffffeU,
+        0xffffffffU,
+    };
+    for (uint32_t x : edge_cases)
+        assert(unpremix32(premix32(x)) == x);
+
+    std::mt19937 rng(0xC1A0);
+    for (uint32_t i = 0; i < 100000; i++) {
+        uint32_t x = rng();
+        assert(unpremix32(premix32(x)) == x);
+    }
+
+    LOG_INFO("premix32 inverse tests passed!");
+}
+
 void test_splitmix64() {
     LOG_INFO("Testing splitmix64...");
 
@@ -163,6 +189,7 @@ int main() {
     test_next_prime();
     test_all_coprime();
     test_mod_inverse();
+    test_premix32_inverse();
     test_splitmix64();
 
     LOG_INFO("All mphf_utils tests passed successfully!");
