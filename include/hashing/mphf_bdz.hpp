@@ -85,6 +85,7 @@ class MPHF {
     // Hash function parameters
     std::array<uint64_t, 3> primes_;  // r[k] = modulus (prime) per hash function
     std::array<uint64_t, 3> multipliers_;  // a[k] = multiplier inside modulo
+    std::array<uint64_t, 3> inv_multipliers_;  // a[k]^-1 modulo p[k]
     std::array<uint64_t, 3> biases_;  // b[k] = additive bias inside modulo
     std::array<uint64_t, 3> segment_starts_;  // d[k] = global segment start
 
@@ -110,6 +111,7 @@ class MPHF {
           n_peeled_(0),
           primes_{0, 0, 0},
           multipliers_{0, 0, 0},
+          inv_multipliers_{0, 0, 0},
           biases_{0, 0, 0},
           segment_starts_{0, 0, 0} {}
 
@@ -187,6 +189,7 @@ class MPHF {
 
     const std::array<uint64_t, 3>& get_primes() const { return primes_; }
     const std::array<uint64_t, 3>& get_multipliers() const { return multipliers_; }
+    const std::array<uint64_t, 3>& get_inverse_multipliers() const { return inv_multipliers_; }
     const std::array<uint64_t, 3>& get_biases() const { return biases_; }
     const std::array<uint64_t, 3>& get_segment_starts() const { return segment_starts_; }
 
@@ -276,6 +279,8 @@ class MPHF {
         segment_starts_[1] = primes_[0];
         segment_starts_[2] = primes_[0] + primes_[1];
         mod_policy_.bind(primes_);
+
+        compute_inverse_multipliers();
 
         // KeyPolicy only needs the hash parameters rebound before load().
         policies::KeyInitContext ctx{n_, primes_, multipliers_, biases_, segment_starts_, 0};
@@ -500,6 +505,8 @@ class MPHF {
             multipliers_[static_cast<size_t>(k)] = distA(rng);  // a[k] ∈ [1, p-1]
         }
 
+        compute_inverse_multipliers();
+
         // Sample biases b[k] ∈ [0, p-1]
         for (int k = 0; k < 3; ++k) {
             uint64_t p = primes_[static_cast<size_t>(k)];
@@ -519,6 +526,13 @@ class MPHF {
         );
 
         return true;
+    }
+
+    void compute_inverse_multipliers() {
+        for (int k = 0; k < 3; ++k) {
+            inv_multipliers_[static_cast<size_t>(k)] =
+                mod_inverse(multipliers_[static_cast<size_t>(k)], primes_[static_cast<size_t>(k)]);
+        }
     }
 
     // ========== STEP 2: Triple Generation ==========
