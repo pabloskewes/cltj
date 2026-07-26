@@ -231,6 +231,9 @@ add_cltj_executable(test-alternation-complexity src/test/test-alternation-comple
 
 add_cltj_executable(test-mphf-utils src/test/hashing/test_mphf_utils.cpp test)
 
+add_cltj_executable(test-premix32-exhaustive src/test/hashing/test_premix32_exhaustive.cpp test)
+set_target_properties(test-premix32-exhaustive PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+
 add_cltj_executable(test-mphf src/test/hashing/test_mphf.cpp test)
 set_target_properties(test-mphf PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
