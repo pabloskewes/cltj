@@ -34,5 +34,19 @@ inline constexpr uint32_t premix32(uint32_t x) noexcept {
     return x;
 }
 
+/**
+ * @brief Inverse of premix32.
+ *
+ * Uses the modular inverse of 0x45d9f3b modulo 2^32.
+ */
+inline constexpr uint32_t unpremix32(uint32_t x) noexcept {
+    x = (x >> 16) ^ x;
+    x *= 0x119de1f3U;
+    x = (x >> 16) ^ x;
+    x *= 0x119de1f3U;
+    x = (x >> 16) ^ x;
+    return x;
+}
+
 }  // namespace hashing
 }  // namespace cltj
