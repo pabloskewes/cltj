@@ -117,6 +117,18 @@ bool run_dataset_test(const TestDataset& dataset,
     }
 
     auto primes = mphf.get_primes();
+    auto multipliers = mphf.get_multipliers();
+    auto inv_multipliers = mphf.get_inverse_multipliers();
+    for (size_t j = 0; j < 3; j++) {
+        uint64_t product = (static_cast<__uint128_t>(multipliers[j]) * inv_multipliers[j]) % primes[j];
+        if (product != 1) {
+            std::cerr << "QuotientKey test failure: invalid inverse multiplier j=" << j
+                      << " product=" << product << " (dataset " << dataset.name << ")."
+                      << std::endl;
+            return false;
+        }
+    }
+
     __uint128_t jump128 = static_cast<__uint128_t>(primes[0]) * primes[1] * primes[2];
     if (jump128 >= (static_cast<__uint128_t>(1) << 64)) {
         std::cerr << "QuotientKey test failure: jump overflowed for dataset " << dataset.name
