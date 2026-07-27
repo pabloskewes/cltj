@@ -63,6 +63,28 @@ class StorageStrategy {
     bool is_vertex_occupied(uint32_t vertex) const { return derived().is_vertex_occupied(vertex); }
 
     /**
+     * @brief Get 64 occupancy bits of B, starting at vertex 64 * word_index
+     *
+     * Bit i of the result is B[64 * word_index + i]; bits of vertices >= m are 0.
+     * Lets a caller walk the occupied vertices with ctz instead of testing one
+     * vertex at a time. This generic version packs the bits one by one;
+     * strategies that can derive B word-wise should override it.
+     *
+     * @param word_index Word index in [0, ceil(m/64))
+     * @return Occupancy bits, least significant bit first
+     */
+    uint64_t occupancy_word(size_t word_index) const {
+        const uint64_t base = static_cast<uint64_t>(word_index) * 64;
+        const uint64_t m = derived().m();
+        uint64_t word = 0;
+        for (uint64_t i = 0; i < 64 && base + i < m; ++i) {
+            if (derived().is_vertex_occupied(static_cast<uint32_t>(base + i)))
+                word |= uint64_t(1) << i;
+        }
+        return word;
+    }
+
+    /**
      * @brief Initialize storage for m vertices
      *
      * Prepares storage structures for m vertices. Specific initialization

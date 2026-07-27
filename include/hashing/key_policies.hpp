@@ -11,6 +11,7 @@
 #include <sdsl/util.hpp>
 
 #include "mphf_types.hpp"
+#include "mphf_utils.hpp"
 
 namespace cltj {
 namespace hashing {
@@ -27,6 +28,7 @@ struct KeyInitContext {
 
 struct NoKey {
     static constexpr bool supports_contains = false;
+    static constexpr bool supports_reconstruction = false;
     static constexpr bool needs_input_stats = false;
 
     void init(const KeyInitContext&) {}
@@ -45,6 +47,7 @@ struct NoKey {
 
 struct FullKey {
     static constexpr bool supports_contains = true;
+    static constexpr bool supports_reconstruction = true;
     static constexpr bool needs_input_stats = false;
 
     std::vector<uint32_t> keys_;
@@ -54,6 +57,12 @@ struct FullKey {
     void store(size_t idx, uint32_t key, const Triple&, int) { keys_[idx] = key; }
 
     bool verify(size_t idx, uint32_t key, int) const { return keys_[idx] == key; }
+
+    // The payload already is the mixed key: store() receives triple.mixed_key.
+    uint32_t mixed_key_at(size_t idx, uint32_t) const {
+        assert(idx < keys_.size() && "slot out of range");
+        return keys_[idx];
+    }
 
     size_t size_in_bytes() const { return sizeof(uint32_t) * keys_.size(); }
 
@@ -93,6 +102,7 @@ struct FullKey {
 
 struct QuotientKey {
     static constexpr bool supports_contains = true;
+    static constexpr bool supports_reconstruction = true;
     static constexpr bool needs_input_stats = true;  // Needs max_mixed_key to compute optimal width
 
     // Persisted values
@@ -101,6 +111,7 @@ struct QuotientKey {
     // Cached parameters (copied from KeyInitContext in init()).
     std::array<uint64_t, 3> primes_{};
     std::array<uint64_t, 3> multipliers_{};
+    std::array<uint64_t, 3> inv_multipliers_{};  // a_j^-1 modulo p_j, only used to reconstruct
     std::array<uint64_t, 3> biases_{};
     std::array<uint64_t, 3> segment_starts_{};
 
@@ -110,6 +121,37 @@ struct QuotientKey {
         multipliers_ = ctx.multipliers;
         biases_ = ctx.biases;
         segment_starts_ = ctx.segment_starts;
+        for (size_t j = 0; j < 3; ++j)
+            inv_multipliers_[j] = mod_inverse(multipliers_[j], primes_[j]);
+    }
+
+    /**
+     * @brief Rebuild the mixed key stored at a slot, from its winning vertex.
+     *
+     * Only the quotient q = floor(y / p_j) is stored. The remainder r = y mod p_j
+     * comes from the position, because v_loc = (a_j*y + b_j) mod p_j does not
+     * depend on q, so r = a_j^-1 * (v_loc - b_j) mod p_j.
+     *
+     * @param idx    Slot in [0, n_peeled)
+     * @param vertex Winning vertex of that slot
+     */
+    uint32_t mixed_key_at(size_t idx, uint32_t vertex) const {
+        assert(idx < quotients_.size() && "slot out of range: only the peeled prefix is reconstructible");
+        const size_t j = (vertex >= segment_starts_[2]) ? 2 : (vertex >= segment_starts_[1] ? 1 : 0);
+        const uint64_t p = primes_[j];
+        assert(
+            p <= (uint64_t(1) << 32) &&
+            "inv_a * t must fit in uint64: both factors are below p, so p < 2^32 is required"
+        );
+
+        const uint64_t v_loc = vertex - segment_starts_[j];
+        uint64_t t = v_loc + p - biases_[j];
+        // TODO: create utilites? modsub and modadd (?)
+        if (t >= p)
+            t -= p;  // single correction instead of modulo
+        const uint64_t r = (inv_multipliers_[j] * t) % p;
+
+        return static_cast<uint32_t>(quotients_[idx] * p + r);
     }
 
     void init(const KeyInitContext& ctx) {
