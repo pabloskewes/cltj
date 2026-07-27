@@ -21,9 +21,21 @@ public:
 private:
   std::array<trie_type, 6> m_tries;
 
-  trie_type create_full_trie(vector<spo_triple> &D, uint8_t order) {
+  static void sort_and_dedup(vector<spo_triple> &D, uint8_t order) {
 
     std::sort(D.begin(), D.end(), comparator_order(order));
+
+    auto last = std::unique(D.begin(), D.end());
+    uint64_t removed = static_cast<uint64_t>(std::distance(last, D.end()));
+    if (removed > 0) {
+      D.erase(last, D.end());
+      std::cout << "Removed " << removed << " duplicate triples" << std::endl;
+    }
+  }
+
+  trie_type create_full_trie(vector<spo_triple> &D, uint8_t order) {
+
+    sort_and_dedup(D, order);
 
     uint64_t c0 = 1, cur_value = D[0][spo_orders[order][0]];
     std::vector<uint64_t> v0;
@@ -114,7 +126,7 @@ private:
 
   trie_type create_partial_trie(vector<spo_triple> &D, uint8_t order) {
 
-    std::sort(D.begin(), D.end(), comparator_order(order));
+    sort_and_dedup(D, order);
 
     uint64_t c0 = 1;
     std::vector<uint64_t> v0;
