@@ -70,8 +70,7 @@ struct SizeBreakdown {
 template <
     typename StorageStrategy = BaselineStorage,
     typename KeyPolicy = policies::NoKey,
-    typename ModPolicy = policies::NativeMod
->
+    typename ModPolicy = policies::NativeMod>
 class MPHF {
   private:
     // Core data structures
@@ -85,7 +84,6 @@ class MPHF {
     // Hash function parameters
     std::array<uint64_t, 3> primes_;  // r[k] = modulus (prime) per hash function
     std::array<uint64_t, 3> multipliers_;  // a[k] = multiplier inside modulo
-    std::array<uint64_t, 3> inv_multipliers_;  // a[k]^-1 modulo p[k]
     std::array<uint64_t, 3> biases_;  // b[k] = additive bias inside modulo
     std::array<uint64_t, 3> segment_starts_;  // d[k] = global segment start
 
@@ -104,6 +102,73 @@ class MPHF {
   public:
     using size_type = size_t;  // Required for sdsl::size_in_bytes
 
+    /**
+     * @brief Sequential cursor over the key set, in slot order.
+     *
+     * Walks the occupied vertices of B from left to right, which yields the
+     * peeled slots 0..n_peeled-1 with no select support: occupied vertices are
+     * exactly the peeling winners, so the k-th occupied vertex has slot k.
+     * The fallback residual keys follow, in slots n_peeled + i, matching the
+     * slot numbering of query() and locate().
+     *
+     * Reconstruction is delegated to the KeyPolicy, which works on mixed keys;
+     * the cursor is the single place where the mixer is undone.
+     */
+    class key_cursor {
+      private:
+        friend class MPHF;
+
+        const MPHF* mphf_;
+        size_t n_words_;
+        uint64_t word_ = 0;  // remaining occupancy bits of word_index_
+        size_t word_index_ = 0;
+        uint32_t next_slot_ = 0;  // slot of the next key to emit
+        uint32_t slot_ = 0;  // slot of the key currently held
+        uint32_t mixed_key_ = 0;
+
+        explicit key_cursor(const MPHF* mphf)
+            : mphf_(mphf), n_words_((static_cast<size_t>(mphf->storage_.m()) + 63) / 64) {
+            if (n_words_ > 0)
+                word_ = mphf_->storage_.occupancy_word(0);
+        }
+
+      public:
+        /**
+         * @brief Advance to the next key.
+         * @return false once every slot has been emitted
+         */
+        bool next() {
+            if (next_slot_ < mphf_->n_peeled_) {
+                while (word_ == 0) {  // skip empty words
+                    ++word_index_;
+                    assert(
+                        word_index_ < n_words_ &&
+                        "ran out of vertices with peeled slots left: B holds fewer ones than n_peeled_"
+                    );
+                    word_ = mphf_->storage_.occupancy_word(word_index_);
+                }
+                // v = word_index * 64 + offset, where offset = index of least significant 1 bit in word_
+                const uint32_t vertex = static_cast<uint32_t>(word_index_ * 64 + __builtin_ctzll(word_));
+                word_ &= word_ - 1;  // BLSR: drop the bit just consumed
+                assert(
+                    mphf_->storage_.rank(vertex) == next_slot_ &&
+                    "incremental slot counter drifted from rank over B"
+                );
+                mixed_key_ = mphf_->key_policy_.mixed_key_at(next_slot_, vertex);
+            } else {  // fallback residual keys
+                const size_t i = next_slot_ - mphf_->n_peeled_;
+                if (i >= mphf_->residual_keys_.size())
+                    return false;
+                mixed_key_ = mphf_->residual_keys_[i];
+            }
+            slot_ = next_slot_++;
+            return true;
+        }
+
+        uint32_t slot() const { return slot_; }
+        uint32_t key() const { return unpremix32(mixed_key_); }
+    };
+
     MPHF()
         : m_(0),
           n_(0),
@@ -111,7 +176,6 @@ class MPHF {
           n_peeled_(0),
           primes_{0, 0, 0},
           multipliers_{0, 0, 0},
-          inv_multipliers_{0, 0, 0},
           biases_{0, 0, 0},
           segment_starts_{0, 0, 0} {}
 
@@ -189,7 +253,6 @@ class MPHF {
 
     const std::array<uint64_t, 3>& get_primes() const { return primes_; }
     const std::array<uint64_t, 3>& get_multipliers() const { return multipliers_; }
-    const std::array<uint64_t, 3>& get_inverse_multipliers() const { return inv_multipliers_; }
     const std::array<uint64_t, 3>& get_biases() const { return biases_; }
     const std::array<uint64_t, 3>& get_segment_starts() const { return segment_starts_; }
 
@@ -279,8 +342,6 @@ class MPHF {
         segment_starts_[1] = primes_[0];
         segment_starts_[2] = primes_[0] + primes_[1];
         mod_policy_.bind(primes_);
-
-        compute_inverse_multipliers();
 
         // KeyPolicy only needs the hash parameters rebound before load().
         policies::KeyInitContext ctx{n_, primes_, multipliers_, biases_, segment_starts_, 0};
@@ -450,6 +511,17 @@ class MPHF {
         return locate(key).first;
     }
 
+    /**
+     * @brief Open a cursor over the key set (only enabled if KeyPolicy supports reconstruction).
+     *
+     * Enumeration is sequential by design: every consumer walks a whole node,
+     * so random access by slot is deliberately not provided.
+     */
+    template <typename K = KeyPolicy>
+    std::enable_if_t<K::supports_reconstruction, key_cursor> keys() const {
+        return key_cursor(this);
+    }
+
   private:
     /**
      * @brief Compute target segment size for prime selection
@@ -505,8 +577,6 @@ class MPHF {
             multipliers_[static_cast<size_t>(k)] = distA(rng);  // a[k] ∈ [1, p-1]
         }
 
-        compute_inverse_multipliers();
-
         // Sample biases b[k] ∈ [0, p-1]
         for (int k = 0; k < 3; ++k) {
             uint64_t p = primes_[static_cast<size_t>(k)];
@@ -526,13 +596,6 @@ class MPHF {
         );
 
         return true;
-    }
-
-    void compute_inverse_multipliers() {
-        for (int k = 0; k < 3; ++k) {
-            inv_multipliers_[static_cast<size_t>(k)] =
-                mod_inverse(multipliers_[static_cast<size_t>(k)], primes_[static_cast<size_t>(k)]);
-        }
     }
 
     // ========== STEP 2: Triple Generation ==========

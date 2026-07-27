@@ -138,6 +138,46 @@ void run_storage_checks(const char* name, const std::array<uint32_t, kNumVertice
     std::cout << name << " passed storage checks.\n";
 }
 
+// occupancy_word must agree with is_vertex_occupied bit for bit, and the bits of
+// the last word past m must read as unoccupied. Sizes cover a single partial
+// word, exact multiples of 64, and several words with a tail.
+template <typename Storage>
+void run_occupancy_word_checks(const char* name) {
+    for (uint32_t m : {1u, 12u, 63u, 64u, 65u, 128u, 130u, 257u}) {
+        Storage storage;
+        storage.initialize(m);
+        for (uint32_t v = 0; v < m; ++v) {
+            // cycling random-ish
+            if ((v * 7 + 3) % 5 != 0) {
+                storage.g_set(v, (v * 7 + 3) % 3);
+            }
+        }
+        storage.build_rank();
+
+        const size_t n_words = (static_cast<size_t>(m) + 63) / 64;
+        uint32_t seen = 0;
+        for (size_t w = 0; w < n_words; ++w) {
+            uint64_t word = storage.occupancy_word(w);
+            for (uint32_t i = 0; i < 64; ++i) {
+                const uint64_t v = static_cast<uint64_t>(w) * 64 + i;
+                const bool bit = ((word >> i) & 1) != 0;
+                const bool expected = v < m && storage.is_vertex_occupied(static_cast<uint32_t>(v));
+                assert(bit == expected && "occupancy_word disagrees with is_vertex_occupied");
+            }
+
+            // Walking the word with ctz must visit the occupied vertices in order.
+            while (word) {
+                const uint32_t v = static_cast<uint32_t>(w * 64 + __builtin_ctzll(word));
+                assert(storage.rank(v) == seen && "ctz walk drifted from rank over B");
+                word &= word - 1;
+                ++seen;
+            }
+        }
+        assert(seen == storage.rank(m) && "ctz walk did not visit every occupied vertex");
+    }
+    std::cout << name << " passed occupancy_word checks.\n";
+}
+
 }  // namespace
 
 int main() {
@@ -157,6 +197,10 @@ int main() {
     );
     run_storage_checks<GlGhStorage>("GlGhStorage (sparse)", kSparsePattern);
     run_storage_checks<GlGhStorage>("GlGhStorage (dense)", kDensePattern);
+
+    run_occupancy_word_checks<GlGhStorage>("GlGhStorage");
+    run_occupancy_word_checks<BaselineStorage>("BaselineStorage");
+    run_occupancy_word_checks<PackedTritStorage<ExplicitBitvector>>("PackedTritStorage<ExplicitBitvector>");
     std::cout << "All storage strategies validated successfully.\n";
     return 0;
 }
