@@ -5,6 +5,7 @@
 #include <sdsl/int_vector.hpp>
 #include <sdsl/structure_tree.hpp>
 #include <sdsl/util.hpp>
+#include <cassert>
 
 namespace cltj {
 namespace hashing {
@@ -31,8 +32,7 @@ class GlGhStorage : public StorageStrategy<GlGhStorage> {
     GlGhStorage() : m_(0) {}
 
     GlGhStorage(GlGhStorage&& o) noexcept
-        : Gl_(std::move(o.Gl_)), Gh_(std::move(o.Gh_)),
-          rank_B_(std::move(o.rank_B_)), m_(o.m_) {
+        : Gl_(std::move(o.Gl_)), Gh_(std::move(o.Gh_)), rank_B_(std::move(o.rank_B_)), m_(o.m_) {
         rank_B_.set_vector(&Gl_);
         rank_B_.set_gh(&Gh_);
     }
@@ -88,6 +88,27 @@ class GlGhStorage : public StorageStrategy<GlGhStorage> {
     }
 
     /**
+     * @brief Get 64 occupancy bits of B, starting at vertex 64 * word_index
+     *
+     * B[v] = ~(Gl[v] & Gh[v]), so one word of B comes from one word of Gl and
+     * one of Gh. The last word is masked: the bits past m are padding of the
+     * underlying bit_vector and their content is not part of the structure.
+     *  
+     *
+     * @param word_index Word index in [0, ceil(m/64))
+     * @return Occupancy bits, least significant bit first
+     */
+    uint64_t occupancy_word(size_t word_index) const {
+        assert(word_index * 64 < m_ && "occupancy_word out of range: word_index must cover a vertex < m");
+        uint64_t word = ~(Gl_.data()[word_index] & Gh_.data()[word_index]);
+        const uint32_t num_valid_bits = m_ % 64;  // valid bits in the last word, 0 if m = 64k
+        bool is_last_word = (word_index == m_ / 64);
+        if (is_last_word && num_valid_bits)
+            word &= (uint64_t(1) << num_valid_bits) - 1;
+        return word;
+    }
+
+    /**
      * @brief Initialize storage for m vertices
      * 
      * Initializes Gl_ and Gh_ with all bits set to 1 (representing G[v] = 3).
@@ -109,9 +130,7 @@ class GlGhStorage : public StorageStrategy<GlGhStorage> {
      * B[v] = ~(Gl[v] & Gh[v]) is computed dynamically during rank queries.
      * 
      */
-    void build_rank() {
-        rank_B_ = rank_support_glgh<>(&Gl_, &Gh_);
-    }
+    void build_rank() { rank_B_ = rank_support_glgh<>(&Gl_, &Gh_); }
 
     /**
      * @brief Compute rank query for compactification
