@@ -93,7 +93,6 @@ class GlGhStorage : public StorageStrategy<GlGhStorage> {
      * B[v] = ~(Gl[v] & Gh[v]), so one word of B comes from one word of Gl and
      * one of Gh. The last word is masked: the bits past m are padding of the
      * underlying bit_vector and their content is not part of the structure.
-     *  
      *
      * @param word_index Word index in [0, ceil(m/64))
      * @return Occupancy bits, least significant bit first
@@ -102,8 +101,8 @@ class GlGhStorage : public StorageStrategy<GlGhStorage> {
         assert(word_index * 64 < m_ && "occupancy_word out of range: word_index must cover a vertex < m");
         uint64_t word = ~(Gl_.data()[word_index] & Gh_.data()[word_index]);
         const uint32_t num_valid_bits = m_ % 64;  // valid bits in the last word, 0 if m = 64k
-        bool is_last_word = (word_index == m_ / 64);
-        if (is_last_word && num_valid_bits)
+        const bool has_padding = num_valid_bits && word_index == m_ / 64;
+        if (has_padding)
             word &= (uint64_t(1) << num_valid_bits) - 1;
         return word;
     }
