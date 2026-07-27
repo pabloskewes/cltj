@@ -155,6 +155,16 @@ class compact_metatrie_hash {
     }
 
     /**
+     * @brief Enumerates the children of the hashed node at @p node_pos, in slot order.
+     * @param node_pos LOUDS position of the node to scan
+     * @return Cursor over the node's keys, slot 0 first.
+     */
+    mphf_type::key_cursor hash_keys(size_type node_pos) const {
+        size_type mphf_idx = m_hash_rank(node_pos);
+        return m_mphfs[mphf_idx].keys();
+    }
+
+    /**
      * @brief Extracts the MPHF-induced permutation for the root's children.
      *
      * Must be called before reorder_louds_by_mphf() (which changes m_seq layout).

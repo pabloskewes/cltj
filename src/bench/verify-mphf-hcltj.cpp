@@ -2,6 +2,7 @@
 // BFS-walks all 6 tries. For every hashed node:
 //   - all children must return hash_contains() == true  (zero false negatives)
 //   - sampled non-members must return hash_contains() == false (zero false positives)
+//   - the key cursor must reproduce m_seq slot by slot (zero cursor mismatches)
 // Usage: verify-mphf-hcltj <path-to-index.hcltj>
 #include <index/cltj_index_metatrie.hpp>
 
@@ -21,6 +22,8 @@ struct TrieStats {
     uint64_t non_member_checked = 0;
     uint64_t false_negatives = 0;
     uint64_t false_positives = 0;
+    uint64_t cursor_keys_checked = 0;
+    uint64_t cursor_mismatches = 0;
 };
 
 static TrieStats verify_trie(cltj::compact_metatrie_hash* trie, const char* name) {
@@ -52,6 +55,26 @@ static TrieStats verify_trie(cltj::compact_metatrie_hash* trie, const char* name
                     uint32_t key = static_cast<uint32_t>(trie->seq[node + k]);
                     child_set.insert(key);
                     if (key > max_key) max_key = key;
+                }
+
+                // The cursor is the only check here that contrasts against the labels
+                // instead of against the MPHF the keys came from.
+                uint64_t emitted = 0;
+                for (auto cur = trie->hash_keys(node); cur.next(); emitted++) {
+                    stats.cursor_keys_checked++;
+                    uint32_t from_seq = static_cast<uint32_t>(trie->seq[node + cur.slot()]);
+                    if (cur.slot() != emitted || cur.key() != from_seq) {
+                        stats.cursor_mismatches++;
+                        if (stats.cursor_mismatches <= 10)
+                            std::cerr << "  CURSOR " << name << " node=" << node
+                                      << " slot=" << cur.slot() << " expected_slot=" << emitted
+                                      << " key=" << cur.key() << " seq=" << from_seq << std::endl;
+                    }
+                }
+                if (emitted != n_children) {
+                    stats.cursor_mismatches++;
+                    std::cerr << "  CURSOR " << name << " node=" << node << " emitted " << emitted
+                              << " keys, expected " << n_children << std::endl;
                 }
 
                 for (uint32_t key : child_set) {
@@ -120,7 +143,7 @@ int main(int argc, char** argv) {
     sdsl::load_from_file(index, index_path);
     std::cout << "Index loaded: " << sdsl::size_in_bytes(index) << " bytes" << std::endl;
 
-    uint64_t total_fn = 0, total_fp = 0;
+    uint64_t total_fn = 0, total_fp = 0, total_cursor_mismatches = 0;
 
     for (int t = 0; t < 6; t++) {
         std::cout << "\n--- Trie " << trie_names[t] << " ---" << std::endl;
@@ -128,17 +151,21 @@ int main(int argc, char** argv) {
         std::cout << "  hashed nodes:      " << s.nodes_checked << std::endl;
         std::cout << "  member checks:     " << s.keys_checked << std::endl;
         std::cout << "  non-member checks: " << s.non_member_checked << std::endl;
+        std::cout << "  cursor keys:       " << s.cursor_keys_checked << std::endl;
         std::cout << "  false negatives:   " << s.false_negatives << std::endl;
         std::cout << "  false positives:   " << s.false_positives << std::endl;
+        std::cout << "  cursor mismatches: " << s.cursor_mismatches << std::endl;
         total_fn += s.false_negatives;
         total_fp += s.false_positives;
+        total_cursor_mismatches += s.cursor_mismatches;
     }
 
     std::cout << "\n=== SUMMARY ===" << std::endl;
     std::cout << "Total false negatives: " << total_fn << std::endl;
     std::cout << "Total false positives: " << total_fp << std::endl;
+    std::cout << "Total cursor mismatches: " << total_cursor_mismatches << std::endl;
 
-    if (total_fn == 0 && total_fp == 0) {
+    if (total_fn == 0 && total_fp == 0 && total_cursor_mismatches == 0) {
         std::cout << "RESULT: ALL PASS" << std::endl;
         return 0;
     } else {
