@@ -149,6 +149,9 @@ set_target_properties(dump-trie-hcltj PROPERTIES CXX_STANDARD 17 CXX_STANDARD_RE
 add_cltj_executable(verify-mphf-hcltj src/bench/verify-mphf-hcltj.cpp analysis)
 set_target_properties(verify-mphf-hcltj PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
+add_cltj_executable(inspect-node-hcltj src/bench/inspect-node-hcltj.cpp analysis)
+set_target_properties(inspect-node-hcltj PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+
 add_cltj_executable(bench-query-cltj-rdf src/bench/bench-query-cltj-rdf.cpp bench hybridbv_gn)
 target_compile_definitions(bench-query-cltj-rdf PRIVATE ADAPTIVE=1)
 
