@@ -512,7 +512,9 @@ class ltj_algorithm_hash {
                         stats.path = IntersectionPath::PURE_HASH;
                     else if (!hashed_itrs.empty())
                         stats.path = IntersectionPath::MIXED;
-                    stats.alternation_complexity = calculate_alternation_complexity(itrs, x_j);
+                    // leap() is undefined on a hashed node: its children are in slot order.
+                    if (!sorted_itrs.empty())
+                        stats.alternation_complexity = calculate_alternation_complexity(sorted_itrs, x_j);
                     m_stats.push_back(stats);
                 }
             }
