@@ -57,6 +57,10 @@ struct IntersectionStats {
   /// @brief How many of the k iterators were on a node with an MPHF overlay.
   uint8_t hashed_iterators = 0;
 
+  /// @brief Values tested against the hashed iterators: the leapfrog output
+  /// over the sorted ones, or the whole smallest list on PURE_HASH.
+  uint64_t candidates = 0;
+
   // --- Derived Statistics (Computed on-the-fly) ---
 
   size_t k() const {
