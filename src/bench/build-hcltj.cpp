@@ -8,13 +8,15 @@ using timer = std::chrono::high_resolution_clock;
 int main(int argc, char** argv) {
     CLI::App app{"Build H-CLTJ index (metatrie + MPHF hash overlay)"};
     std::string dataset;
+    std::string output;
     uint32_t threshold = 1000;
     app.add_option("dataset", dataset, "Input dataset file")->required();
     app.add_option("-t,--threshold", threshold, "Min children to hash a node (default: 1000)");
+    app.add_option("-o,--output", output, "Output index path (default: <dataset>.hcltj)");
     CLI11_PARSE(app, argc, argv);
 
     try {
-        std::string index_name = dataset + ".hcltj";
+        std::string index_name = output.empty() ? dataset + ".hcltj" : output;
         std::vector<cltj::spo_triple> D;
 
         std::ifstream ifs(dataset);
@@ -70,7 +72,10 @@ int main(int argc, char** argv) {
         std::cout << "Hash overlay: " << total_mphfs << " MPHFs total, "
                   << duration_cast<seconds>(stop - start).count() << "s" << std::endl;
 
-        sdsl::store_to_file(index, index_name);
+        if (!sdsl::store_to_file(index, index_name)) {
+            std::cerr << "Failed to write index to " << index_name << std::endl;
+            return 1;
+        }
         std::cout << "Index saved to " << index_name << std::endl;
         std::cout << sdsl::memory_monitor::peak() << " bytes peak." << std::endl;
 

@@ -9,13 +9,13 @@ using timer = std::chrono::high_resolution_clock;
 int main(int argc, char **argv) {
   try {
 
-    if (argc != 2) {
-      cout << argv[0] << " <dataset>" << endl;
+    if (argc != 2 && !(argc == 4 && std::string(argv[2]) == "-o")) {
+      cout << argv[0] << " <dataset> [-o <output>]" << endl;
       return 0;
     }
 
     std::string dataset = argv[1];
-    std::string index_name = dataset + ".xcltj";
+    std::string index_name = (argc == 4) ? argv[3] : dataset + ".xcltj";
     vector<cltj::spo_triple> D;
 
     std::ifstream ifs(dataset);
@@ -43,7 +43,10 @@ int main(int argc, char **argv) {
 
     // sdsl::memory_monitor::stop();
 
-    sdsl::store_to_file(index, index_name);
+    if (!sdsl::store_to_file(index, index_name)) {
+      cerr << "Failed to write index to " << index_name << endl;
+      return 1;
+    }
 
     cout << "Index saved" << endl;
     cout << duration_cast<seconds>(stop - start).count() << " seconds." << endl;
