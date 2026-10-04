@@ -143,6 +143,11 @@ target_compile_definitions(bench-query-hcltj-global PRIVATE ADAPTIVE=0)
 add_cltj_executable(stats-hcltj src/bench/stats-hcltj.cpp analysis)
 set_target_properties(stats-hcltj PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
+if(CLTJ_COLLECT_QUERY_STATS)
+  add_cltj_executable(stats-intersections src/bench/stats-intersections.cpp analysis)
+  set_target_properties(stats-intersections PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+endif()
+
 add_cltj_executable(dump-trie-hcltj src/bench/dump-trie-hcltj.cpp analysis)
 set_target_properties(dump-trie-hcltj PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
