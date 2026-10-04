@@ -290,6 +290,11 @@ set_target_properties(test-children-histogram PROPERTIES CXX_STANDARD 17 CXX_STA
 add_cltj_executable(test-hcltj-correctness src/test/hcltj/test_hcltj_correctness.cpp test/hcltj)
 set_target_properties(test-hcltj-correctness PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
+if(CLTJ_COLLECT_QUERY_STATS)
+  add_cltj_executable(test-intersection-paths src/test/hcltj/test_intersection_paths.cpp test/hcltj)
+  set_target_properties(test-intersection-paths PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+endif()
+
 add_cltj_executable(count-distinct-spo src/analysis/count_distinct_spo.cpp analysis)
 
 add_cltj_executable(bench-mphf-hashing src/bench/bench_mphf_hashing.cpp analysis)
