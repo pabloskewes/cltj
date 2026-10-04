@@ -11,6 +11,14 @@ namespace ltj {
 
 using cltj::COLLECT_QUERY_STATS;
 
+/// @brief Code path that resolved a variable in the join.
+enum class IntersectionPath : uint8_t {
+  LEAPFROG,        ///< Leapfrog over every iterator.
+  MIXED,           ///< Leapfrog over the sorted iterators, probe the hashed ones.
+  PURE_HASH,       ///< Scan the smallest list, probe the other hashed ones.
+  LONELY_SEEK_ALL, ///< Single iterator in its last level, enumerated by seek_all.
+};
+
 /**
  * @brief Stores statistics for a single k-way set intersection operation (a
  * leapfrog join).
@@ -43,6 +51,11 @@ struct IntersectionStats {
   /// @brief The number of "seeks" or iterations the leapfrog join required to
   /// complete.
   uint64_t leapfrog_seeks = 0;
+
+  IntersectionPath path = IntersectionPath::LEAPFROG;
+
+  /// @brief How many of the k iterators were on a node with an MPHF overlay.
+  uint8_t hashed_iterators = 0;
 
   // --- Derived Statistics (Computed on-the-fly) ---
 
