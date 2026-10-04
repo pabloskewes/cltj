@@ -480,6 +480,8 @@ class ltj_algorithm_hash {
                         m_tracer, "hybrid", j, x_j, tuple
                     );
                     while (c != 0) {  // If empty c=0
+                        if constexpr (COLLECT_QUERY_STATS)
+                            stats.candidates++;
                         if (candidate_in_hashed_iterators(x_j, c, hashed_itrs)) {
                             if constexpr (COLLECT_QUERY_STATS)
                                 stats.result_size++;
@@ -508,9 +510,10 @@ class ltj_algorithm_hash {
 
                 if constexpr (COLLECT_QUERY_STATS) {
                     stats.hashed_iterators = hashed_itrs.size();
-                    if (sorted_itrs.empty())
+                    if (sorted_itrs.empty()) {
                         stats.path = IntersectionPath::PURE_HASH;
-                    else if (!hashed_itrs.empty())
+                        stats.candidates = children_sizes[min_idx];
+                    } else if (!hashed_itrs.empty())
                         stats.path = IntersectionPath::MIXED;
                     // leap() is undefined on a hashed node: its children are in slot order.
                     if (!sorted_itrs.empty())
