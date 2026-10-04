@@ -7,6 +7,7 @@
 #include <iostream>
 #include <queue>
 #include <sdsl/select_support_mcl.hpp>
+#include <ltj26_knobs.hpp>
 #include <sdsl/vectors.hpp>
 #include <string>
 #include <vector>
@@ -122,7 +123,7 @@ public:
       Receives index of node whos children we want to count
       Returns how many children said node has
   */
-  size_type children(size_type i) const {
+  LTJ26_NOINLINE size_type children(size_type i) const {
     return m_succ0(i + 1) - i;
   }
 
@@ -130,11 +131,11 @@ public:
     return i;
   }
 
-  inline size_type nodeselect(size_type i) const {
+  LTJ26_NOINLINE size_type nodeselect(size_type i) const {
     return m_select0(i + 2);
   }
 
-  pair<uint32_t, uint32_t>
+  LTJ26_NOINLINE pair<uint32_t, uint32_t>
   binary_search_seek(uint32_t val, uint32_t i, uint32_t f) const {
     if (m_seq[f] < val)
       return make_pair(0, f + 1);

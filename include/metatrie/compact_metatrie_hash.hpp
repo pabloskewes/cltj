@@ -15,6 +15,7 @@
 #include <hashing/mphf_build_tracer.hpp>
 #include <hashing/storage/glgh.hpp>
 #include <util/instrument.hpp>
+#include <ltj26_knobs.hpp>
 
 namespace cltj {
 
@@ -125,12 +126,14 @@ class compact_metatrie_hash {
 
     size_type mphf_count() const { return m_mphfs.size(); }
 
+    uint32_t threshold() const { return m_threshold; }
+
     /** 
      * @brief True iff the node at LOUDS position @p node_pos has an MPHF overlay.
      * @param node_pos LOUDS position of the node to check
      * @return True if the node has an MPHF overlay, false otherwise.
      */
-    bool node_has_hash(size_type node_pos) const { return m_has_hash[node_pos]; }
+    LTJ26_NOINLINE bool node_has_hash(size_type node_pos) const { return m_has_hash[node_pos]; }
 
     /** 
      * @brief O(1) membership check: is @p key a child of the hashed node at @p node_pos?
@@ -149,7 +152,7 @@ class compact_metatrie_hash {
      * @param key The key to check
      * @return {true, slot} if @p key is a child, {false, 0} otherwise.
      */
-    std::pair<bool, uint32_t> hash_locate(size_type node_pos, value_type key) const {
+    LTJ26_NOINLINE std::pair<bool, uint32_t> hash_locate(size_type node_pos, value_type key) const {
         size_type mphf_idx = m_hash_rank(node_pos);
         return m_mphfs[mphf_idx].locate(key);
     }
@@ -195,7 +198,7 @@ class compact_metatrie_hash {
       Receives index of node whos children we want to count
       Returns how many children said node has
   */
-    size_type children(size_type i) const { return m_succ0(i + 1) - i; }
+    LTJ26_NOINLINE size_type children(size_type i) const { return m_succ0(i + 1) - i; }
 
     size_type first_child(size_type i) const { return i; }
 
@@ -476,9 +479,9 @@ class compact_metatrie_hash {
         return nodes;
     }
 
-    inline size_type nodeselect(size_type i) const { return m_select0(i + 2); }
+    LTJ26_NOINLINE size_type nodeselect(size_type i) const { return m_select0(i + 2); }
 
-    pair<uint32_t, uint32_t> binary_search_seek(uint32_t val, uint32_t i, uint32_t f) const {
+    LTJ26_NOINLINE pair<uint32_t, uint32_t> binary_search_seek(uint32_t val, uint32_t i, uint32_t f) const {
         if (m_seq[f] < val)
             return make_pair(0, f + 1);
         uint32_t mid;

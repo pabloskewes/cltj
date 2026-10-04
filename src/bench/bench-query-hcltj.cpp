@@ -27,6 +27,10 @@
 #include <util/file_util.hpp>
 #include <util/time_util.hpp>
 #include <utility>
+#include <ltj26_knobs.hpp>
+#ifdef LTJ26_PROF
+#include <valgrind/callgrind.h>
+#endif
 
 using namespace std;
 
@@ -46,6 +50,7 @@ void query(
     sdsl::load_from_file(graph, file);
 
     std::cout << "Index loaded: " << sdsl::size_in_bytes(graph) << " bytes." << std::endl;
+    ltj26::print_knobs();
 
     std::ifstream ifs;
     uint64_t nQ = 0;
@@ -79,7 +84,15 @@ void query(
             auto start = std::chrono::high_resolution_clock::now();
             algorithm_type ltj(&query, &graph);
             ltj.set_query_id(nQ);
+#ifdef LTJ26_PROF
+            CALLGRIND_ZERO_STATS;
+            CALLGRIND_START_INSTRUMENTATION;
+#endif
             ltj.join(res, limit, timeout);
+#ifdef LTJ26_PROF
+            CALLGRIND_STOP_INSTRUMENTATION;
+            CALLGRIND_DUMP_STATS_AT(("q" + std::to_string(nQ)).c_str());
+#endif
             auto stop = std::chrono::high_resolution_clock::now();
             auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(stop - start).count();
             cout << nQ << ";" << res.size() << ";" << time << endl;

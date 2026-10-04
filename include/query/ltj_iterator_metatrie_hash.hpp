@@ -22,6 +22,7 @@
 
 #include <cassert>
 #include <cltj_config.hpp>
+#include <ltj26_knobs.hpp>
 #include <cltj_utils.hpp>
 #include <string>
 #include <triple_pattern.hpp>
@@ -66,6 +67,7 @@ class ltj_iterator_metatrie_hash {
 
     size_type m_trie_i = 0;
     size_type m_status_i = 0;
+    bool m_ltj26_shortcut = ltj26::shortcut();
     status_type m_status;
     redo_array_type m_redo;
 
@@ -80,6 +82,7 @@ class ltj_iterator_metatrie_hash {
         m_status = o.m_status;
         m_redo = o.m_redo;
         m_path_label = o.m_path_label;
+        m_ltj26_shortcut = o.m_ltj26_shortcut;
     }
 
     void print_status() {
@@ -152,7 +155,7 @@ class ltj_iterator_metatrie_hash {
         }
     }
 
-    size_type trie_switch() {
+    LTJ26_NOINLINE size_type trie_switch() {
         size_type trie_aux;
         switch (m_trie_i) {
             case 1:
@@ -183,7 +186,7 @@ class ltj_iterator_metatrie_hash {
         cnt = trie->children(cur_node);
         beg = trie->first_child(cur_node);
         end = beg + cnt - 1;
-        if (trie->node_has_hash(cur_node)) {
+        if ((!m_ltj26_shortcut || cnt >= trie->threshold()) && trie->node_has_hash(cur_node)) {
             auto [found, slot] = trie->hash_locate(cur_node, m_path_label[m_nfixed - 2]);
             p = {m_path_label[m_nfixed - 2], beg + slot};
         } else {
@@ -312,6 +315,19 @@ class ltj_iterator_metatrie_hash {
 
     inline size_type parent() const;
 
+    /** True iff the next down() from the current level goes through trie_switch(). */
+    bool ltj26_next_down_switches() const { return m_nfixed == 1 && m_status_i == 1; }
+
+    /** Physical position, among the switch-target trie root's children, of key @p c. */
+    size_type ltj26_switch_root_pos(value_type c) const {
+        size_type trie_aux = (m_trie_i == 1) ? 4 : (m_trie_i == 3) ? 0 : 2;
+        const auto* trie = m_ptr_index->get_trie(trie_aux);
+        if (trie->node_has_hash(0))
+            return trie->hash_locate(0, c).second;
+        size_type cnt = trie->root_degree();
+        return trie->binary_search_seek(c, 0, cnt - 1).second;
+    }
+
     ltj_iterator_metatrie_hash() = default;
     ltj_iterator_metatrie_hash(const triple_pattern* triple, index_scheme_type* index) {
         m_ptr_triple_pattern = triple;
@@ -366,6 +382,7 @@ class ltj_iterator_metatrie_hash {
             m_status = std::move(o.m_status);
             m_redo = std::move(o.m_redo);
             m_path_label = std::move(o.m_path_label);
+            m_ltj26_shortcut = o.m_ltj26_shortcut;
         }
         return *this;
     }
@@ -431,7 +448,7 @@ class ltj_iterator_metatrie_hash {
         --m_nfixed;
     };
 
-    bool exists(state_type state, size_type c) {  // Return the minimum in the
+    LTJ26_NOINLINE bool exists(state_type state, size_type c) {  // Return the minimum in the
         // range
 
         choose_trie(state);
@@ -507,7 +524,7 @@ class ltj_iterator_metatrie_hash {
         return true;
     }
 
-    value_type leap(var_type var, size_type c = -1ULL) {  // Return the minimum in the range
+    LTJ26_NOINLINE value_type leap(var_type var, size_type c = -1ULL) {  // Return the minimum in the range
         // If c=-1 we need to get the minimum value for the current level.
 
         state_type state = o;
@@ -672,7 +689,7 @@ class ltj_iterator_metatrie_hash {
         return trie->children(it);
     }
 
-    std::vector<uint64_t> seek_all(var_type x_j) {
+    LTJ26_NOINLINE std::vector<uint64_t> seek_all(var_type x_j) {
         std::vector<uint64_t> results;
         size_type t_i;
         // TODO: duplicated from original iterator logic; keep behavior for now, deduplicate with resolve_trie().

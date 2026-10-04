@@ -21,6 +21,8 @@
 #define RING_LTJ_ALGORITHM_HASH_HPP
 
 #include <cassert>
+#include <algorithm>
+#include <ltj26_knobs.hpp>
 #include <triple_pattern.hpp>
 // #include <ltj_iterator.hpp>
 #include <dict/dict_map.hpp>
@@ -439,6 +441,40 @@ class ltj_algorithm_hash {
                     cltj::query::CandidateFrame<TRACE_QUERY, tuple_type> frame(
                         m_tracer, "hash", j, x_j, tuple
                     );
+
+                    // LTJ-26: optional scan order (throwaway). Same per-element body, only the order changes.
+                    const int ltj26_order = ltj26::enum_order();
+                    if (ltj26_order != ltj26::ENUM_SLOT && itrs.size() == 1
+                        && itrs[min_idx]->ltj26_next_down_switches()) {
+                        std::vector<std::pair<uint64_t, size_type>> order;
+                        order.reserve(end_pos - beg);
+                        for (size_type pos = beg; pos < end_pos; ++pos) {
+                            value_type c = scan_trie->seq[pos];
+                            uint64_t k = (ltj26_order == ltj26::ENUM_KEY)
+                                             ? (uint64_t)c
+                                             : (uint64_t)itrs[min_idx]->ltj26_switch_root_pos(c);
+                            order.emplace_back(k, pos);
+                        }
+                        std::sort(order.begin(), order.end());
+                        for (const auto& kp : order) {
+                            size_type pos = kp.second;
+                            value_type c = scan_trie->seq[pos];
+                            tuple[j] = {x_j, c};
+                            frame.add(c);
+                            itrs[min_idx]->set_level_status(pos, beg, end_pos - beg);
+                            itrs[min_idx]->down(x_j, c);
+                            m_veo.down();
+                            ok = search(j + 1, tuple, res, start, limit_results, timeout_seconds);
+                            if (!ok)
+                                return false;
+                            itrs[min_idx]->up(x_j);
+                            m_veo.up();
+                        }
+                        itrs[min_idx]->leap_done();
+                        frame.emit();
+                        m_veo.done();
+                        return true;
+                    }
 
                     for (size_type pos = beg; pos < end_pos; ++pos) {
                         value_type c = scan_trie->seq[pos];

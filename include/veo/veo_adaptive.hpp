@@ -21,6 +21,8 @@
 #define RING_VEO_ADAPTIVE_HPP
 
 #include <cltj_config.hpp>
+#include <ltj26_knobs.hpp>
+#include <algorithm>
 #include <cltj_utils.hpp>
 #include <index/cltj_index_spo_lite.hpp>
 #include <list>
@@ -187,6 +189,8 @@ public:
       }
       ++i;
     }
+    if (ltj26::lonely_reverse())
+      std::reverse(m_lonely.begin(), m_lonely.end());
     m_index = 0;
     /*for(const auto & v : m_var_info){
         cout << "var=" << (uint64_t) v.name << " weight=" << v.weight << endl;

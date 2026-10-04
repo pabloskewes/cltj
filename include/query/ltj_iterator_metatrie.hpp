@@ -21,6 +21,7 @@
 #define LTJ_ITERATOR_METATRIE_HPP
 
 #include <cltj_config.hpp>
+#include <ltj26_knobs.hpp>
 #include <cltj_utils.hpp>
 #include <string>
 #include <triple_pattern.hpp>
@@ -152,7 +153,7 @@ private:
     }
   }
 
-  size_type trie_switch() {
+  LTJ26_NOINLINE size_type trie_switch() {
     size_type trie_aux;
     switch (m_trie_i) {
     case 1:
@@ -390,7 +391,7 @@ public:
     return true;
   }
 
-  value_type
+  LTJ26_NOINLINE value_type
   leap(var_type var, size_type c = -1ULL) { // Return the minimum in the range
     // If c=-1 we need to get the minimum value for the current level.
 
@@ -554,7 +555,7 @@ public:
     return trie->children(it);
   }
 
-  std::vector<uint64_t> seek_all(var_type x_j) {
+  LTJ26_NOINLINE std::vector<uint64_t> seek_all(var_type x_j) {
     std::vector<uint64_t> results;
     size_type t_i;
     if (m_nfixed == 2 && m_status_i == 1) {
