@@ -388,6 +388,16 @@ class ltj_algorithm_hash {
             if (itrs.size() == 1 && itrs[0]->in_last_level()) {  // Lonely variables
                 // cout << "Seeking (last level)" << endl;
                 auto results = itrs[0]->seek_all(x_j);
+                if constexpr (COLLECT_QUERY_STATS) {
+                    IntersectionStats stats;
+                    stats.variable_id = x_j;
+                    stats.depth = j;
+                    stats.list_sizes = {results.size()};
+                    stats.result_size = results.size();
+                    stats.path = IntersectionPath::LONELY_SEEK_ALL;
+                    stats.hashed_iterators = itrs[0]->current_node_has_hash(x_j);
+                    m_stats.push_back(stats);
+                }
                 // cout << "Results: " << results.size() << endl;
                 // cout << "Seek (last level): (" << (uint64_t) x_j << ": size=" <<
                 // results.size() << ")" <<endl;
