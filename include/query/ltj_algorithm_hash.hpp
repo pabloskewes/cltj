@@ -507,6 +507,11 @@ class ltj_algorithm_hash {
                 }
 
                 if constexpr (COLLECT_QUERY_STATS) {
+                    stats.hashed_iterators = hashed_itrs.size();
+                    if (sorted_itrs.empty())
+                        stats.path = IntersectionPath::PURE_HASH;
+                    else if (!hashed_itrs.empty())
+                        stats.path = IntersectionPath::MIXED;
                     stats.alternation_complexity = calculate_alternation_complexity(itrs, x_j);
                     m_stats.push_back(stats);
                 }
