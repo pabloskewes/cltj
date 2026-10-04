@@ -69,9 +69,7 @@ class ltj_algorithm_hash {
     bool m_is_empty = false;
     std::vector<IntersectionStats> m_stats;
     cltj::query::QueryTracer<cltj::TRACE_QUERY> m_tracer{"query_traces"};
-#ifdef CLTJ_COLLECT_QUERY_STATS_ENABLED
     std::function<void(const IntersectionStats&)> m_stats_sink;
-#endif
 
     void copy(const ltj_algorithm_hash& o) {
         m_ptr_triple_patterns = o.m_ptr_triple_patterns;
@@ -94,13 +92,10 @@ class ltj_algorithm_hash {
     }
 
     void record_stats(const IntersectionStats& stats) {
-#ifdef CLTJ_COLLECT_QUERY_STATS_ENABLED
-        if (m_stats_sink) {
+        if (m_stats_sink)
             m_stats_sink(stats);
-            return;
-        }
-#endif
-        m_stats.push_back(stats);
+        else
+            m_stats.push_back(stats);
     }
 
     void from_id_to_str(
@@ -122,10 +117,8 @@ class ltj_algorithm_hash {
   public:
     const std::vector<IntersectionStats>& get_stats() const { return m_stats; }
 
-#ifdef CLTJ_COLLECT_QUERY_STATS_ENABLED
     /// Sends each record to @p sink instead of keeping it in get_stats().
     void set_stats_sink(std::function<void(const IntersectionStats&)> sink) { m_stats_sink = std::move(sink); }
-#endif
 
     void set_query_id(uint64_t qid) { m_tracer.set_query_id(qid); }
 

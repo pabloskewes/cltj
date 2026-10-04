@@ -70,9 +70,7 @@ private:
   bool m_is_empty = false;
   std::vector<IntersectionStats> m_stats;
   cltj::query::QueryTracer<cltj::TRACE_QUERY> m_tracer{"query_traces"};
-#ifdef CLTJ_COLLECT_QUERY_STATS_ENABLED
   std::function<void(const IntersectionStats &)> m_stats_sink;
-#endif
 
   void copy(const ltj_algorithm &o) {
     m_ptr_triple_patterns = o.m_ptr_triple_patterns;
@@ -96,13 +94,10 @@ private:
   }
 
   void record_stats(const IntersectionStats &stats) {
-#ifdef CLTJ_COLLECT_QUERY_STATS_ENABLED
-    if (m_stats_sink) {
+    if (m_stats_sink)
       m_stats_sink(stats);
-      return;
-    }
-#endif
-    m_stats.push_back(stats);
+    else
+      m_stats.push_back(stats);
   }
 
   void from_id_to_str(
@@ -126,12 +121,10 @@ public:
     return m_stats;
   }
 
-#ifdef CLTJ_COLLECT_QUERY_STATS_ENABLED
   /// Sends each record to @p sink instead of keeping it in get_stats().
   void set_stats_sink(std::function<void(const IntersectionStats &)> sink) {
     m_stats_sink = std::move(sink);
   }
-#endif
 
   void set_query_id(uint64_t qid) {
     m_tracer.set_query_id(qid);
