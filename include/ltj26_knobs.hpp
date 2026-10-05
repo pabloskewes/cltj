@@ -3,6 +3,7 @@
 //   LTJ26_LONELY_REVERSE=1   reverse the order of lonely variables (X and H)
 //   LTJ26_ENUM=key|spo       H pure-hash scan order when the next level trie-switches
 //   LTJ26_SHORTCUT=1         H trie_switch: skip m_has_hash read on nodes below threshold
+#include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
@@ -56,3 +57,20 @@ inline void print_knobs() {
 }
 
 }  // namespace ltj26
+
+// LTJ26_COUNT: per-query counters (throwaway). Compiled out unless -DLTJ26_COUNT.
+namespace ltj26 {
+struct counters_t {
+    uint64_t sw = 0;       // trie_switch() calls
+    uint64_t loc = 0;      // hash_locate() calls
+    uint64_t cont = 0;     // hash_contains() calls
+    uint64_t seekall = 0;  // seek_all() calls
+    uint64_t root_loc = 0; // hash_locate() on a full-trie root (inside trie_switch)
+};
+inline counters_t g_cnt;
+}  // namespace ltj26
+#ifdef LTJ26_COUNT
+#define LTJ26_INC(f) (++ltj26::g_cnt.f)
+#else
+#define LTJ26_INC(f) ((void)0)
+#endif

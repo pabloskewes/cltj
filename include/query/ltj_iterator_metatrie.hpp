@@ -154,6 +154,7 @@ private:
   }
 
   LTJ26_NOINLINE size_type trie_switch() {
+    LTJ26_INC(sw);
     size_type trie_aux;
     switch (m_trie_i) {
     case 1:
@@ -556,6 +557,7 @@ public:
   }
 
   LTJ26_NOINLINE std::vector<uint64_t> seek_all(var_type x_j) {
+    LTJ26_INC(seekall);
     std::vector<uint64_t> results;
     size_type t_i;
     if (m_nfixed == 2 && m_status_i == 1) {

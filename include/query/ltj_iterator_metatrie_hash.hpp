@@ -156,6 +156,7 @@ class ltj_iterator_metatrie_hash {
     }
 
     LTJ26_NOINLINE size_type trie_switch() {
+        LTJ26_INC(sw);
         size_type trie_aux;
         switch (m_trie_i) {
             case 1:
@@ -177,6 +178,7 @@ class ltj_iterator_metatrie_hash {
         end = beg + cnt - 1;
         std::pair<uint32_t, uint32_t> p;
         if (trie->node_has_hash(0)) {
+            LTJ26_INC(root_loc);
             auto [found, slot] = trie->hash_locate(0, m_path_label[m_nfixed - 1]);
             p = {m_path_label[m_nfixed - 1], beg + slot};
         } else {
@@ -690,6 +692,7 @@ class ltj_iterator_metatrie_hash {
     }
 
     LTJ26_NOINLINE std::vector<uint64_t> seek_all(var_type x_j) {
+        LTJ26_INC(seekall);
         std::vector<uint64_t> results;
         size_type t_i;
         // TODO: duplicated from original iterator logic; keep behavior for now, deduplicate with resolve_trie().

@@ -13,6 +13,11 @@ int main(int argc, char** argv) {
     app.add_option("dataset", dataset, "Input dataset file")->required();
     app.add_option("-t,--threshold", threshold, "Min children to hash a node (default: 1000)");
     app.add_option("-o,--output", output, "Output index path (default: <dataset>.hcltj)");
+    bool no_root_hash = false;
+    app.add_flag(
+        "--no-root-hash", no_root_hash,
+        "LTJ-26 (throwaway): do not hash the roots of the full tries; roots and partial first levels stay in id order"
+    );
     CLI11_PARSE(app, argc, argv);
 
     try {
@@ -44,7 +49,8 @@ int main(int argc, char** argv) {
         // Free D before overlay build to reduce peak memory
         std::vector<cltj::spo_triple>().swap(D);
 
-        std::cout << "Building hash overlay (threshold=" << threshold << ")..." << std::endl;
+        std::cout << "Building hash overlay (threshold=" << threshold << ", no_root_hash=" << no_root_hash
+                  << ")..." << std::endl;
         start = timer::now();
         uint32_t total_mphfs = 0;
 
@@ -55,8 +61,14 @@ int main(int argc, char** argv) {
             auto* full = index.get_trie(full_i);
             auto* part = index.get_trie(part_i);
 
-            full->build_hash_overlay(threshold, static_cast<uint32_t>(full_i));
+            full->build_hash_overlay(threshold, static_cast<uint32_t>(full_i), no_root_hash);
             auto root_perm = full->extract_root_permutation();
+            if (no_root_hash) {
+                // Identity, so the partial trie's first level goes through the top-level path of the reorder.
+                root_perm.resize(full->root_degree());
+                for (size_t i = 0; i < root_perm.size(); ++i)
+                    root_perm[i] = i;
+            }
             full->reorder_louds_by_mphf();
 
             part->build_hash_overlay(threshold, static_cast<uint32_t>(part_i));

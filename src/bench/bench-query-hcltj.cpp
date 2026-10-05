@@ -88,6 +88,7 @@ void query(
             CALLGRIND_ZERO_STATS;
             CALLGRIND_START_INSTRUMENTATION;
 #endif
+            ltj26::g_cnt = {};
             ltj.join(res, limit, timeout);
 #ifdef LTJ26_PROF
             CALLGRIND_STOP_INSTRUMENTATION;
@@ -95,7 +96,12 @@ void query(
 #endif
             auto stop = std::chrono::high_resolution_clock::now();
             auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(stop - start).count();
+#ifdef LTJ26_COUNT
+            cout << nQ << ";" << res.size() << ";" << time << ";" << ltj26::g_cnt.sw << ";" << ltj26::g_cnt.loc
+                 << ";" << ltj26::g_cnt.cont << ";" << ltj26::g_cnt.seekall << ";" << ltj26::g_cnt.root_loc << endl;
+#else
             cout << nQ << ";" << res.size() << ";" << time << endl;
+#endif
             nQ++;
 
             // cout << std::chrono::duration_cast<std::chrono::nanoseconds> (end -

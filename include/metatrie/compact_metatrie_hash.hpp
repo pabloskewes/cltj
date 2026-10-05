@@ -142,6 +142,7 @@ class compact_metatrie_hash {
      * @return True if @p key is a child, false otherwise.
      */
     bool hash_contains(size_type node_pos, value_type key) const {
+        LTJ26_INC(cont);
         size_type mphf_idx = m_hash_rank(node_pos);
         return m_mphfs[mphf_idx].contains(key);
     }
@@ -153,6 +154,7 @@ class compact_metatrie_hash {
      * @return {true, slot} if @p key is a child, {false, 0} otherwise.
      */
     LTJ26_NOINLINE std::pair<bool, uint32_t> hash_locate(size_type node_pos, value_type key) const {
+        LTJ26_INC(loc);
         size_type mphf_idx = m_hash_rank(node_pos);
         return m_mphfs[mphf_idx].locate(key);
     }
@@ -248,7 +250,8 @@ class compact_metatrie_hash {
      * each such node, and m_hash_rank is rebuilt over the updated bitvector.
      */
     // TODO: move tracer metadata (e.g., trie_id) out of this functional API.
-    void build_hash_overlay(uint32_t threshold, uint32_t trie_id = UINT32_MAX) {
+    // skip_root (LTJ-26, throwaway): leave node 0 unhashed, so a full trie's root stays in id order.
+    void build_hash_overlay(uint32_t threshold, uint32_t trie_id = UINT32_MAX, bool skip_root = false) {
         m_threshold = threshold;
         m_has_hash = sdsl::bit_vector(m_bv.size(), 0);
         m_mphfs.clear();
@@ -263,7 +266,7 @@ class compact_metatrie_hash {
             std::vector<size_type> next_level;
             for (auto node : current_level) {
                 size_type n_children = children(node);
-                if (n_children >= threshold) {
+                if (n_children >= threshold && !(skip_root && node == 0)) {
                     std::vector<uint32_t> keys;
                     keys.reserve(n_children);
                     for (size_type k = 0; k < n_children; k++)
