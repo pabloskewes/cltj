@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # EXP-016 batch (LTJ-26, throwaway). Runs only after an explicit ok.
-# A (flock -s): build H variant -> verify -> size breakdowns, in parallel with the X and H-default counter runs.
-# B (flock -x): paired timings X, H-default, H-variant, H-variant with LTJ26_MIXED_MIN=1 LTJ26_SORTED_SCAN=1,
-#   one at a time, EXP-013/02 arguments.
+# A (flock -s): build H variant -> verify -> size breakdowns. Stops the batch if build or verify fail.
+# B (flock -x): paired timings, one at a time, EXP-013/02 arguments, in this order:
+#   X, H-variant with LTJ26_MIXED_MIN=1 LTJ26_SORTED_SCAN=1 (var2), H-default, H-variant.
+# C (flock -s): counter runs (build-count) of X and H-default, in parallel.
 set -u
 W=~/tesis/worktrees/ltj-26-diagnose-and-remove-h-cltjs-per-element-query-overhead
 OUT=~/tesis/data/experiments/EXP-016-unhashed-full-trie-roots
@@ -28,20 +29,18 @@ cnt() {  # name bin index
 }
 
 # ---- A ----
-(
-  stage "BUILD_VAR start"
-  flock -s $LOCK ./build/bench/build-hcltj $DAT -t 4000 --no-root-hash -o $VI > $OUT/build-hcltj-noroot.log 2>&1
-  stage "BUILD_VAR done rc=$?"
-  stage "VERIFY_VAR start"
-  flock -s $LOCK ./build/analysis/verify-mphf-hcltj $VI > $OUT/verify-noroot.log 2>&1
-  stage "VERIFY_VAR done rc=$?"
-  flock -s $LOCK ./build/analysis/size-breakdown-hcltj $HI $OUT/size-hdef.json > $OUT/size-hdef.txt 2>&1
-  flock -s $LOCK ./build/analysis/size-breakdown-hcltj $VI $OUT/size-hvar.json > $OUT/size-hvar.txt 2>&1
-  stage "SIZE done"
-) &
-cnt x    bench-query-xcltj $XI &
-cnt hdef bench-query-hcltj $HI &
-wait
+stage "BUILD_VAR start"
+flock -s $LOCK ./build/bench/build-hcltj $DAT -t 4000 --no-root-hash -o $VI > $OUT/build-hcltj-noroot.log 2>&1
+rc=$?
+stage "BUILD_VAR done rc=$rc"
+if [ $rc -ne 0 ] || [ ! -s $VI ]; then stage "FAILED: build"; exit 1; fi
+stage "VERIFY_VAR start"
+flock -s $LOCK ./build/analysis/verify-mphf-hcltj $VI > $OUT/verify-noroot.log 2>&1
+rc=$?
+stage "VERIFY_VAR done rc=$rc"
+if [ $rc -ne 0 ] || ! grep -q "^RESULT: ALL PASS" $OUT/verify-noroot.log; then stage "FAILED: verify"; exit 1; fi
+flock -s $LOCK ./build/analysis/size-breakdown-hcltj $HI $OUT/size-hdef.json > $OUT/size-hdef.txt 2>&1
+flock -s $LOCK ./build/analysis/size-breakdown-hcltj $VI $OUT/size-hvar.json > $OUT/size-hvar.txt 2>&1
 stage "PHASE_A done"
 
 # ---- B ----
@@ -52,7 +51,13 @@ tm() {  # name bin index [ENV=VAL...]
   stage "BENCH $name done rc=$? lines=$(wc -l < $OUT/bench-$name.csv)"
 }
 tm xcltj       bench-query-xcltj $XI
+tm hcltj-var2  bench-query-hcltj $VI LTJ26_MIXED_MIN=1 LTJ26_SORTED_SCAN=1
 tm hcltj       bench-query-hcltj $HI
 tm hcltj-var   bench-query-hcltj $VI
-tm hcltj-var2  bench-query-hcltj $VI LTJ26_MIXED_MIN=1 LTJ26_SORTED_SCAN=1
+stage "PHASE_B done"
+
+# ---- C ----
+cnt x    bench-query-xcltj $XI &
+cnt hdef bench-query-hcltj $HI &
+wait
 stage "ALL_DONE"
