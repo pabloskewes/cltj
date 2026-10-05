@@ -7,6 +7,7 @@
 #include <query/ltj_iterator_metatrie.hpp>
 #include <query/ltj_iterator_metatrie_hash.hpp>
 #include <results/results_counter.hpp>
+#include <set>
 #include <string>
 #include <util/rdf_util.hpp>
 #include <vector>
@@ -37,6 +38,7 @@ void check(bool ok, const std::string& what) {
 
 // Subjects per predicate: 1 -> {1..5} hashed, 2 -> {2..7} hashed, 3 -> {3,5}, 4 -> {5,6,9}.
 // Subject 20 has 5 objects under predicate 5, so node (20, 5) is hashed.
+// Predicate 6 is a pseudo-random graph over {30..69}, used for triangles.
 std::vector<cltj::spo_triple> dataset() {
     std::vector<cltj::spo_triple> triples;
     auto add = [&](uint32_t s, uint32_t p, uint32_t o) { triples.push_back({s, p, o}); };
@@ -50,6 +52,13 @@ std::vector<cltj::spo_triple> dataset() {
         add(s, 4, 400 + s);
     for (uint32_t o = 1; o <= 5; ++o)
         add(20, 5, o);
+    uint32_t state = 12345;
+    for (uint32_t a = 30; a < 70; ++a)
+        for (uint32_t b = 30; b < 70; ++b) {
+            state = state * 1103515245 + 12345;
+            if (a != b && (state >> 16) % 5 == 0)
+                add(a, 6, b);
+        }
     return triples;
 }
 
@@ -70,6 +79,15 @@ h_index build_hcltj(std::vector<cltj::spo_triple> triples) {
         part->reorder_louds_by_mphf(root_perm);
     }
     return index;
+}
+
+template <class algo, class index_type>
+uint64_t count_results(const std::string& query_str, index_type& index) {
+    auto query = ::util::rdf::ids::get_query(query_str);
+    ::util::results_counter res;
+    algo ltj(&query, &index);
+    ltj.join(res, 0, 600);
+    return res.size();
 }
 
 template <class algo, class index_type>
@@ -202,6 +220,23 @@ int main() {
         check(h.joined.empty(), q + ": no intersection recorded");
         check_lonely(q, h, 1, 1, 5);
         check_hashed_matches_degree(q, stats);
+    }
+
+    {
+        // Intersections below depth 0 run once per parent binding, after the alternation of the
+        // previous one: they must find the same results as without stats.
+        std::set<std::pair<uint32_t, uint32_t>> edges;
+        for (const auto& t : triples)
+            if (t[1] == 6)
+                edges.insert({t[0], t[2]});
+        uint64_t triangles = 0;
+        for (auto [a, b] : edges)
+            for (auto [b2, c] : edges)
+                triangles += b2 == b && edges.count({a, c});
+        const std::string q = "?a 6 ?b . ?b 6 ?c . ?a 6 ?c";
+        const std::string expected = std::to_string(triangles) + " triangles";
+        check(count_results<x_algo>(q, xcltj) == triangles, q + ": X finds the " + expected);
+        check(count_results<h_algo>(q, hcltj) == triangles, q + ": H finds the " + expected);
     }
 
     std::cout << std::endl << (failures == 0 ? "ALL PASS" : std::to_string(failures) + " FAILED") << std::endl;
