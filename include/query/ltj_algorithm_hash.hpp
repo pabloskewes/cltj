@@ -476,7 +476,44 @@ class ltj_algorithm_hash {
                         return true;
                     }
 
-                    for (size_type pos = beg; pos < end_pos; ++pos) {
+                    // LTJ-26 (throwaway): LTJ26_SORTED_SCAN=1 filters first and descends in id order when the
+                    // next down() switches trie, so the binary search on the target root is monotone.
+                    bool ltj26_sorted = false;
+                    if (ltj26::sorted_scan()) {
+                        for (ltj_iter_type* iter : itrs)
+                            ltj26_sorted = ltj26_sorted || iter->ltj26_next_down_switches();
+                    }
+                    if (ltj26_sorted) {
+                        std::vector<std::pair<value_type, size_type>> cand;
+                        for (size_type pos = beg; pos < end_pos; ++pos) {
+                            value_type c = scan_trie->seq[pos];
+                            if (candidate_in_hashed_iterators(x_j, c, hashed_itrs, itrs[min_idx]))
+                                cand.emplace_back(c, pos);
+                        }
+                        std::sort(cand.begin(), cand.end());
+                        for (const auto& cp : cand) {
+                            value_type c = cp.first;
+                            if constexpr (COLLECT_QUERY_STATS)
+                                stats.result_size++;
+                            tuple[j] = {x_j, c};
+                            frame.add(c);
+                            itrs[min_idx]->set_level_status(cp.second, beg, end_pos - beg);
+                            position_hashed_iterators(x_j, c, hashed_itrs, itrs[min_idx]);
+                            for (ltj_iter_type* iter : itrs) {
+                                iter->down(x_j, c);
+                            }
+                            m_veo.down();
+                            ok = search(j + 1, tuple, res, start, limit_results, timeout_seconds);
+                            if (!ok)
+                                return false;
+                            for (ltj_iter_type* iter : itrs) {
+                                iter->up(x_j);
+                            }
+                            m_veo.up();
+                        }
+                    }
+
+                    for (size_type pos = ltj26_sorted ? end_pos : beg; pos < end_pos; ++pos) {
                         value_type c = scan_trie->seq[pos];
 
                         if (candidate_in_hashed_iterators(x_j, c, hashed_itrs, itrs[min_idx])) {
@@ -504,6 +541,57 @@ class ltj_algorithm_hash {
                             }
                             m_veo.up();
                         }
+                    }
+                    for (ltj_iter_type* iter : itrs) {
+                        iter->leap_done();
+                    }
+                    frame.emit();
+                } else if (ltj26::mixed_min()
+                           && std::find(hashed_itrs.begin(), hashed_itrs.end(), itrs[min_idx]) != hashed_itrs.end()) {
+                    // LTJ-26 (throwaway): LTJ26_MIXED_MIN=1 drives a mixed frame by the smallest list when it is
+                    // hashed, probing hashed iterators with hash_contains and sorted ones with exists().
+                    ltj_iter_type* mi = itrs[min_idx];
+                    auto [beg, end_pos] = mi->children_range();
+                    const auto* scan_trie = mi->resolve_trie();
+                    cltj::query::CandidateFrame<TRACE_QUERY, tuple_type> frame(
+                        m_tracer, "hybrid-min", j, x_j, tuple
+                    );
+                    std::vector<std::pair<value_type, size_type>> cand;
+                    cand.reserve(end_pos - beg);
+                    for (size_type pos = beg; pos < end_pos; ++pos)
+                        cand.emplace_back(scan_trie->seq[pos], pos);
+                    if (ltj26::sorted_scan())
+                        std::sort(cand.begin(), cand.end());
+                    for (const auto& cp : cand) {
+                        value_type c = cp.first;
+                        if (!candidate_in_hashed_iterators(x_j, c, hashed_itrs, mi))
+                            continue;
+                        bool in_all = true;
+                        for (ltj_iter_type* iter : sorted_itrs) {
+                            if (!iter->exists(state_for(iter, x_j), c)) {
+                                in_all = false;
+                                break;
+                            }
+                        }
+                        if (!in_all)
+                            continue;
+                        if constexpr (COLLECT_QUERY_STATS)
+                            stats.result_size++;
+                        tuple[j] = {x_j, c};
+                        frame.add(c);
+                        mi->set_level_status(cp.second, beg, end_pos - beg);
+                        position_hashed_iterators(x_j, c, hashed_itrs, mi);
+                        for (ltj_iter_type* iter : itrs) {
+                            iter->down(x_j, c);
+                        }
+                        m_veo.down();
+                        ok = search(j + 1, tuple, res, start, limit_results, timeout_seconds);
+                        if (!ok)
+                            return false;
+                        for (ltj_iter_type* iter : itrs) {
+                            iter->up(x_j);
+                        }
+                        m_veo.up();
                     }
                     for (ltj_iter_type* iter : itrs) {
                         iter->leap_done();

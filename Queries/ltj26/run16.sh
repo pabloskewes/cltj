@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # EXP-016 batch (LTJ-26, throwaway). Runs only after an explicit ok.
 # A (flock -s): build H variant -> verify -> size breakdowns, in parallel with the X and H-default counter runs.
-# B (flock -x): paired timings X, H-default, H-variant, one at a time, EXP-013/02 arguments.
-# C (flock -s): counter run on H-variant.
+# B (flock -x): paired timings X, H-default, H-variant, H-variant with LTJ26_MIXED_MIN=1 LTJ26_SORTED_SCAN=1,
+#   one at a time, EXP-013/02 arguments.
 set -u
 W=~/tesis/worktrees/ltj-26-diagnose-and-remove-h-cltjs-per-element-query-overhead
 OUT=~/tesis/data/experiments/EXP-016-unhashed-full-trie-roots
@@ -45,16 +45,14 @@ wait
 stage "PHASE_A done"
 
 # ---- B ----
-tm() {  # name bin index
-  stage "BENCH $1 start"
-  flock -x $LOCK ./build/bench/$2 $3 $Q $ARGS > $OUT/bench-$1.csv 2> $OUT/bench-$1.err
-  stage "BENCH $1 done rc=$? lines=$(wc -l < $OUT/bench-$1.csv)"
+tm() {  # name bin index [ENV=VAL...]
+  local name=$1 bin=$2 idx=$3; shift 3
+  stage "BENCH $name start"
+  env "$@" flock -x $LOCK ./build/bench/$bin $idx $Q $ARGS > $OUT/bench-$name.csv 2> $OUT/bench-$name.err
+  stage "BENCH $name done rc=$? lines=$(wc -l < $OUT/bench-$name.csv)"
 }
-tm xcltj      bench-query-xcltj $XI
-tm hcltj      bench-query-hcltj $HI
-tm hcltj-var  bench-query-hcltj $VI
-stage "PHASE_B done"
-
-# ---- C ----
-cnt hvar bench-query-hcltj $VI
+tm xcltj       bench-query-xcltj $XI
+tm hcltj       bench-query-hcltj $HI
+tm hcltj-var   bench-query-hcltj $VI
+tm hcltj-var2  bench-query-hcltj $VI LTJ26_MIXED_MIN=1 LTJ26_SORTED_SCAN=1
 stage "ALL_DONE"

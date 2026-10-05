@@ -3,6 +3,8 @@
 //   LTJ26_LONELY_REVERSE=1   reverse the order of lonely variables (X and H)
 //   LTJ26_ENUM=key|spo       H pure-hash scan order when the next level trie-switches
 //   LTJ26_SHORTCUT=1         H trie_switch: skip m_has_hash read on nodes below threshold
+//   LTJ26_MIXED_MIN=1        H mixed frames whose smallest list is hashed: scan it, exists() on sorted ones
+//   LTJ26_SORTED_SCAN=1      H pure-hash frames whose next down() switches trie: filter, sort by id, descend
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
@@ -47,9 +49,19 @@ inline bool shortcut() {
     return v;
 }
 
+inline bool sorted_scan() {
+    static const bool v = env_flag("LTJ26_SORTED_SCAN");
+    return v;
+}
+
+inline bool mixed_min() {
+    static const bool v = env_flag("LTJ26_MIXED_MIN");
+    return v;
+}
+
 inline void print_knobs() {
     std::cerr << "[ltj26] LONELY_REVERSE=" << lonely_reverse() << " ENUM=" << enum_order()
-              << " SHORTCUT=" << shortcut()
+              << " SHORTCUT=" << shortcut() << " SORTED_SCAN=" << sorted_scan() << " MIXED_MIN=" << mixed_min()
 #ifdef LTJ26_PROF
               << " PROF=1"
 #endif
