@@ -1,5 +1,6 @@
 // Runs every query on X-CLTJ or H-CLTJ and writes its intersection stats aggregated per query.
 // Characterization only: with CLTJ_COLLECT_QUERY_STATS the printed times are not measurements.
+#include <CLI11.hpp>
 #include <algorithm>
 #include <array>
 #include <chrono>
@@ -15,7 +16,6 @@
 #include <query/ltj_iterator_metatrie_hash.hpp>
 #include <results/results_counter.hpp>
 #include <set>
-#include <sstream>
 #include <string>
 #include <util/file_util.hpp>
 #include <util/rdf_util.hpp>
@@ -129,27 +129,21 @@ void run(
 }  // namespace
 
 int main(int argc, char* argv[]) {
-    if (argc < 7) {
-        std::cout << "Usage: " << argv[0]
-                  << " <xcltj|hcltj> <index> <queries> <timeout> <threshold> <out.csv> [skip_ids]" << std::endl;
-        std::cout << "  threshold  only classifies lists into the `large` column (size >= threshold)" << std::endl;
-        std::cout << "  skip_ids   comma-separated 0-based query ids to leave out" << std::endl;
-        return 1;
-    }
-
-    const std::string system = argv[1];
-    const std::string index = argv[2];
-    const std::string queries = argv[3];
-    const uint64_t timeout = std::stoull(argv[4]);
-    const uint64_t threshold = std::stoull(argv[5]);
-    const std::string out = argv[6];
-    std::set<uint64_t> skip;
-    if (argc > 7) {
-        std::stringstream ss(argv[7]);
-        std::string id;
-        while (std::getline(ss, id, ','))
-            skip.insert(std::stoull(id));
-    }
+    CLI::App app{"Per-query intersection stats of X-CLTJ or H-CLTJ (needs CLTJ_COLLECT_QUERY_STATS)"};
+    std::string system, index, queries, out;
+    uint64_t timeout = 600;
+    uint64_t threshold = 4000;
+    std::vector<uint64_t> skip_ids;
+    app.add_option("system", system, "Index type")->required()->check(CLI::IsMember({"xcltj", "hcltj"}));
+    app.add_option("index", index, "Index file")->required();
+    app.add_option("queries", queries, "Query file, one query per line")->required();
+    app.add_option("-o,--output", out, "Output CSV")->required();
+    app.add_option("--timeout", timeout, "Timeout per query in seconds")->capture_default_str();
+    app.add_option("-t,--threshold", threshold, "Lists with at least this size count as `large`")
+        ->capture_default_str();
+    app.add_option("--skip", skip_ids, "Comma-separated 0-based query ids to leave out")->delimiter(',');
+    CLI11_PARSE(app, argc, argv);
+    const std::set<uint64_t> skip(skip_ids.begin(), skip_ids.end());
 
     using x_index = cltj::compact_ltj_metatrie;
     using x_iter = ltj::ltj_iterator_metatrie<x_index, uint8_t, uint64_t>;
@@ -159,13 +153,9 @@ int main(int argc, char* argv[]) {
     using h_iter = ltj::ltj_iterator_metatrie_hash<h_index, uint8_t, uint64_t>;
     using h_algo = ltj::ltj_algorithm_hash<h_iter, ltj::veo::veo_adaptive<h_iter, ltj::util::trait_distinct>>;
 
-    if (system == "xcltj") {
+    if (system == "xcltj")
         run<x_index, x_algo>(index, queries, timeout, threshold, out, skip);
-    } else if (system == "hcltj") {
+    else
         run<h_index, h_algo>(index, queries, timeout, threshold, out, skip);
-    } else {
-        std::cerr << "unknown system: " << system << std::endl;
-        return 1;
-    }
     return 0;
 }
