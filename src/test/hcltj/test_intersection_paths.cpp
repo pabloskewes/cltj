@@ -1,5 +1,3 @@
-// Checks the path, hashed iterator count, candidates and alternation that H-CLTJ records
-// for intersections whose path is known from the degree of each node (hashed iff >= threshold).
 #include <index/cltj_index_metatrie.hpp>
 #include <iostream>
 #include <query/ltj_algorithm.hpp>
@@ -223,8 +221,6 @@ int main() {
     }
 
     {
-        // Intersections below depth 0 run once per parent binding, after the alternation of the
-        // previous one: they must find the same results as without stats.
         std::set<std::pair<uint32_t, uint32_t>> edges;
         for (const auto& t : triples)
             if (t[1] == 6)
