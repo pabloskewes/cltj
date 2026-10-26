@@ -42,7 +42,7 @@ Temporary Items
 cmake-build-debug/
 .idea/
 plots/
-build/
+build*/
 /results/
 
 # Datasets
