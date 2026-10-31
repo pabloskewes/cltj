@@ -193,7 +193,7 @@ int main() {
         const std::string q = "?x 3 ?y . ?x 4 ?z";
         auto stats = run<h_algo>(q, hcltj);
         auto h = split(stats);
-        check_joined(q, h, IntersectionPath::LEAPFROG, 2, 0, 1, 1);
+        check_joined(q, h, IntersectionPath::LEAPFROG, 2, 0, 1, 0);
         auto x = run<x_algo>(q, xcltj);
         if (h.joined.size() == 1 && x.size() == 1)
             check(

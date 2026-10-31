@@ -503,7 +503,8 @@ class ltj_algorithm_hash {
                     );
                     while (c != 0) {  // If empty c=0
                         if constexpr (COLLECT_QUERY_STATS)
-                            stats.candidates++;
+                            if (!hashed_itrs.empty())
+                                stats.candidates++;
                         if (candidate_in_hashed_iterators(x_j, c, hashed_itrs)) {
                             if constexpr (COLLECT_QUERY_STATS)
                                 stats.result_size++;
