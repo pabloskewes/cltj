@@ -21,6 +21,7 @@
 #define RING_LTJ_ALGORITHM_HASH_HPP
 
 #include <cassert>
+#include <functional>
 #include <triple_pattern.hpp>
 // #include <ltj_iterator.hpp>
 #include <dict/dict_map.hpp>
@@ -68,6 +69,7 @@ class ltj_algorithm_hash {
     bool m_is_empty = false;
     std::vector<IntersectionStats> m_stats;
     cltj::query::QueryTracer<cltj::TRACE_QUERY> m_tracer{"query_traces"};
+    std::function<void(const IntersectionStats&)> m_stats_sink;
 
     void copy(const ltj_algorithm_hash& o) {
         m_ptr_triple_patterns = o.m_ptr_triple_patterns;
@@ -89,6 +91,13 @@ class ltj_algorithm_hash {
         }
     }
 
+    void record_stats(const IntersectionStats& stats) {
+        if (m_stats_sink)
+            m_stats_sink(stats);
+        else
+            m_stats.push_back(stats);
+    }
+
     void from_id_to_str(
         tuple_type& t,
         tuple_str_type& t_str,
@@ -107,6 +116,9 @@ class ltj_algorithm_hash {
 
   public:
     const std::vector<IntersectionStats>& get_stats() const { return m_stats; }
+
+    /// Sends each record to @p sink instead of keeping it in get_stats().
+    void set_stats_sink(std::function<void(const IntersectionStats&)> sink) { m_stats_sink = std::move(sink); }
 
     void set_query_id(uint64_t qid) { m_tracer.set_query_id(qid); }
 
@@ -388,6 +400,16 @@ class ltj_algorithm_hash {
             if (itrs.size() == 1 && itrs[0]->in_last_level()) {  // Lonely variables
                 // cout << "Seeking (last level)" << endl;
                 auto results = itrs[0]->seek_all(x_j);
+                if constexpr (COLLECT_QUERY_STATS) {
+                    IntersectionStats stats;
+                    stats.variable_id = x_j;
+                    stats.depth = j;
+                    stats.list_sizes = {results.size()};
+                    stats.result_size = results.size();
+                    stats.path = IntersectionPath::LONELY_SEEK_ALL;
+                    stats.hashed_iterators = itrs[0]->current_node_has_hash(x_j);
+                    record_stats(stats);
+                }
                 // cout << "Results: " << results.size() << endl;
                 // cout << "Seek (last level): (" << (uint64_t) x_j << ": size=" <<
                 // results.size() << ")" <<endl;
@@ -480,6 +502,9 @@ class ltj_algorithm_hash {
                         m_tracer, "hybrid", j, x_j, tuple
                     );
                     while (c != 0) {  // If empty c=0
+                        if constexpr (COLLECT_QUERY_STATS)
+                            if (!hashed_itrs.empty())
+                                stats.candidates++;
                         if (candidate_in_hashed_iterators(x_j, c, hashed_itrs)) {
                             if constexpr (COLLECT_QUERY_STATS)
                                 stats.result_size++;
@@ -507,8 +532,16 @@ class ltj_algorithm_hash {
                 }
 
                 if constexpr (COLLECT_QUERY_STATS) {
-                    stats.alternation_complexity = calculate_alternation_complexity(itrs, x_j);
-                    m_stats.push_back(stats);
+                    stats.hashed_iterators = hashed_itrs.size();
+                    if (sorted_itrs.empty()) {
+                        stats.path = IntersectionPath::PURE_HASH;
+                        stats.candidates = children_sizes[min_idx];
+                    } else if (!hashed_itrs.empty())
+                        stats.path = IntersectionPath::MIXED;
+                    // leap() is undefined on a hashed node: its children are in slot order.
+                    if (!sorted_itrs.empty())
+                        stats.alternation_complexity = calculate_alternation_complexity(sorted_itrs, x_j);
+                    record_stats(stats);
                 }
             }
             m_veo.done();

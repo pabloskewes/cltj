@@ -101,6 +101,9 @@ std::vector<Interval> calculate_minimal_certificate(
     // If all iterators returned POS_INF, we're done
     if (current_value == POS_INF) {
       // std::cout << "[DEBUG] All iterators exhausted, breaking" << std::endl;
+      for (auto *iter : iterators) {
+        iter->leap_done();
+      }
       break;
     }
 

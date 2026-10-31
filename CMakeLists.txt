@@ -143,6 +143,11 @@ target_compile_definitions(bench-query-hcltj-global PRIVATE ADAPTIVE=0)
 add_cltj_executable(stats-hcltj src/bench/stats-hcltj.cpp analysis)
 set_target_properties(stats-hcltj PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
+if(CLTJ_COLLECT_QUERY_STATS)
+  add_cltj_executable(stats-intersections src/bench/stats-intersections.cpp analysis)
+  set_target_properties(stats-intersections PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+endif()
+
 add_cltj_executable(dump-trie-hcltj src/bench/dump-trie-hcltj.cpp analysis)
 set_target_properties(dump-trie-hcltj PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
@@ -284,6 +289,11 @@ set_target_properties(test-children-histogram PROPERTIES CXX_STANDARD 17 CXX_STA
 
 add_cltj_executable(test-hcltj-correctness src/test/hcltj/test_hcltj_correctness.cpp test/hcltj)
 set_target_properties(test-hcltj-correctness PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+
+if(CLTJ_COLLECT_QUERY_STATS)
+  add_cltj_executable(test-intersection-paths src/test/hcltj/test_intersection_paths.cpp test/hcltj)
+  set_target_properties(test-intersection-paths PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+endif()
 
 add_cltj_executable(count-distinct-spo src/analysis/count_distinct_spo.cpp analysis)
 
