@@ -16,13 +16,20 @@
 #include <hashing/mphf_build_tracer.hpp>
 #include <hashing/storage/glgh.hpp>
 #include <metatrie/overlay/sep_bitmap.hpp>
+#include <metatrie/overlay/step_table.hpp>
 #include <sdsl/rank_support_v.hpp>
 #include <stdexcept>
 #include <util/instrument.hpp>
 
 namespace cltj {
 
-template <class Overlay = overlay::SepBitmapOverlay>
+#ifdef CLTJ_OVERLAY_STEP_TABLE
+using default_overlay = overlay::StepTableOverlay;
+#else
+using default_overlay = overlay::SepBitmapOverlay;
+#endif
+
+template <class Overlay = default_overlay>
 class compact_metatrie_hash {
   public:
     typedef uint64_t size_type;
@@ -33,6 +40,7 @@ class compact_metatrie_hash {
     //   (no tag)  pre-overlay format: the stream starts with the bit size of B, which
     //             never reaches the high bytes of the tag, so load() rejects it
     //   1         dual phase: L and L_plain both stored, scheme A overlay
+    //   4         dual phase: L and L_plain both stored, scheme C overlay
     static constexpr uint64_t format_tag = 0x48434C544A000000ULL | Overlay::format_version;
 
   private:
