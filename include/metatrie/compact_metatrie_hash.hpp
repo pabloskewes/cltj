@@ -226,6 +226,32 @@ class compact_metatrie_hash {
         return m_mphfs[mphf_idx].keys();
     }
 
+    //! r of the node at @p node_pos: the number of hashed nodes that start before it.
+    size_type dict_idx(size_type node_pos) const { return m_overlay.dict_idx(node_pos); }
+
+    // Overloads for a caller that already knows r = dict_idx(node_pos). In Debug they
+    // check that r is the one of node_pos.
+
+    bool node_has_hash(size_type node_pos, size_type r) const {
+        assert(r == m_overlay.dict_idx(node_pos) && "r belongs to another node");
+        return m_overlay.has_dict(node_pos, r);
+    }
+
+    bool hash_contains([[maybe_unused]] size_type node_pos, size_type r, value_type key) const {
+        assert(r == m_overlay.dict_idx(node_pos) && "r belongs to another node");
+        return m_mphfs[r].contains(key);
+    }
+
+    std::pair<bool, uint32_t> hash_locate([[maybe_unused]] size_type node_pos, size_type r, value_type key) const {
+        assert(r == m_overlay.dict_idx(node_pos) && "r belongs to another node");
+        return m_mphfs[r].locate(key);
+    }
+
+    mphf_type::key_cursor hash_keys([[maybe_unused]] size_type node_pos, size_type r) const {
+        assert(r == m_overlay.dict_idx(node_pos) && "r belongs to another node");
+        return m_mphfs[r].keys();
+    }
+
     //! Number of keys of the MPHF of the hashed node at @p node_pos.
     uint32_t hash_size(size_type node_pos) const { return m_mphfs[m_overlay.dict_idx(node_pos)].n(); }
 
@@ -589,6 +615,12 @@ class compact_metatrie_hash {
      * position pos of its block [v, v + deg(v)).
      */
     size_type deleted_before(size_type node_pos) const { return node_pos - m_overlay.plain_start(node_pos); }
+
+    //! deleted_before(node_pos) when r = dict_idx(node_pos) is already known.
+    size_type deleted_before(size_type node_pos, size_type r) const {
+        assert(r == m_overlay.dict_idx(node_pos) && "r belongs to another node");
+        return node_pos - m_overlay.plain_start(node_pos, r);
+    }
 
     //! Label at LOUDS position @p pos of a non-hashed node with deleted_before() == @p off.
     value_type plain_label(size_type pos, size_type off) const { return m_seq_plain[pos - off]; }
