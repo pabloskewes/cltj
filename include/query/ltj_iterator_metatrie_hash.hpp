@@ -701,10 +701,8 @@ class ltj_iterator_metatrie_hash {
         if (trie->node_has_hash(parent())) {
             // Children of a hashed node come in MPHF slot order, not in increasing order.
             auto cur = trie->hash_keys(parent());
-            while (cur.next()) {
-                assert(cur.key() == trie->seq[beg + cur.slot()] && "cursor disagrees with L");
+            while (cur.next())
                 results.emplace_back(cur.key());
-            }
             assert(results.size() == cnt && "cursor must emit deg(parent) keys");
             return results;
         }

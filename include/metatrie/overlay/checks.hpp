@@ -7,6 +7,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 namespace cltj {
@@ -19,12 +20,13 @@ struct CheckReport {
     uint64_t hashed_labels = 0;
     uint64_t comparisons = 0;
     uint64_t errors = 0;
-    std::vector<std::string> messages;  // the first few errors
+    std::vector<std::string> messages;  // the first max_messages errors
+    uint64_t max_messages = 8;
 
     bool ok() const { return errors == 0; }
 
     void fail(const std::string& msg) {
-        if (messages.size() < 8)
+        if (messages.size() < max_messages)
             messages.push_back(msg);
         errors++;
     }
@@ -39,54 +41,52 @@ inline void print_report(std::ostream& os, const std::string& name, const CheckR
         os << "    " << m << "\n";
 }
 
-// The key cursor of the hashed node v emits exactly deg keys, the k-th with slot k and key L[v + k].
-template <class Trie>
-void check_cursor(const Trie& trie, uint64_t v, uint64_t deg, CheckReport& rep) {
-    const auto& seq = trie.seq;
-    uint64_t k = 0;
-    bool extra = false;
-    for (auto cur = trie.hash_keys(v); cur.next(); k++) {
-        if (k >= deg) {
-            extra = true;
-            break;
-        }
-        rep.comparisons++;
-        if (cur.slot() != k || cur.key() != seq[v + k]) {
-            std::ostringstream m;
-            m << "v=" << v << " k=" << k << ": cursor (slot " << cur.slot() << ", key " << cur.key()
-              << ") vs L=" << seq[v + k];
-            rep.fail(m.str());
-        }
-    }
-    if (extra || k != deg) {
-        std::ostringstream m;
-        m << "v=" << v << ": cursor emitted " << (extra ? "more than" : "only") << " " << k
-          << " keys, deg=" << deg;
-        rep.fail(m.str());
-    }
-}
+//! Truth for check_labels(): none, the cursor keys are checked against the MPHF instead.
+struct no_truth {};
 
 /**
- * @brief Ground truth of the dual phase, for any translation policy.
+ * @brief Labels and structure of a trie, for any translation policy.
  *
  * Walks the nodes of @p trie in position order, keeping its own count of the labels of
  * non-hashed nodes seen so far (v - deleted_before(v)) and of hashed nodes (r), and checks:
  *   - plain_start(v) equals that count, for every node, and dict_idx(v) == r for hashed ones;
- *   - non-hashed v: plain_start(v) + deg(v) <= |L_plain| and
- *     L_plain[plain_start(v) + k] == L[v + k] for every k < deg(v);
+ *   - non-hashed v: plain_start(v) + deg(v) <= |L_plain|;
  *   - hashed v: deg(v) >= threshold, dict_idx(v) < mphf_count(), its MPHF has deg(v) keys,
- *     and the key cursor emits exactly deg(v) keys with slot k and key L[v + k];
- *   - the blocks cover L_plain and L (minus its mock) exactly, and r ends at mphf_count().
+ *     and the key cursor emits exactly deg(v) keys, the k-th with slot k;
+ *   - the blocks cover L_plain and B exactly, and r ends at mphf_count().
+ *
+ * @p truth gives L: truth() returns the next label of L in position order. Then
+ * L_plain[plain_start(v) + k] == L[v + k] for non-hashed v and cursor(v)[k] == L[v + k]
+ * for hashed v. With no_truth, hash_locate() of the k-th cursor key has to give slot k.
  */
-template <class Trie>
-CheckReport check_dual_phase(const Trie& trie) {
+template <class Trie, class Truth = no_truth>
+CheckReport check_labels(const Trie& trie, Truth truth = {}, uint64_t max_messages = 8) {
+    constexpr bool with_truth = !std::is_same<Truth, no_truth>::value;
     CheckReport rep;
-    const auto& seq = trie.seq;
+    rep.max_messages = max_messages;
     const auto& plain = trie.seq_plain();
     const auto& ov = trie.overlay();
     const uint64_t louds = trie.louds_size();
     uint64_t plain_cursor = 0;
     uint64_t r = 0;
+
+    auto skip = [&](uint64_t n) {
+        if constexpr (with_truth)
+            for (uint64_t i = 0; i < n; i++)
+                truth();
+    };
+    // The k-th label of the block of v against L, consuming one label of the truth.
+    auto compare = [&](uint64_t v, uint64_t k, uint64_t got, const char* what) {
+        if constexpr (with_truth) {
+            const uint64_t expected = truth();
+            rep.comparisons++;
+            if (got != expected) {
+                std::ostringstream m;
+                m << "v=" << v << " k=" << k << ": " << what << "=" << got << " vs L=" << expected;
+                rep.fail(m.str());
+            }
+        }
+    };
 
     for (uint64_t v = 0, deg = 0; v + 1 < louds; v += deg) {
         deg = trie.children(v);
@@ -111,6 +111,7 @@ CheckReport check_dual_phase(const Trie& trie) {
                 rep.fail(m.str());
             }
             rep.comparisons++;
+            uint64_t k = 0;
             if (ov.dict_idx(v) >= trie.mphf_count()) {
                 std::ostringstream m;
                 m << "v=" << v << ": dict_idx=" << ov.dict_idx(v) << " >= mphf_count=" << trie.mphf_count();
@@ -120,27 +121,52 @@ CheckReport check_dual_phase(const Trie& trie) {
                 m << "v=" << v << ": MPHF has " << trie.hash_size(v) << " keys, deg=" << deg;
                 rep.fail(m.str());
             } else {
-                check_cursor(trie, v, deg, rep);
+                auto cur = trie.hash_keys(v);
+                for (; k < deg && cur.next(); k++) {
+                    rep.comparisons++;
+                    if (cur.slot() != k) {
+                        std::ostringstream m;
+                        m << "v=" << v << " k=" << k << ": cursor slot " << cur.slot();
+                        rep.fail(m.str());
+                    }
+                    compare(v, k, cur.key(), "cursor");
+                    if constexpr (!with_truth) {
+                        const auto loc = trie.hash_locate(v, cur.key());
+                        rep.comparisons++;
+                        if (!loc.first || loc.second != k) {
+                            std::ostringstream m;
+                            m << "v=" << v << " k=" << k << ": key " << cur.key() << " locates to ("
+                              << loc.first << ", " << loc.second << ")";
+                            rep.fail(m.str());
+                        }
+                    }
+                }
+                const bool extra = k == deg && cur.next();
+                rep.comparisons++;
+                if (k != deg || extra) {
+                    std::ostringstream m;
+                    m << "v=" << v << ": cursor emitted " << (extra ? "more than " : "only ") << k
+                      << " keys, deg=" << deg;
+                    rep.fail(m.str());
+                }
             }
+            skip(deg - k);
             r++;
             rep.hashed_nodes++;
             rep.hashed_labels += deg;
         } else {
             rep.comparisons++;
-            if (s + deg > plain.size()) {
+            const bool fits = s + deg <= plain.size();
+            if (!fits) {
                 std::ostringstream m;
                 m << "v=" << v << ": plain_start+deg=" << s + deg << " > |L_plain|=" << plain.size();
                 rep.fail(m.str());
-            } else {
-                for (uint64_t k = 0; k < deg; k++) {
-                    rep.comparisons++;
-                    if (plain[s + k] != seq[v + k]) {
-                        std::ostringstream m;
-                        m << "v=" << v << " k=" << k << ": L_plain=" << plain[s + k] << " vs L=" << seq[v + k];
-                        rep.fail(m.str());
-                    }
-                }
             }
+            if (fits)
+                for (uint64_t k = 0; k < deg; k++)
+                    compare(v, k, plain[s + k], "L_plain");
+            else
+                skip(deg);
             plain_cursor += deg;
             rep.plain_nodes++;
             rep.plain_labels += deg;
@@ -153,9 +179,9 @@ CheckReport check_dual_phase(const Trie& trie) {
         m << "non-hashed blocks hold " << plain_cursor << " labels, |L_plain|=" << plain.size();
         rep.fail(m.str());
     }
-    if (rep.plain_labels + rep.hashed_labels + 1 != seq.size()) {
+    if (rep.plain_labels + rep.hashed_labels + 1 != louds) {
         std::ostringstream m;
-        m << "blocks hold " << rep.plain_labels + rep.hashed_labels << " labels, |L|-1=" << seq.size() - 1;
+        m << "blocks hold " << rep.plain_labels + rep.hashed_labels << " labels, |B|-1=" << louds - 1;
         rep.fail(m.str());
     }
     if (r != trie.mphf_count()) {
@@ -233,7 +259,7 @@ CheckReport check_sep_bitmap(const Trie& trie) {
  *
  * The r-th hashed node v in position order has hashed_start[r] == v and
  * cum_deleted[r] - cum_deleted[r - 1] == deg(v); the table has one row per MPHF and its
- * last cum_deleted is |L| - 1 - |L_plain|.
+ * last cum_deleted is |B| - 1 - |L_plain|, |B| - 1 being the number of labels of L.
  */
 template <class Trie>
 CheckReport check_step_table(const Trie& trie) {
@@ -287,9 +313,9 @@ CheckReport check_step_table(const Trie& trie) {
         m << r << " hashed nodes, " << rows << " rows";
         rep.fail(m.str());
     }
-    if (cum + trie.seq_plain().size() + 1 != trie.seq.size()) {
+    if (cum + trie.seq_plain().size() + 1 != trie.louds_size()) {
         std::ostringstream m;
-        m << "hashed blocks hold " << cum << " labels, |L|-1-|L_plain|=" << trie.seq.size() - 1 - trie.seq_plain().size();
+        m << "hashed blocks hold " << cum << " labels, |B|-1-|L_plain|=" << trie.louds_size() - 1 - trie.seq_plain().size();
         rep.fail(m.str());
     }
     return rep;
@@ -328,7 +354,7 @@ std::string serialized_without_overlay(const Trie& trie) {
     uint64_t overlay = 0;
     for (const auto& c : node->children) {
         const std::string& n = c.second->name;
-        if (n == "bv" || n == "seq" || n == "seq_plain" || n == "succ0" || n == "select0" || n == "threshold")
+        if (n == "bv" || n == "seq_plain" || n == "succ0" || n == "select0" || n == "threshold")
             before += c.second->size;
         else if (n == "overlay")
             overlay = c.second->size;
@@ -345,7 +371,7 @@ std::string serialized_without_overlay(const Trie& trie) {
  * @brief Differential check of two tries built from the same data with different policies.
  *
  * At every block start v and at the sentinel |B| - 1, has_dict, dict_idx and plain_start
- * agree; B, L, L_plain and the MPHFs agree, compared as the serialization without the
+ * agree; B, L_plain and the MPHFs agree, compared as the serialization without the
  * overlay, and the key cursor of every hashed node emits the same keys.
  */
 template <class TrieA, class TrieC>
@@ -420,7 +446,7 @@ CheckReport check_overlay_equal(const TrieA& a, const TrieC& c) {
 
     rep.comparisons++;
     if (serialized_without_overlay(a) != serialized_without_overlay(c))
-        rep.fail("serialization without the overlay differs (B, L, L_plain, supports, threshold or MPHFs)");
+        rep.fail("serialization without the overlay differs (B, L_plain, supports, threshold or MPHFs)");
     return rep;
 }
 

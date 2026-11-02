@@ -39,15 +39,15 @@ class compact_metatrie_hash {
     // Every serialized trie starts with this tag; its low byte is the format version:
     //   (no tag)  pre-overlay format: the stream starts with the bit size of B, which
     //             never reaches the high bytes of the tag, so load() rejects it
-    //   1         dual phase: L and L_plain both stored, scheme A overlay
-    //   4         dual phase: L and L_plain both stored, scheme C overlay
-    static constexpr uint64_t format_tag = 0x48434C544A000000ULL | Overlay::format_version;
+    //   2         scheme A overlay (SepBitmapOverlay)
+    //   3         scheme C overlay (StepTableOverlay)
+    static constexpr uint64_t format_magic = 0x48434C544A000000ULL;
+    static constexpr uint64_t format_tag = format_magic | Overlay::format_version;
 
   private:
     using mphf_type = hashing::MPHF<hashing::GlGhStorage, hashing::policies::QuotientKey>;
 
     sdsl::bit_vector m_bv;  // LOUDS bitvector (B)
-    sdsl::int_vector<> m_seq;  // Trie labels (L)
     sdsl::int_vector<> m_seq_plain;  // L_plain: L without the blocks of hashed nodes
     // sdsl::rank_support_v<1> m_rank1;
     cds::succ_support_v<0> m_succ0;
@@ -61,8 +61,10 @@ class compact_metatrie_hash {
     Overlay m_overlay;
     uint32_t m_threshold = 0;
 
-    // Build scratch: hashed nodes in the layout before reorder_louds_by_mphf(), which releases it.
+    // Build scratch, in the layout before reorder_louds_by_mphf(), which releases both:
+    // the hashed nodes, and L with its trailing mock label.
     sdsl::bit_vector m_build_has_hash;
+    sdsl::int_vector<> m_build_seq;
 
     // Copy is disabled: std::vector<mphf_type> is not copyable (MPHF copy is deleted by design).
     // Might change in the future if we find a good reason to copy it.
@@ -86,14 +88,14 @@ class compact_metatrie_hash {
     /**
      * @brief Builds L_plain and the overlay of a trie without MPHFs.
      *
-     * The layout stays as built: every node is non-hashed and L_plain is m_seq
+     * The layout stays as built: every node is non-hashed and L_plain is L
      * without its mock.
      */
     void build_plain_overlay() {
-        const size_type plain_len = m_seq.size() - 1;
-        m_seq_plain = sdsl::int_vector<>(plain_len, 0, m_seq.width());
+        const size_type plain_len = m_build_seq.size() - 1;
+        m_seq_plain = sdsl::int_vector<>(plain_len, 0, m_build_seq.width());
         for (size_type i = 0; i < plain_len; i++)
-            m_seq_plain[i] = m_seq[i];
+            m_seq_plain[i] = m_build_seq[i];
         sdsl::util::bit_compress(m_seq_plain);
 
         Overlay new_overlay;
@@ -102,18 +104,21 @@ class compact_metatrie_hash {
             new_overlay.on_plain_node(v, children(v));
         m_overlay = std::move(new_overlay);
         m_overlay.finalize(m_bv, m_threshold);
+        release_build_scratch();
+    }
+
+    void release_build_scratch() {
         sdsl::bit_vector().swap(m_build_has_hash);
+        sdsl::int_vector<>().swap(m_build_seq);
     }
 
   public:
-    const sdsl::int_vector<>& seq = m_seq;
-
     compact_metatrie_hash() = default;
 
     compact_metatrie_hash(sdsl::bit_vector& _bv, sdsl::int_vector<>& _seq) {
         m_bv = _bv;
-        m_seq = _seq;
-        sdsl::util::bit_compress(m_seq);
+        m_build_seq = _seq;
+        sdsl::util::bit_compress(m_build_seq);
         sdsl::util::init_support(m_succ0, &m_bv);
         sdsl::util::init_support(m_select0, &m_bv);
         m_root_degree = m_succ0(1);
@@ -129,7 +134,6 @@ class compact_metatrie_hash {
     compact_metatrie_hash& operator=(compact_metatrie_hash&& o) {
         if (this != &o) {
             m_bv = std::move(o.m_bv);
-            m_seq = std::move(o.m_seq);
             // m_rank1 = std::move(o.m_rank1);
             m_succ0 = std::move(o.m_succ0);
             // m_rank1.set_vector(&m_bv);
@@ -143,6 +147,7 @@ class compact_metatrie_hash {
             m_overlay.bind(m_bv);
             m_threshold = o.m_threshold;
             m_build_has_hash = std::move(o.m_build_has_hash);
+            m_build_seq = std::move(o.m_build_seq);
         }
         return *this;
     }
@@ -151,7 +156,6 @@ class compact_metatrie_hash {
         // m_bp.swap(bp_support.m_bp); use set_vector to set the supported
         // bit_vector
         std::swap(m_bv, o.m_bv);
-        std::swap(m_seq, o.m_seq);
         sdsl::util::swap_support(m_succ0, o.m_succ0, &m_bv, &o.m_bv);
         sdsl::util::swap_support(m_select0, o.m_select0, &m_bv, &o.m_bv);
         std::swap(m_root_degree, o.m_root_degree);
@@ -162,6 +166,7 @@ class compact_metatrie_hash {
         o.m_overlay.bind(o.m_bv);
         std::swap(m_threshold, o.m_threshold);
         std::swap(m_build_has_hash, o.m_build_has_hash);
+        std::swap(m_build_seq, o.m_build_seq);
     }
 
     /*
@@ -175,6 +180,8 @@ class compact_metatrie_hash {
     size_type mphf_count() const { return m_mphfs.size(); }
 
     uint32_t threshold() const { return m_threshold; }
+
+    const sdsl::bit_vector& bv() const { return m_bv; }
 
     const sdsl::int_vector<>& seq_plain() const { return m_seq_plain; }
 
@@ -230,7 +237,7 @@ class compact_metatrie_hash {
     /**
      * @brief Extracts the MPHF-induced permutation for the root's children.
      *
-     * Must be called before reorder_louds_by_mphf() (which changes m_seq layout).
+     * Must be called before reorder_louds_by_mphf() (which changes the layout).
      * Returns perm such that perm[slot] = old_child_index.
      * If the root is not hashed, returns an empty vector (identity is implied).
      */
@@ -243,7 +250,7 @@ class compact_metatrie_hash {
         size_type mphf_idx = 0;
         std::vector<size_type> perm(d);
         for (size_type i = 0; i < d; i++) {
-            value_type key = m_seq[i];
+            value_type key = m_build_seq[i];
             auto [found, slot] = m_mphfs[mphf_idx].locate(key);
             perm[slot] = i;
         }
@@ -306,7 +313,7 @@ class compact_metatrie_hash {
      *
      * Walks the LOUDS in BFS order
      * For each node whose out-degree meets the threshold, extracts the keys
-     * from m_seq and builds an MPHF.  m_build_has_hash[node_pos] is set to 1
+     * from L and builds an MPHF.  m_build_has_hash[node_pos] is set to 1
      * for each such node; the overlay itself is built by reorder_louds_by_mphf().
      */
     // TODO: move tracer metadata (e.g., trie_id) out of this functional API.
@@ -329,7 +336,7 @@ class compact_metatrie_hash {
                     std::vector<uint32_t> keys;
                     keys.reserve(n_children);
                     for (size_type k = 0; k < n_children; k++)
-                        keys.push_back(m_seq[node + k]);
+                        keys.push_back(m_build_seq[node + k]);
 
                     tracer.on_node_start(trie_id, node, n_children, threshold);
                     mphf_type mphf;
@@ -357,12 +364,12 @@ class compact_metatrie_hash {
     }
 
     /**
-     * @brief Rebuilds m_bv and m_seq so that children of hashed nodes appear
-     *        in MPHF slot order instead of sorted order.
+     * @brief Rebuilds m_bv so that children of hashed nodes appear in MPHF slot
+     *        order instead of sorted order, and emits L_plain and the overlay.
      *
-     * Must be called after build_hash_overlay().  The MPHFs and m_mphfs vector
-     * are not modified; only the physical layout (m_bv, m_seq), L_plain, the
-     * overlay and the supports are rebuilt.
+     * Must be called after build_hash_overlay().  The MPHFs are not modified;
+     * the layout (m_bv), L_plain, the overlay and the supports are rebuilt, and
+     * the build scratch (L included) is released.
      *
      * For non-hashed nodes children remain in their original (sorted) order.
      *
@@ -380,15 +387,14 @@ class compact_metatrie_hash {
 
         // 1. Init variables
         const size_type bv_len = m_bv.size();
-        const size_type seq_len = m_seq.size();
+        const size_type seq_len = m_build_seq.size();
         size_type hashed_labels = 0;
         for (const auto& mphf : m_mphfs)
             hashed_labels += mphf.n();
-        const size_type plain_len = seq_len - 1 - hashed_labels;  // the -1 is the mock of m_seq
+        const size_type plain_len = seq_len - 1 - hashed_labels;  // the -1 is the mock of L
 
         sdsl::bit_vector new_bv(bv_len, 1);
-        sdsl::int_vector<> new_seq(seq_len);
-        sdsl::int_vector<> new_plain(plain_len, 0, m_seq.width());
+        sdsl::int_vector<> new_plain(plain_len, 0, m_build_seq.width());
         Overlay new_overlay;
         new_overlay.begin(bv_len, plain_len);
         std::vector<mphf_type> new_mphfs;
@@ -437,7 +443,7 @@ class compact_metatrie_hash {
                         throw std::runtime_error("reorder_louds_by_mphf: MPHF size differs from the node degree");
                     assert(n_children >= m_threshold && "has_dict(v) implies deg(v) >= threshold");
                     for (size_type i = 0; i < n_children; i++) {
-                        value_type key = m_seq[old_pos + i];
+                        value_type key = m_build_seq[old_pos + i];
                         auto [found, slot] = m_mphfs[mphf_idx].locate(key);
                         perm[slot] = i;
                     }
@@ -450,22 +456,19 @@ class compact_metatrie_hash {
                     new_overlay.on_plain_node(new_pos, n_children);
                 }
 
-                // 3.2. Emit children in the chosen ("permuted") order
+                // 3.2. Emit the block; the labels of non-hashed nodes go to L_plain in sorted order
                 new_bv[new_pos] = 0;
-                for (size_type i = 0; i < n_children; i++) {
-                    new_seq[new_pos + i] = m_seq[old_pos + perm[i]];
-                }
                 seq_cursor += n_children;
                 if (!is_hashed) {
                     if (plain_cursor + n_children > plain_len)
                         throw std::runtime_error("reorder_louds_by_mphf: non-hashed blocks overflow L_plain");
                     for (size_type i = 0; i < n_children; i++)
-                        new_plain[plain_cursor + i] = m_seq[old_pos + i];
+                        new_plain[plain_cursor + i] = m_build_seq[old_pos + i];
                     plain_cursor += n_children;
                 }
 
                 // In a partial trie the first-level nodes have no subtrees in the
-                // BFS sense (their children are leaves encoded only in m_seq).
+                // BFS sense (their children are leaves encoded only in L).
                 // So we skip enqueuing during the first iteration.
                 if (in_partial_trie_first_level)
                     continue;
@@ -491,8 +494,6 @@ class compact_metatrie_hash {
 
         // 4. Install new arrays and rebuild supports
         m_bv.swap(new_bv);
-        m_seq.swap(new_seq);
-        sdsl::util::bit_compress(m_seq);
         sdsl::util::init_support(m_succ0, &m_bv);
         sdsl::util::init_support(m_select0, &m_bv);
 
@@ -502,7 +503,7 @@ class compact_metatrie_hash {
         m_mphfs.swap(new_mphfs);
         m_overlay = std::move(new_overlay);
         m_overlay.finalize(m_bv, m_threshold);
-        sdsl::bit_vector().swap(m_build_has_hash);
+        release_build_scratch();
         m_root_degree = m_succ0(1);
     }
 
@@ -513,8 +514,8 @@ class compact_metatrie_hash {
      * the returned vector.  The root has parent = -1.
      *
      * In this LOUDS encoding, a node at position p stores its *children's*
-     * keys at m_seq[p .. p + children(p) - 1].  The node's own key lives
-     * in its parent's m_seq range.  The key is passed from parent to child
+     * keys at L[p .. p + children(p) - 1].  The node's own key lives
+     * in its parent's range of L.  The key is passed from parent to child
      * during BFS, and the virtual root gets key = 0.
      *
      * The last-level nodes (e.g. O-values in full tries) are not encoded in
@@ -551,10 +552,8 @@ class compact_metatrie_hash {
                 std::vector<uint32_t> child_keys(d);
                 if (node_has_hash(e.louds_pos)) {
                     auto cur = hash_keys(e.louds_pos);
-                    while (cur.next()) {
-                        assert(cur.key() == m_seq[e.louds_pos + cur.slot()] && "cursor disagrees with L");
+                    while (cur.next())
                         child_keys[cur.slot()] = cur.key();
-                    }
                 } else {
                     const size_type off = deleted_before(e.louds_pos);
                     for (size_type k = 0; k < d; k++)
@@ -592,10 +591,7 @@ class compact_metatrie_hash {
     size_type deleted_before(size_type node_pos) const { return node_pos - m_overlay.plain_start(node_pos); }
 
     //! Label at LOUDS position @p pos of a non-hashed node with deleted_before() == @p off.
-    value_type plain_label(size_type pos, size_type off) const {
-        assert(m_seq_plain[pos - off] == m_seq[pos] && "L_plain disagrees with L");
-        return m_seq_plain[pos - off];
-    }
+    value_type plain_label(size_type pos, size_type off) const { return m_seq_plain[pos - off]; }
 
     /**
      * @brief Binary search in the block of a non-hashed node.
@@ -632,7 +628,6 @@ class compact_metatrie_hash {
         size_type written_bytes = 0;
         written_bytes += sdsl::write_member(format_tag, out, child, "format_tag");
         written_bytes += m_bv.serialize(out, child, "bv");
-        written_bytes += m_seq.serialize(out, child, "seq");
         written_bytes += m_seq_plain.serialize(out, child, "seq_plain");
         written_bytes += m_succ0.serialize(out, child, "succ0");
         written_bytes += m_select0.serialize(out, child, "select0");
@@ -646,29 +641,63 @@ class compact_metatrie_hash {
         return written_bytes;
     }
 
+    /**
+     * @brief Serialized bytes of every member, in serialization order; they add up to
+     *        sdsl::size_in_bytes() of the trie. Overlay entries are prefixed "overlay.".
+     */
+    overlay::OverlaySizeBreakdown get_size_breakdown() const {
+        overlay::OverlaySizeBreakdown b;
+        size_t mphf_bytes = 0;
+        for (const auto& mphf : m_mphfs)
+            mphf_bytes += sdsl::size_in_bytes(mphf);
+        b.components = {
+            {"format_tag", sizeof(format_tag)              },
+            {"bv",         sdsl::size_in_bytes(m_bv)       },
+            {"seq_plain",  sdsl::size_in_bytes(m_seq_plain)},
+            {"succ0",      sdsl::size_in_bytes(m_succ0)    },
+            {"select0",    sdsl::size_in_bytes(m_select0)  },
+            {"threshold",  sizeof(m_threshold)             },
+        };
+        for (const auto& c : m_overlay.get_size_breakdown().components)
+            b.components.push_back({"overlay." + c.first, c.second});
+        b.components.push_back({"n_mphfs", sizeof(uint32_t)});
+        b.components.push_back({"mphfs", mphf_bytes});
+        return b;
+    }
+
     void load(std::istream& in) {
         uint64_t tag = 0;
         sdsl::read_member(tag, in);
         if (!in || tag != format_tag) {
             std::ostringstream msg;
-            msg << "compact_metatrie_hash::load: unsupported index format (tag 0x" << std::hex << tag
-                << ", expected 0x" << format_tag << "); rebuild the index with this binary";
+            msg << "compact_metatrie_hash::load: ";
+            if (in && (tag & ~0xFFULL) == format_magic)
+                msg << "index format version " << (tag & 0xFF) << ", this binary reads version "
+                    << int(Overlay::format_version);
+            else
+                msg << "not an index with a format version (tag 0x" << std::hex << tag << ")";
+            msg << "; rebuild the index with this binary";
             throw std::runtime_error(msg.str());
         }
         m_bv.load(in);
-        m_seq.load(in);
         m_seq_plain.load(in);
         m_succ0.load(in, &m_bv);
         m_select0.load(in, &m_bv);
+        if (!in)
+            throw std::runtime_error("compact_metatrie_hash::load: truncated stream");
         m_root_degree = m_succ0(1);
         sdsl::read_member(m_threshold, in);
         m_overlay.load(in);
         m_overlay.bind(m_bv);
-        uint32_t n;
+        uint32_t n = 0;
         sdsl::read_member(n, in);
+        if (!in)
+            throw std::runtime_error("compact_metatrie_hash::load: truncated stream");
         m_mphfs.resize(n);
         for (auto& mphf : m_mphfs)
             mphf.load(in);
+        if (!in)
+            throw std::runtime_error("compact_metatrie_hash::load: truncated stream");
     }
 };
 }  // namespace cltj

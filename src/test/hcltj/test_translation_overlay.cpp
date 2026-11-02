@@ -1,4 +1,4 @@
-// Dual-phase checks of the translation overlay (L_plain and the policy against m_seq) on
+// Structure, key cursor and policy checks of the translation overlay on
 // datasets that force the edge cases, plus move, swap, serialization and old-format rejection.
 #include <index/cltj_index_metatrie.hpp>
 #include <metatrie/overlay/checks.hpp>
@@ -72,18 +72,18 @@ std::vector<Shape> check_index(const index_type& index, const std::string& label
     std::cout << label << "\n";
     for (int i = 0; i < 6; i++) {
         const auto& trie = index.tries[i];
-        CheckReport dual = cltj::overlay::check_dual_phase(trie);
+        CheckReport labels = cltj::overlay::check_labels(trie);
         CheckReport policy = cltj::overlay::check_policy(trie);
         Shape s = shape_of(trie);
         shapes.push_back(s);
         std::cout << "  " << names[i] << ": mphfs=" << s.mphfs << " root_hashed=" << s.root_hashed
                   << " last_hashed=" << s.last_hashed << " fallbacks=" << s.fallbacks << "\n";
-        if (!dual.ok() || !policy.ok()) {
-            cltj::overlay::print_report(std::cout, std::string(names[i]) + " dual", dual);
+        if (!labels.ok() || !policy.ok()) {
+            cltj::overlay::print_report(std::cout, std::string(names[i]) + " labels", labels);
             cltj::overlay::print_report(std::cout, std::string(names[i]) + " policy", policy);
             failures++;
         }
-        expect(dual.comparisons > 0 && policy.comparisons > 0, std::string(names[i]) + ": checks ran");
+        expect(labels.comparisons > 0 && policy.comparisons > 0, std::string(names[i]) + ": checks ran");
     }
     return shapes;
 }
@@ -199,7 +199,8 @@ int main(int argc, char** argv) {
         }
     }
 
-    // A pre-overlay trie starts with the bit size of B; a wrong version byte is rejected too.
+    // A pre-overlay trie starts with the bit size of B; other versions (1 and 4 are the dual
+    // phase, which also stored L) are rejected too.
     {
         auto expect_rejected = [](std::stringstream& ss, const std::string& what) {
             trie_type trie;
@@ -214,10 +215,44 @@ int main(int argc, char** argv) {
         sdsl::bit_vector(1000, 1).serialize(old_format);
         expect_rejected(old_format, "old format");
 
-        std::stringstream wrong_version;
-        uint64_t tag = trie_type::format_tag ^ 0xFF;
-        sdsl::write_member(tag, wrong_version);
-        expect_rejected(wrong_version, "wrong version");
+        for (uint64_t version : {1ULL, 4ULL, (trie_type::format_tag ^ 0xFF) & 0xFF}) {
+            std::stringstream wrong_version;
+            uint64_t tag = trie_type::format_magic | version;
+            sdsl::write_member(tag, wrong_version);
+            expect_rejected(wrong_version, "version " + std::to_string(version));
+        }
+    }
+
+    // A truncated trie fails with a runtime_error: cut inside the overlay, inside the MPHFs
+    // and before the last byte.
+    {
+        index_type index = build_index(grid(5, 2, 6), 3);
+        const trie_type& trie = index.tries[0];
+        std::stringstream full;
+        sdsl::structure_tree_node root("root", "root");
+        trie.serialize(full, &root, "trie");
+        const std::string bytes = full.str();
+        uint64_t overlay_begin = sizeof(uint64_t), overlay_size = 0;
+        for (const auto& c : root.children.begin()->second->children) {
+            const std::string& n = c.second->name;
+            if (n == "overlay")
+                overlay_size = c.second->size;
+            else if (n == "bv" || n == "seq_plain" || n == "succ0" || n == "select0" || n == "threshold")
+                overlay_begin += c.second->size;
+        }
+        const uint64_t mphfs_begin = overlay_begin + overlay_size + sizeof(uint32_t);
+        expect(trie.mphf_count() > 0 && overlay_size > 0 && mphfs_begin < bytes.size(), "truncation case has MPHFs");
+        for (uint64_t cut : {overlay_begin + overlay_size / 2, overlay_begin + overlay_size - 1,
+                             mphfs_begin + (bytes.size() - mphfs_begin) / 2, uint64_t(bytes.size() - 1)}) {
+            std::stringstream ss(bytes.substr(0, cut));
+            trie_type loaded;
+            try {
+                loaded.load(ss);
+                expect(false, "trie cut at " + std::to_string(cut) + " of " + std::to_string(bytes.size()) + " is rejected");
+            } catch (const std::runtime_error& e) {
+                std::cout << "  rejected (cut at " << cut << " of " << bytes.size() << "): " << e.what() << "\n";
+            }
+        }
     }
 
     std::cout << (failures == 0 ? "ALL PASS" : "FAILURES: " + std::to_string(failures)) << std::endl;

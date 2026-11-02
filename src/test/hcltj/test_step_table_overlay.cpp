@@ -182,20 +182,20 @@ Index build_index(std::vector<cltj::spo_triple> triples, uint32_t threshold) {
     return index;
 }
 
-// Dual phase and table consistency of C, and C against A, trie by trie.
+// Structure and table consistency of C, and C against A, trie by trie.
 void check_pair(const index_a& a, const index_c& c, const std::string& label) {
     static const char* names[] = {"SPO", "SOP", "POS", "PSO", "OSP", "OPS"};
     std::cout << label << "\n";
     for (int i = 0; i < 6; i++) {
         const auto& ta = a.tries[i];
         const auto& tc = c.tries[i];
-        CheckReport dual = cltj::overlay::check_dual_phase(tc);
+        CheckReport labels = cltj::overlay::check_labels(tc);
         CheckReport table = cltj::overlay::check_step_table(tc);
         CheckReport diff = cltj::overlay::check_overlay_equal(ta, tc);
         std::cout << "  " << names[i] << ": mphfs=" << tc.mphf_count() << " root_hashed=" << tc.node_has_hash(0)
                   << " compared=" << diff.comparisons << "\n";
-        if (!dual.ok() || !table.ok() || !diff.ok()) {
-            cltj::overlay::print_report(std::cout, std::string(names[i]) + " dual (C)", dual);
+        if (!labels.ok() || !table.ok() || !diff.ok()) {
+            cltj::overlay::print_report(std::cout, std::string(names[i]) + " labels (C)", labels);
             cltj::overlay::print_report(std::cout, std::string(names[i]) + " table (C)", table);
             cltj::overlay::print_report(std::cout, std::string(names[i]) + " A vs C", diff);
             failures++;

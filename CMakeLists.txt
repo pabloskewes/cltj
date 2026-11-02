@@ -168,15 +168,6 @@ add_cltj_executable(verify-mphf-hcltj src/bench/verify-mphf-hcltj.cpp analysis)
 set_target_properties(verify-mphf-hcltj PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 add_hcltj_policy_executables(verify-mphf-hcltj src/bench/verify-mphf-hcltj.cpp analysis)
 
-add_cltj_executable(inspect-node-hcltj src/bench/inspect-node-hcltj.cpp analysis)
-set_target_properties(inspect-node-hcltj PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
-
-add_cltj_executable(dump-labels-hcltj src/bench/dump-labels-hcltj.cpp analysis)
-set_target_properties(dump-labels-hcltj PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
-
-add_cltj_executable(bench-cursor-cost src/bench/bench-cursor-cost.cpp analysis)
-set_target_properties(bench-cursor-cost PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
-
 add_cltj_executable(check-overlay-hcltj src/bench/check-overlay-hcltj.cpp analysis)
 set_target_properties(check-overlay-hcltj PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 add_hcltj_policy_executables(check-overlay-hcltj src/bench/check-overlay-hcltj.cpp analysis)
@@ -326,9 +317,6 @@ set_target_properties(test-children-histogram PROPERTIES CXX_STANDARD 17 CXX_STA
 add_cltj_executable(test-hcltj-correctness src/test/hcltj/test_hcltj_correctness.cpp test/hcltj)
 set_target_properties(test-hcltj-correctness PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 add_hcltj_policy_executables(test-hcltj-correctness src/test/hcltj/test_hcltj_correctness.cpp test/hcltj)
-
-add_cltj_executable(test-label-stream src/test/hcltj/test_label_stream.cpp test/hcltj)
-set_target_properties(test-label-stream PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
 add_cltj_executable(test-translation-overlay src/test/hcltj/test_translation_overlay.cpp test/hcltj)
 set_target_properties(test-translation-overlay PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)

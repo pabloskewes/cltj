@@ -1,11 +1,13 @@
 // Verifies MPHF correctness post-deserialization for an H-CLTJ index.
 // BFS-walks all 6 tries. For every hashed node:
-//   - all children must return hash_contains() == true  (zero false negatives)
+//   - the key cursor must emit deg(node) keys with slots 0, 1, ... (zero cursor mismatches)
+//   - every emitted key must return hash_contains() == true and hash_locate() == {true, its
+//     slot} (zero false negatives)
 //   - sampled non-members must return hash_contains() == false (zero false positives)
-//   - the key cursor must reproduce m_seq slot by slot (zero cursor mismatches)
 // Usage: verify-mphf-hcltj <path-to-index.hcltj>
 #include <index/cltj_index_metatrie.hpp>
 
+#include <algorithm>
 #include <cstdint>
 #include <iostream>
 #include <random>
@@ -49,26 +51,31 @@ static TrieStats verify_trie(cltj::compact_metatrie_hash<>* trie, const char* na
             if (trie->node_has_hash(node)) {
                 stats.nodes_checked++;
 
-                std::set<uint32_t> child_set;
+                std::vector<uint32_t> children;
+                children.reserve(n_children);
                 uint32_t max_key = 0;
-                for (uint64_t k = 0; k < n_children; k++) {
-                    uint32_t key = static_cast<uint32_t>(trie->seq[node + k]);
-                    child_set.insert(key);
-                    if (key > max_key) max_key = key;
-                }
-
-                // The cursor is the only check here that contrasts against the labels
-                // instead of against the MPHF the keys came from.
                 uint64_t emitted = 0;
                 for (auto cur = trie->hash_keys(node); cur.next(); emitted++) {
                     stats.cursor_keys_checked++;
-                    uint32_t from_seq = static_cast<uint32_t>(trie->seq[node + cur.slot()]);
-                    if (cur.slot() != emitted || cur.key() != from_seq) {
+                    if (cur.slot() != emitted) {
                         stats.cursor_mismatches++;
                         if (stats.cursor_mismatches <= 10)
                             std::cerr << "  CURSOR " << name << " node=" << node
                                       << " slot=" << cur.slot() << " expected_slot=" << emitted
-                                      << " key=" << cur.key() << " seq=" << from_seq << std::endl;
+                                      << " key=" << cur.key() << std::endl;
+                    }
+                    uint32_t key = cur.key();
+                    children.push_back(key);
+                    if (key > max_key) max_key = key;
+
+                    stats.keys_checked++;
+                    auto [found, slot] = trie->hash_locate(node, key);
+                    if (!trie->hash_contains(node, key) || !found || slot != cur.slot()) {
+                        stats.false_negatives++;
+                        if (stats.false_negatives <= 10)
+                            std::cerr << "  FN " << name << " node=" << node << " key=" << key
+                                      << " (child, slot " << cur.slot() << ") locates to (" << found
+                                      << ", " << slot << ")" << std::endl;
                     }
                 }
                 if (emitted != n_children) {
@@ -76,16 +83,10 @@ static TrieStats verify_trie(cltj::compact_metatrie_hash<>* trie, const char* na
                     std::cerr << "  CURSOR " << name << " node=" << node << " emitted " << emitted
                               << " keys, expected " << n_children << std::endl;
                 }
-
-                for (uint32_t key : child_set) {
-                    stats.keys_checked++;
-                    if (!trie->hash_contains(node, key)) {
-                        stats.false_negatives++;
-                        if (stats.false_negatives <= 10)
-                            std::cerr << "  FN " << name << " node=" << node
-                                      << " key=" << key << " (child)" << std::endl;
-                    }
-                }
+                std::sort(children.begin(), children.end());
+                auto is_child = [&](uint32_t key) {
+                    return std::binary_search(children.begin(), children.end(), key);
+                };
 
                 std::set<uint32_t> non_members;
                 non_members.insert(max_key + 1);
@@ -95,7 +96,7 @@ static TrieStats verify_trie(cltj::compact_metatrie_hash<>* trie, const char* na
                 std::uniform_int_distribution<uint32_t> dist(0, std::max(max_key * 2, uint32_t(1000)));
                 while (static_cast<int>(non_members.size()) < NON_MEMBER_SAMPLES) {
                     uint32_t v = dist(rng);
-                    if (child_set.count(v) == 0)
+                    if (!is_child(v))
                         non_members.insert(v);
                 }
 

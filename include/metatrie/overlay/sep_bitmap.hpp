@@ -4,6 +4,7 @@
 #include <sdsl/rank_support_v.hpp>
 #include <sdsl/select_support_mcl.hpp>
 #include <sdsl/util.hpp>
+#include <stdexcept>
 
 namespace cltj {
 namespace overlay {
@@ -21,7 +22,7 @@ class SepBitmapOverlay : public OverlayPolicy<SepBitmapOverlay> {
   public:
     typedef uint64_t size_type;
 
-    static constexpr uint8_t format_version = 1;
+    static constexpr uint8_t format_version = 2;
 
   private:
     sdsl::bit_vector m_has_hash;  // B_h
@@ -118,6 +119,8 @@ class SepBitmapOverlay : public OverlayPolicy<SepBitmapOverlay> {
         m_bv_rank0.load(in);
         m_lsep.load(in);
         m_lsep_select.load(in, &m_lsep);
+        if (!in)
+            throw std::runtime_error("SepBitmapOverlay::load: truncated stream");
     }
 
     OverlaySizeBreakdown get_size_breakdown() const {

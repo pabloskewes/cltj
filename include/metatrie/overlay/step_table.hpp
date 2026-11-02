@@ -22,7 +22,7 @@ class StepTableOverlay : public OverlayPolicy<StepTableOverlay> {
   public:
     typedef uint64_t size_type;
 
-    static constexpr uint8_t format_version = 4;
+    static constexpr uint8_t format_version = 3;
 
   private:
     std::vector<uint32_t> m_hashed_start;
@@ -42,8 +42,12 @@ class StepTableOverlay : public OverlayPolicy<StepTableOverlay> {
     static void load_u32s(std::vector<uint32_t>& vec, std::istream& in) {
         uint64_t n = 0;
         sdsl::read_member(n, in);
+        if (!in)
+            throw std::runtime_error("StepTableOverlay::load: truncated stream");
         vec.resize(n);
         in.read(reinterpret_cast<char*>(vec.data()), n * sizeof(uint32_t));
+        if (!in)
+            throw std::runtime_error("StepTableOverlay::load: truncated stream");
     }
 
   public:

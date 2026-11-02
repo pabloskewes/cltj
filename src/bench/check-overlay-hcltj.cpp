@@ -4,7 +4,7 @@
 #include <iostream>
 
 int main(int argc, char** argv) {
-    CLI::App app{"Check L_plain and the translation overlay of an H-CLTJ index against m_seq"};
+    CLI::App app{"Check the structure, the key cursors and the translation overlay of an H-CLTJ index"};
     std::string index_file;
     app.add_option("index", index_file, "H-CLTJ index file (.hcltj)")->required();
     CLI11_PARSE(app, argc, argv);
@@ -19,17 +19,17 @@ int main(int argc, char** argv) {
     bool ok = true;
     for (int i = 0; i < 6; i++) {
         const auto* trie = index.get_trie(i);
-        auto dual = cltj::overlay::check_dual_phase(*trie);
+        auto labels = cltj::overlay::check_labels(*trie);
         auto policy = cltj::overlay::check_policy(*trie);
-        std::cout << names[i] << " (mphfs=" << trie->mphf_count() << ", |L|=" << trie->seq.size()
+        std::cout << names[i] << " (mphfs=" << trie->mphf_count() << ", |L|=" << trie->louds_size() - 1
                   << ", |L_plain|=" << trie->seq_plain().size() << ")\n";
-        cltj::overlay::print_report(std::cout, "dual phase", dual);
+        cltj::overlay::print_report(std::cout, "structure", labels);
         cltj::overlay::print_report(std::cout, "policy", policy);
         std::cout << "  overlay bytes:";
         for (const auto& c : trie->overlay().get_size_breakdown().components)
             std::cout << " " << c.first << "=" << c.second;
         std::cout << "\n";
-        ok = ok && dual.ok() && policy.ok();
+        ok = ok && labels.ok() && policy.ok();
     }
     std::cout << (ok ? "RESULT: ALL PASS" : "RESULT: FAIL") << std::endl;
     return ok ? 0 : 1;

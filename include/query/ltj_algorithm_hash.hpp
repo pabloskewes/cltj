@@ -473,7 +473,6 @@ class ltj_algorithm_hash {
                     while (keys.next()) {
                         const size_type pos = beg + keys.slot();
                         value_type c = keys.key();
-                        assert(c == scan_trie->seq[pos] && "cursor disagrees with L");
 
                         if (candidate_in_hashed_iterators(x_j, c, hashed_itrs, itrs[min_idx])) {
                             if constexpr (COLLECT_QUERY_STATS)
