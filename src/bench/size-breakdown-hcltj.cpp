@@ -36,7 +36,7 @@ int main(int argc, char** argv) {
             return 2;
         }
         const uint64_t index_bytes = sdsl::size_in_bytes(index);
-        std::cout << "index_bytes=" << index_bytes << " overlay=" << sdsl::util::class_name(overlay_type())
+        std::cout << "index_bytes=" << index_bytes << " format_version=" << int(overlay_type::format_version)
                   << std::endl;
 
         bool ok = true;

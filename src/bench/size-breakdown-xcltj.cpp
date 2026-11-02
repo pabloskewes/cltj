@@ -43,11 +43,16 @@ int main(int argc, char** argv) {
             trie->serialize(trie_ns, &node, "trie");
             const auto* trie_node = node.children.begin()->second.get();
 
+            // In serialization order; a member missing here makes the sum fall short.
             std::vector<std::pair<std::string, uint64_t>> members;
             uint64_t sum = 0;
-            for (const auto& c : trie_node->children) {
-                members.push_back({c.second->name, c.second->size});
-                sum += c.second->size;
+            for (const char* name : {"bv", "seq", "succ0", "select0"}) {
+                uint64_t size = 0;
+                for (const auto& c : trie_node->children)
+                    if (c.second->name == name)
+                        size = c.second->size;
+                members.push_back({name, size});
+                sum += size;
             }
 
             uint64_t b_bits = 0;
