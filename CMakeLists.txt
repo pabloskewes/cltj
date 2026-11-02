@@ -160,6 +160,9 @@ set_target_properties(inspect-node-hcltj PROPERTIES CXX_STANDARD 17 CXX_STANDARD
 add_cltj_executable(dump-labels-hcltj src/bench/dump-labels-hcltj.cpp analysis)
 set_target_properties(dump-labels-hcltj PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
+add_cltj_executable(bench-cursor-cost src/bench/bench-cursor-cost.cpp analysis)
+set_target_properties(bench-cursor-cost PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+
 add_cltj_executable(bench-query-cltj-rdf src/bench/bench-query-cltj-rdf.cpp bench hybridbv_gn)
 target_compile_definitions(bench-query-cltj-rdf PRIVATE ADAPTIVE=1)
 
