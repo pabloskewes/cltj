@@ -45,7 +45,9 @@ class ltj_iterator_metatrie_hash {
         size_type beg;
         size_type end;
         size_type off;  // deleted_before(parent) if parent is not hashed; unset otherwise, leap() never runs there
+        std::array<size_type, 2> r;  // dict_idx(it[k]) in the trie of it[k], or no_r until parent_r() needs it
     } level_data_type;
+    static constexpr size_type no_r = -1ULL;
     typedef std::array<level_data_type, 4> status_type;
     typedef std::array<bool, 4> redo_array_type;
     // std::vector<value_type> leap_result_type;
@@ -174,21 +176,22 @@ class ltj_iterator_metatrie_hash {
         beg = trie->first_child(0);
         end = beg + cnt - 1;
         std::pair<uint32_t, uint32_t> p;
-        if (trie->node_has_hash(0)) {
-            auto [found, slot] = trie->hash_locate(0, m_path_label[m_nfixed - 1]);
+        if (trie->node_has_hash(0, 0)) {
+            auto [found, slot] = trie->hash_locate(0, 0, m_path_label[m_nfixed - 1]);
             p = {m_path_label[m_nfixed - 1], beg + slot};
         } else {
-            p = trie->binary_search_seek(m_path_label[m_nfixed - 1], beg, end, trie->deleted_before(0));
+            p = trie->binary_search_seek(m_path_label[m_nfixed - 1], beg, end, trie->deleted_before(0, 0));
         }
         size_type cur_node = trie->nodeselect(p.second);
+        size_type cur_r = trie->dict_idx(cur_node);
         cnt = trie->children(cur_node);
         beg = trie->first_child(cur_node);
         end = beg + cnt - 1;
-        if (trie->node_has_hash(cur_node)) {
-            auto [found, slot] = trie->hash_locate(cur_node, m_path_label[m_nfixed - 2]);
+        if (trie->node_has_hash(cur_node, cur_r)) {
+            auto [found, slot] = trie->hash_locate(cur_node, cur_r, m_path_label[m_nfixed - 2]);
             p = {m_path_label[m_nfixed - 2], beg + slot};
         } else {
-            p = trie->binary_search_seek(m_path_label[m_nfixed - 2], beg, end, trie->deleted_before(cur_node));
+            p = trie->binary_search_seek(m_path_label[m_nfixed - 2], beg, end, trie->deleted_before(cur_node, cur_r));
         }
         cur_node = trie->nodeselect(p.second);
         return cur_node;
@@ -254,14 +257,14 @@ class ltj_iterator_metatrie_hash {
         else if (is_variable_predicate(var))
             state = p;
         choose_trie(state);
-        return resolve_trie()->node_has_hash(parent());
+        return resolve_trie()->node_has_hash(parent(), parent_r());
     }
 
     /**
      * @brief O(1) membership check via the MPHF overlay of the current node.
      *
      * Resolves which trie to use for @p var (same logic as leap/exists),
-     * then delegates to the trie's hash_contains(parent(), key).
+     * then delegates to the trie's hash_contains(parent(), parent_r(), key).
      */
     bool hash_contains(var_type var, value_type key) {
         state_type state = o;
@@ -270,7 +273,7 @@ class ltj_iterator_metatrie_hash {
         else if (is_variable_predicate(var))
             state = p;
         choose_trie(state);
-        return resolve_trie()->hash_contains(parent(), key);
+        return resolve_trie()->hash_contains(parent(), parent_r(), key);
     }
 
     /**
@@ -305,6 +308,17 @@ class ltj_iterator_metatrie_hash {
 
     inline size_type parent() const;
 
+    /**
+     * @brief r of parent(), computed once per node entry and kept in its level.
+     * Assumes the trie has been selected (e.g. via current_node_has_hash).
+     */
+    size_type parent_r() {
+        size_type& r = m_status[m_nfixed].r[m_status_i];
+        if (r == no_r)
+            r = resolve_trie()->dict_idx(parent());
+        return r;
+    }
+
     ltj_iterator_metatrie_hash() = default;
     ltj_iterator_metatrie_hash(const triple_pattern* triple, index_scheme_type* index) {
         m_ptr_triple_pattern = triple;
@@ -316,6 +330,8 @@ class ltj_iterator_metatrie_hash {
         m_status[0].end = 0;
         m_status[0].cnt = 1;
         m_status[0].off = 0;
+        // The root has r == 0 in every trie: no hashed node starts before it.
+        m_status[0].r = {0, 0};
         // m_status[1][0].it = 2;
         // m_status[1][0].last = 1;
         m_redo[0] = true;
@@ -391,15 +407,18 @@ class ltj_iterator_metatrie_hash {
             const auto* trie_aux = m_ptr_index->get_trie(m_trie_i + 1);
             m_status[m_nfixed].it[1] =
                 trie_aux->nodeselect(m_status[m_nfixed].beg - 1);  // -1 as there is no root in this trie
+            m_status[m_nfixed].r = {no_r, no_r};
         } else if (m_nfixed == 2) {
             if (!m_status_i) {
                 const auto* trie = m_ptr_index->get_trie(m_trie_i);
                 auto pos = m_status[m_nfixed].beg;
                 m_status[m_nfixed].it[m_status_i] = trie->nodeselect(pos);
+                m_status[m_nfixed].r[m_status_i] = no_r;
             } else {
                 // trie switching
                 size_type switch_node = trie_switch();
                 m_status[m_nfixed].it[m_status_i] = switch_node;
+                m_status[m_nfixed].r[m_status_i] = no_r;
             }
         }
     }
@@ -438,8 +457,9 @@ class ltj_iterator_metatrie_hash {
             beg = trie->first_child(node);
             end = beg + cnt - 1;
 
-            if (trie->node_has_hash(node)) {
-                auto [found, slot] = trie->hash_locate(node, c);
+            const size_type r = parent_r();
+            if (trie->node_has_hash(node, r)) {
+                auto [found, slot] = trie->hash_locate(node, r, c);
                 if (!found)
                     return false;
                 m_status[m_nfixed + 1].beg = beg + slot;
@@ -449,7 +469,7 @@ class ltj_iterator_metatrie_hash {
                 return true;
             }
 
-            const size_type off = trie->deleted_before(node);
+            const size_type off = trie->deleted_before(node, r);
             auto p = trie->binary_search_seek(c, beg, end, off);
             if (p.second > end or p.first != c)
                 return false;
@@ -482,8 +502,9 @@ class ltj_iterator_metatrie_hash {
         beg = trie->first_child(parent());
         end = beg + cnt - 1;
 
-        if (trie->node_has_hash(parent())) {
-            auto [found, slot] = trie->hash_locate(parent(), c);
+        const size_type r = parent_r();
+        if (trie->node_has_hash(parent(), r)) {
+            auto [found, slot] = trie->hash_locate(parent(), r, c);
             if (!found)
                 return false;
             m_status[m_nfixed + 1].beg = beg + slot;
@@ -493,7 +514,7 @@ class ltj_iterator_metatrie_hash {
             return true;
         }
 
-        const size_type off = trie->deleted_before(parent());
+        const size_type off = trie->deleted_before(parent(), r);
         auto p = trie->binary_search_seek(c, beg, end, off);
         if (p.second > end or p.first != c)
             return false;
@@ -540,7 +561,7 @@ class ltj_iterator_metatrie_hash {
             auto cnt = trie->children(parent());
             beg = trie->first_child(parent());
             end = beg + cnt - 1;
-            off = trie->deleted_before(parent());
+            off = trie->deleted_before(parent(), parent_r());
             m_status[m_nfixed + 1].beg = beg;
             m_status[m_nfixed + 1].end = end;
             // m_status[m_nfixed+1].it[0] = m_status[m_nfixed+1].it[1] = it;
@@ -698,15 +719,16 @@ class ltj_iterator_metatrie_hash {
         const auto* trie = m_ptr_index->get_trie(t_i);
         uint32_t cnt = trie->children(parent());
         size_type beg = trie->first_child(parent());
-        if (trie->node_has_hash(parent())) {
+        const size_type r = parent_r();
+        if (trie->node_has_hash(parent(), r)) {
             // Children of a hashed node come in MPHF slot order, not in increasing order.
-            auto cur = trie->hash_keys(parent());
+            auto cur = trie->hash_keys(parent(), r);
             while (cur.next())
                 results.emplace_back(cur.key());
             assert(results.size() == cnt && "cursor must emit deg(parent) keys");
             return results;
         }
-        const size_type off = trie->deleted_before(parent());
+        const size_type off = trie->deleted_before(parent(), r);
         for (auto i = beg; i < beg + cnt; ++i) {
             results.emplace_back(trie->plain_label(i, off));
         }

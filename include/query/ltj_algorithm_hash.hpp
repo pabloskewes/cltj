@@ -469,7 +469,7 @@ class ltj_algorithm_hash {
                         m_tracer, "hash", j, x_j, tuple
                     );
 
-                    auto keys = scan_trie->hash_keys(itrs[min_idx]->parent());
+                    auto keys = scan_trie->hash_keys(itrs[min_idx]->parent(), itrs[min_idx]->parent_r());
                     while (keys.next()) {
                         const size_type pos = beg + keys.slot();
                         value_type c = keys.key();
