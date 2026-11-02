@@ -170,6 +170,11 @@ add_hcltj_policy_executables(verify-mphf-hcltj src/bench/verify-mphf-hcltj.cpp a
 
 add_hcltj_policy_executables(verify-labels-hcltj src/bench/verify-labels-hcltj.cpp analysis)
 
+add_hcltj_policy_executables(size-breakdown-hcltj src/bench/size-breakdown-hcltj.cpp analysis)
+
+add_cltj_executable(size-breakdown-xcltj src/bench/size-breakdown-xcltj.cpp analysis)
+set_target_properties(size-breakdown-xcltj PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+
 add_cltj_executable(check-overlay-hcltj src/bench/check-overlay-hcltj.cpp analysis)
 set_target_properties(check-overlay-hcltj PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 add_hcltj_policy_executables(check-overlay-hcltj src/bench/check-overlay-hcltj.cpp analysis)
