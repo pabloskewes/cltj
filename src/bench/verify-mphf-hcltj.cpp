@@ -26,7 +26,7 @@ struct TrieStats {
     uint64_t cursor_mismatches = 0;
 };
 
-static TrieStats verify_trie(cltj::compact_metatrie_hash* trie, const char* name) {
+static TrieStats verify_trie(cltj::compact_metatrie_hash<>* trie, const char* name) {
     TrieStats stats;
 
     uint64_t bv_size = trie->louds_size();

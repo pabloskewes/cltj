@@ -12,7 +12,7 @@
 #include <string>
 #include <vector>
 
-static std::string bits_from_print(cltj::compact_metatrie_hash* trie) {
+static std::string bits_from_print(cltj::compact_metatrie_hash<>* trie) {
     std::ostringstream captured;
     auto* old = std::cout.rdbuf(captured.rdbuf());
     trie->print();

@@ -49,7 +49,7 @@ struct Totals {
     }
 };
 
-static std::vector<uint64_t> hashed_nodes(cltj::compact_metatrie_hash* trie) {
+static std::vector<uint64_t> hashed_nodes(cltj::compact_metatrie_hash<>* trie) {
     std::vector<uint64_t> out;
     uint64_t bv_size = trie->louds_size();
     uint64_t num_zeros = 0;
@@ -83,7 +83,7 @@ static uint64_t sum_seq(const sdsl::int_vector<>& seq, uint64_t node, uint64_t d
     return sum;
 }
 
-static uint64_t sum_cursor(cltj::compact_metatrie_hash* trie, uint64_t node, uint64_t& count) {
+static uint64_t sum_cursor(cltj::compact_metatrie_hash<>* trie, uint64_t node, uint64_t& count) {
     uint64_t sum = 0;
     count = 0;
     for (auto cur = trie->hash_keys(node); cur.next(); count++)
@@ -93,7 +93,7 @@ static uint64_t sum_cursor(cltj::compact_metatrie_hash* trie, uint64_t node, uin
 
 // Untimed key-by-key check: the cursor must emit seq[node + slot] for slot = 0 .. degree - 1.
 // Leaves in reference the sum of the node's labels; it also warms both forms before timing.
-static uint64_t check_node(cltj::compact_metatrie_hash* trie, uint64_t node, uint64_t degree, uint64_t& reference) {
+static uint64_t check_node(cltj::compact_metatrie_hash<>* trie, uint64_t node, uint64_t degree, uint64_t& reference) {
     uint64_t mismatches = 0;
     uint64_t emitted = 0;
     reference = 0;

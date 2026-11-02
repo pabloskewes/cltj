@@ -16,7 +16,7 @@ static constexpr size_t BLOCK_WORDS = 1 << 16;
 static constexpr size_t BLOCK_LABELS = 1 << 17;
 
 // m_bv is private, so B is rebuilt from its zeros: the next zero after z is z + children(z).
-static void write_b(cltj::compact_metatrie_hash* trie, cltj::label_stream::writer& w) {
+static void write_b(cltj::compact_metatrie_hash<>* trie, cltj::label_stream::writer& w) {
     const uint64_t b_bits = trie->louds_size();
     const uint64_t n_words = cltj::label_stream::b_words(b_bits);
     std::vector<uint64_t> block(BLOCK_WORDS);
@@ -38,7 +38,7 @@ static void write_b(cltj::compact_metatrie_hash* trie, cltj::label_stream::write
         throw std::runtime_error("zero walk over B did not end at louds_size()");
 }
 
-static void write_l(cltj::compact_metatrie_hash* trie, uint64_t n_labels, cltj::label_stream::writer& w) {
+static void write_l(cltj::compact_metatrie_hash<>* trie, uint64_t n_labels, cltj::label_stream::writer& w) {
     const auto& seq = trie->seq;
     std::vector<uint32_t> block(BLOCK_LABELS);
     for (uint64_t first = 0; first < n_labels; first += BLOCK_LABELS) {

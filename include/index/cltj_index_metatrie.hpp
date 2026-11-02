@@ -289,7 +289,7 @@ public:
 };
 
 typedef cltj::cltj_index_metatrie<cltj::compact_metatrie> compact_ltj_metatrie;
-typedef cltj::cltj_index_metatrie<cltj::compact_metatrie_hash> compact_ltj_metatrie_hash;
+typedef cltj::cltj_index_metatrie<cltj::compact_metatrie_hash<>> compact_ltj_metatrie_hash;
 // typedef cltj::cltj_index_metatrie<cltj::uncompact_trie_v2> uncompact_ltj;
 
 } // namespace cltj
