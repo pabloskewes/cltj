@@ -166,6 +166,9 @@ set_target_properties(bench-cursor-cost PROPERTIES CXX_STANDARD 17 CXX_STANDARD_
 add_cltj_executable(check-overlay-hcltj src/bench/check-overlay-hcltj.cpp analysis)
 set_target_properties(check-overlay-hcltj PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
+add_cltj_executable(diff-overlay-hcltj src/bench/diff-overlay-hcltj.cpp analysis)
+set_target_properties(diff-overlay-hcltj PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+
 add_cltj_executable(bench-query-cltj-rdf src/bench/bench-query-cltj-rdf.cpp bench hybridbv_gn)
 target_compile_definitions(bench-query-cltj-rdf PRIVATE ADAPTIVE=1)
 
@@ -313,6 +316,9 @@ set_target_properties(test-label-stream PROPERTIES CXX_STANDARD 17 CXX_STANDARD_
 
 add_cltj_executable(test-translation-overlay src/test/hcltj/test_translation_overlay.cpp test/hcltj)
 set_target_properties(test-translation-overlay PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+
+add_cltj_executable(test-step-table-overlay src/test/hcltj/test_step_table_overlay.cpp test/hcltj)
+set_target_properties(test-step-table-overlay PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
 if(CLTJ_COLLECT_QUERY_STATS)
   add_cltj_executable(test-intersection-paths src/test/hcltj/test_intersection_paths.cpp test/hcltj)

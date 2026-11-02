@@ -73,17 +73,17 @@ std::vector<Shape> check_index(const index_type& index, const std::string& label
     for (int i = 0; i < 6; i++) {
         const auto& trie = index.tries[i];
         CheckReport dual = cltj::overlay::check_dual_phase(trie);
-        CheckReport sep = cltj::overlay::check_sep_bitmap(trie);
+        CheckReport policy = cltj::overlay::check_policy(trie);
         Shape s = shape_of(trie);
         shapes.push_back(s);
         std::cout << "  " << names[i] << ": mphfs=" << s.mphfs << " root_hashed=" << s.root_hashed
                   << " last_hashed=" << s.last_hashed << " fallbacks=" << s.fallbacks << "\n";
-        if (!dual.ok() || !sep.ok()) {
+        if (!dual.ok() || !policy.ok()) {
             cltj::overlay::print_report(std::cout, std::string(names[i]) + " dual", dual);
-            cltj::overlay::print_report(std::cout, std::string(names[i]) + " sep", sep);
+            cltj::overlay::print_report(std::cout, std::string(names[i]) + " policy", policy);
             failures++;
         }
-        expect(dual.comparisons > 0 && sep.comparisons > 0, std::string(names[i]) + ": checks ran");
+        expect(dual.comparisons > 0 && policy.comparisons > 0, std::string(names[i]) + ": checks ran");
     }
     return shapes;
 }
