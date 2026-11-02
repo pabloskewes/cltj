@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <stdexcept>
 #include <cmath>
 #include <cstdint>
 #include <limits>
@@ -334,6 +335,8 @@ class MPHF {
         for (int k = 0; k < 3; ++k) {
             sdsl::read_member(biases_[k], in);
         }
+        if (!in)
+            throw std::runtime_error("MPHF::load: truncated stream");
 
         m_ = static_cast<uint32_t>(primes_[0] + primes_[1] + primes_[2]);
 
