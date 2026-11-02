@@ -462,8 +462,11 @@ class ltj_algorithm_hash {
                         m_tracer, "hash", j, x_j, tuple
                     );
 
-                    for (size_type pos = beg; pos < end_pos; ++pos) {
-                        value_type c = scan_trie->seq[pos];
+                    auto keys = scan_trie->hash_keys(itrs[min_idx]->parent());
+                    while (keys.next()) {
+                        const size_type pos = beg + keys.slot();
+                        value_type c = keys.key();
+                        assert(c == scan_trie->seq[pos] && "cursor disagrees with L");
 
                         if (candidate_in_hashed_iterators(x_j, c, hashed_itrs, itrs[min_idx])) {
                             if constexpr (COLLECT_QUERY_STATS)
