@@ -510,8 +510,9 @@ class compact_metatrie_hash {
      * during BFS, and the virtual root gets key = 0.
      *
      * The last-level nodes (e.g. O-values in full tries) are not encoded in
-     * the BV.  Their keys are read from m_seq and emitted as leaf entries
-     * (is_leaf = true, n_children = 0).
+     * the BV.  Their keys are emitted as leaf entries (is_leaf = true,
+     * n_children = 0).  Keys come from L_plain, or from the MPHF cursor for
+     * hashed nodes.
      *
      * For partial tries (SOP, PSO, OPS) the first-level keys are not stored
      * in the trie (they come from the full trie via trie switching).
@@ -539,8 +540,21 @@ class compact_metatrie_hash {
                 int64_t my_idx = static_cast<int64_t>(nodes.size());
                 nodes.push_back({e.parent_idx, e.depth, e.key, d, false});
 
+                std::vector<uint32_t> child_keys(d);
+                if (node_has_hash(e.louds_pos)) {
+                    auto cur = hash_keys(e.louds_pos);
+                    while (cur.next()) {
+                        assert(cur.key() == m_seq[e.louds_pos + cur.slot()] && "cursor disagrees with L");
+                        child_keys[cur.slot()] = cur.key();
+                    }
+                } else {
+                    const size_type off = deleted_before(e.louds_pos);
+                    for (size_type k = 0; k < d; k++)
+                        child_keys[k] = static_cast<uint32_t>(plain_label(e.louds_pos + k, off));
+                }
+
                 for (size_type n = 1; n <= d; n++) {
-                    uint32_t child_key = static_cast<uint32_t>(m_seq[e.louds_pos + n - 1]);
+                    uint32_t child_key = child_keys[n - 1];
                     if (e.louds_pos + 1 + n > num_zeros) {
                         nodes.push_back({my_idx, e.depth + 1, child_key, 0, true});
                     } else {
@@ -561,19 +575,38 @@ class compact_metatrie_hash {
 
     inline size_type nodeselect(size_type i) const { return m_select0(i + 2); }
 
-    pair<uint32_t, uint32_t> binary_search_seek(uint32_t val, uint32_t i, uint32_t f) const {
-        if (m_seq[f] < val)
+    /**
+     * @brief Labels of hashed nodes that come before the node at @p node_pos.
+     *
+     * For a non-hashed node v, L_plain[pos - deleted_before(v)] is the label at LOUDS
+     * position pos of its block [v, v + deg(v)).
+     */
+    size_type deleted_before(size_type node_pos) const { return node_pos - m_overlay.plain_start(node_pos); }
+
+    //! Label at LOUDS position @p pos of a non-hashed node with deleted_before() == @p off.
+    value_type plain_label(size_type pos, size_type off) const {
+        assert(m_seq_plain[pos - off] == m_seq[pos] && "L_plain disagrees with L");
+        return m_seq_plain[pos - off];
+    }
+
+    /**
+     * @brief Binary search in the block of a non-hashed node.
+     * @param off deleted_before() of the node; [i, f] and the result are LOUDS positions
+     * @return {first label >= val, its position}, or {0, f + 1} if there is none.
+     */
+    pair<uint32_t, uint32_t> binary_search_seek(uint32_t val, uint32_t i, uint32_t f, size_type off) const {
+        if (plain_label(f, off) < val)
             return make_pair(0, f + 1);
         uint32_t mid;
         while (i < f) {
             mid = (i + f) / 2;
-            if (m_seq[mid] < val) {
+            if (plain_label(mid, off) < val) {
                 i = mid + 1;
             } else {
                 f = mid;
             }
         }
-        return make_pair(m_seq[i], i);
+        return make_pair(plain_label(i, off), i);
     }
 
     void print() const {

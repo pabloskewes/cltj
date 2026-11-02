@@ -44,6 +44,7 @@ class ltj_iterator_metatrie_hash {
         size_type cnt;
         size_type beg;
         size_type end;
+        size_type off;  // deleted_before(parent) if parent is not hashed; unset otherwise, leap() never runs there
     } level_data_type;
     typedef std::array<level_data_type, 4> status_type;
     typedef std::array<bool, 4> redo_array_type;
@@ -177,7 +178,7 @@ class ltj_iterator_metatrie_hash {
             auto [found, slot] = trie->hash_locate(0, m_path_label[m_nfixed - 1]);
             p = {m_path_label[m_nfixed - 1], beg + slot};
         } else {
-            p = trie->binary_search_seek(m_path_label[m_nfixed - 1], beg, end);
+            p = trie->binary_search_seek(m_path_label[m_nfixed - 1], beg, end, trie->deleted_before(0));
         }
         size_type cur_node = trie->nodeselect(p.second);
         cnt = trie->children(cur_node);
@@ -187,7 +188,7 @@ class ltj_iterator_metatrie_hash {
             auto [found, slot] = trie->hash_locate(cur_node, m_path_label[m_nfixed - 2]);
             p = {m_path_label[m_nfixed - 2], beg + slot};
         } else {
-            p = trie->binary_search_seek(m_path_label[m_nfixed - 2], beg, end);
+            p = trie->binary_search_seek(m_path_label[m_nfixed - 2], beg, end, trie->deleted_before(cur_node));
         }
         cur_node = trie->nodeselect(p.second);
         return cur_node;
@@ -273,10 +274,10 @@ class ltj_iterator_metatrie_hash {
     }
 
     /**
-     * @brief Returns the m_seq index range [beg, end) for children of the current node.
+     * @brief Returns the LOUDS position range [beg, end) for children of the current node.
      *
-     * The algorithm scans trie->seq[beg..end) to enumerate all children
-     * of the smallest list during hashing intersection.
+     * In the pure hash path the children are enumerated with the MPHF cursor; the
+     * child at slot k sits at position beg + k.
      * Assumes the trie has been selected (e.g. via current_node_has_hash).
      */
     std::pair<size_type, size_type> children_range() const {
@@ -286,14 +287,6 @@ class ltj_iterator_metatrie_hash {
         size_type beg = trie->first_child(node);
         return {beg, beg + count};
     }
-
-    /**
-     * @brief Returns the key stored at position @p pos in the active trie's m_seq.
-     *
-     * Used to scan children sequentially without allocating a vector.
-     * Assumes the trie has been selected (e.g. via current_node_has_hash).
-     */
-    value_type child_value_at(size_type pos) const { return resolve_trie()->seq[pos]; }
 
     /**
      * @brief Directly sets the next-level status frame, skipping binary search.
@@ -322,6 +315,7 @@ class ltj_iterator_metatrie_hash {
         m_status[0].beg = 1;
         m_status[0].end = 0;
         m_status[0].cnt = 1;
+        m_status[0].off = 0;
         // m_status[1][0].it = 2;
         // m_status[1][0].last = 1;
         m_redo[0] = true;
@@ -455,12 +449,14 @@ class ltj_iterator_metatrie_hash {
                 return true;
             }
 
-            auto p = trie->binary_search_seek(c, beg, end);
+            const size_type off = trie->deleted_before(node);
+            auto p = trie->binary_search_seek(c, beg, end, off);
             if (p.second > end or p.first != c)
                 return false;
             m_status[m_nfixed + 1].beg = p.second;
             m_status[m_nfixed + 1].end = end;
             m_status[m_nfixed + 1].cnt = cnt;
+            m_status[m_nfixed + 1].off = off;
             m_redo[m_nfixed] = false;
             return true;
         }
@@ -497,12 +493,14 @@ class ltj_iterator_metatrie_hash {
             return true;
         }
 
-        auto p = trie->binary_search_seek(c, beg, end);
+        const size_type off = trie->deleted_before(parent());
+        auto p = trie->binary_search_seek(c, beg, end, off);
         if (p.second > end or p.first != c)
             return false;
         m_status[m_nfixed + 1].beg = p.second;
         m_status[m_nfixed + 1].end = end;
         m_status[m_nfixed + 1].cnt = cnt;
+        m_status[m_nfixed + 1].off = off;
         m_redo[m_nfixed] = false;
         return true;
     }
@@ -535,29 +533,33 @@ class ltj_iterator_metatrie_hash {
         }
         assert(!trie->node_has_hash(parent()));
 
-        size_type beg, end;
+        size_type beg, end, off;
         // std::cout << "Leap redo n_fixed:" << m_nfixed << std::endl;
         // print_redo();
         if (m_redo[m_nfixed]) {  // First time of leap
             auto cnt = trie->children(parent());
             beg = trie->first_child(parent());
             end = beg + cnt - 1;
+            off = trie->deleted_before(parent());
             m_status[m_nfixed + 1].beg = beg;
             m_status[m_nfixed + 1].end = end;
             // m_status[m_nfixed+1].it[0] = m_status[m_nfixed+1].it[1] = it;
             m_status[m_nfixed + 1].cnt = cnt;
+            m_status[m_nfixed + 1].off = off;
             m_redo[m_nfixed] = false;
         } else {
             // std::cout << "Current: " << current() << std::endl;
             beg = m_status[m_nfixed + 1].beg;
             end = m_status[m_nfixed + 1].end;
+            off = m_status[m_nfixed + 1].off;
+            assert(off == trie->deleted_before(parent()) && "cached off belongs to another node");
         }
         size_type value;
         if (c == -1ULL) {
-            value = trie->seq[beg];
+            value = trie->plain_label(beg, off);
             m_status[m_nfixed + 1].beg = beg;  // First position in the sequence
         } else {
-            const auto p = trie->binary_search_seek(c, beg, end);
+            const auto p = trie->binary_search_seek(c, beg, end, off);
             if (p.second > end)
                 return 0;
             value = p.first;
@@ -696,8 +698,19 @@ class ltj_iterator_metatrie_hash {
         const auto* trie = m_ptr_index->get_trie(t_i);
         uint32_t cnt = trie->children(parent());
         size_type beg = trie->first_child(parent());
+        if (trie->node_has_hash(parent())) {
+            // Children of a hashed node come in MPHF slot order, not in increasing order.
+            auto cur = trie->hash_keys(parent());
+            while (cur.next()) {
+                assert(cur.key() == trie->seq[beg + cur.slot()] && "cursor disagrees with L");
+                results.emplace_back(cur.key());
+            }
+            assert(results.size() == cnt && "cursor must emit deg(parent) keys");
+            return results;
+        }
+        const size_type off = trie->deleted_before(parent());
         for (auto i = beg; i < beg + cnt; ++i) {
-            results.emplace_back(trie->seq[i]);
+            results.emplace_back(trie->plain_label(i, off));
         }
         return results;
     }
