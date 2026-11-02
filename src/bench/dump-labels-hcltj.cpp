@@ -73,7 +73,8 @@ int main(int argc, char** argv) {
     try {
         std::cerr << "Loading index: " << index_path << std::endl;
         cltj::compact_ltj_metatrie_hash index;
-        sdsl::load_from_file(index, index_path);
+        if (!sdsl::load_from_file(index, index_path))
+            throw std::runtime_error("cannot load index: " + index_path);
 
         cltj::label_stream::writer w(out);
         for (uint32_t t = 0; t < cltj::label_stream::N_TRIES; t++) {

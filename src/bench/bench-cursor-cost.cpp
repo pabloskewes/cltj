@@ -92,12 +92,17 @@ static uint64_t sum_cursor(cltj::compact_metatrie_hash* trie, uint64_t node, uin
 }
 
 // Untimed key-by-key check: the cursor must emit seq[node + slot] for slot = 0 .. degree - 1.
-static uint64_t check_node(cltj::compact_metatrie_hash* trie, uint64_t node, uint64_t degree) {
+// Leaves in reference the sum of the node's labels; it also warms both forms before timing.
+static uint64_t check_node(cltj::compact_metatrie_hash* trie, uint64_t node, uint64_t degree, uint64_t& reference) {
     uint64_t mismatches = 0;
     uint64_t emitted = 0;
-    for (auto cur = trie->hash_keys(node); cur.next(); emitted++)
+    reference = 0;
+    for (auto cur = trie->hash_keys(node); cur.next(); emitted++) {
         if (cur.slot() != emitted || emitted >= degree || cur.key() != trie->seq[node + emitted])
             mismatches++;
+        else
+            reference += cur.key();
+    }
     if (emitted != degree)
         mismatches++;
     return mismatches;
@@ -117,9 +122,9 @@ static void print_totals(const std::string& label, const Totals& t) {
     double k = t.keys > 0 ? static_cast<double>(t.keys) : 1.0;
     std::cerr << std::left << std::setw(6) << label << std::right << " nodes=" << std::setw(6) << t.nodes
               << " keys=" << std::setw(11) << t.keys << std::fixed << std::setprecision(3)
-              << "  ns/key min: seq=" << t.seq_min_ns / k << " cursor=" << t.cursor_min_ns / k
-              << " ratio=" << t.cursor_min_ns / t.seq_min_ns << "  median: seq=" << t.seq_median_ns / k
-              << " cursor=" << t.cursor_median_ns / k << " ratio=" << t.cursor_median_ns / t.seq_median_ns
+              << "  ns/key seq=" << t.seq_min_ns / k << " (" << t.seq_median_ns / k << ")"
+              << " cursor=" << t.cursor_min_ns / k << " (" << t.cursor_median_ns / k << ")"
+              << " ratio=" << t.cursor_min_ns / t.seq_min_ns << " (" << t.cursor_median_ns / t.seq_median_ns << ")"
               << "  mismatches=" << t.mismatches << std::endl;
 }
 
@@ -127,12 +132,16 @@ int main(int argc, char** argv) {
     CLI::App app{"Cost per key of m_seq against the MPHF key cursor over all hashed nodes of an H-CLTJ index"};
     std::string index_path;
     std::string csv_path;
-    uint32_t reps = 5;
+    uint32_t reps = 8;
     app.add_option("index", index_path, "Path to the .hcltj index")->required()->check(CLI::ExistingFile);
-    app.add_option("--reps", reps, "Timed repetitions of each form per node (default: 5)")
+    app.add_option("--reps", reps, "Timed repetitions of each form per node, a multiple of 4 (default: 8)")
         ->check(CLI::PositiveNumber);
     app.add_option("--csv", csv_path, "Per-node CSV path (default: stdout). Summary and progress go to stderr");
     CLI11_PARSE(app, argc, argv);
+    if (reps % 4 != 0) {
+        std::cerr << "ERROR: --reps must be a multiple of 4" << std::endl;
+        return 1;
+    }
 
     std::ofstream csv_file;
     if (!csv_path.empty()) {
@@ -146,7 +155,15 @@ int main(int argc, char** argv) {
 
     std::cerr << "Loading index: " << index_path << std::endl;
     cltj::compact_ltj_metatrie_hash index;
-    sdsl::load_from_file(index, index_path);
+    try {
+        if (!sdsl::load_from_file(index, index_path)) {
+            std::cerr << "ERROR: cannot load index: " << index_path << std::endl;
+            return 1;
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "ERROR: cannot load index: " << index_path << ": " << e.what() << std::endl;
+        return 1;
+    }
 
     csv << "trie,node_pos,degree,seq_ns_per_key_min,seq_ns_per_key_median,cursor_ns_per_key_min,"
            "cursor_ns_per_key_median\n";
@@ -159,16 +176,21 @@ int main(int argc, char** argv) {
         const auto& seq = trie->seq;
         std::vector<uint64_t> nodes = hashed_nodes(trie);
         std::cerr << trie_names[t] << ": " << nodes.size() << " hashed nodes" << std::endl;
+        if (nodes.size() != trie->mphf_count()) {
+            std::cerr << "ERROR: " << trie_names[t] << ": BFS found " << nodes.size() << " hashed nodes, the trie has "
+                      << trie->mphf_count() << " MPHFs" << std::endl;
+            return 1;
+        }
 
         for (uint64_t node : nodes) {
             const uint64_t degree = trie->children(node);
-            uint64_t mismatches = check_node(trie, node, degree);
+            uint64_t reference;
+            uint64_t mismatches = check_node(trie, node, degree, reference);
 
-            const uint64_t reference = sum_seq(seq, node, degree);
             for (uint32_t r = 0; r < reps; r++) {
                 uint64_t s_seq, s_cur, count;
-                // Alternate which form runs first so neither always finds the other's cache.
-                if (r % 2 == 0) {
+                // ABBA order: over every 4 reps each form runs first twice and follows itself once.
+                if (r % 4 == 0 || r % 4 == 3) {
                     auto a = clock_type::now();
                     s_seq = sum_seq(seq, node, degree);
                     auto b = clock_type::now();
@@ -213,7 +235,7 @@ int main(int argc, char** argv) {
     }
 
     Totals total;
-    std::cerr << "\n=== SUMMARY (reps=" << reps << ", ns/key weighted by keys) ===" << std::endl;
+    std::cerr << "\n=== SUMMARY (reps=" << reps << ", ns/key weighted by keys, min over reps (median)) ===" << std::endl;
     for (int t = 0; t < 6; t++) {
         print_totals(trie_names[t], per_trie[t]);
         total.add(per_trie[t]);
