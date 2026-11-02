@@ -93,6 +93,15 @@ function(add_cltj_executable name source_file output_dir)
   set_target_properties(${name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${output_dir})
 endfunction()
 
+# One C++17 binary per translation policy of H-CLTJ: ${name}-a (scheme A) and ${name}-c (scheme C)
+function(add_hcltj_policy_executables name source_file output_dir)
+  foreach(policy a c)
+    add_cltj_executable(${name}-${policy} ${source_file} ${output_dir} ${ARGN})
+    set_target_properties(${name}-${policy} PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+  endforeach()
+  target_compile_definitions(${name}-c PRIVATE CLTJ_OVERLAY_STEP_TABLE)
+endfunction()
+
 # Suppress warnings from external C library (hybridBV)
 if(TARGET hybridbv_gn)
   target_compile_options(hybridbv_gn PRIVATE -w)
@@ -107,6 +116,7 @@ add_cltj_executable(build-xcltj src/bench/build-xcltj.cpp bench hybridbv_gn)
 
 add_cltj_executable(build-hcltj src/bench/build-hcltj.cpp bench hybridbv_gn)
 set_target_properties(build-hcltj PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+add_hcltj_policy_executables(build-hcltj src/bench/build-hcltj.cpp bench hybridbv_gn)
 
 add_cltj_executable(build-xcltj-dyn src/bench/build-xcltj-dyn.cpp bench hybridbv_gn)
 
@@ -136,6 +146,9 @@ target_compile_definitions(bench-query-xcltj-global PRIVATE ADAPTIVE=0)
 
 add_cltj_executable(bench-query-hcltj src/bench/bench-query-hcltj.cpp bench)
 target_compile_definitions(bench-query-hcltj PRIVATE ADAPTIVE=1)
+add_hcltj_policy_executables(bench-query-hcltj src/bench/bench-query-hcltj.cpp bench)
+target_compile_definitions(bench-query-hcltj-a PRIVATE ADAPTIVE=1)
+target_compile_definitions(bench-query-hcltj-c PRIVATE ADAPTIVE=1)
 
 add_cltj_executable(bench-query-hcltj-global src/bench/bench-query-hcltj.cpp bench)
 target_compile_definitions(bench-query-hcltj-global PRIVATE ADAPTIVE=0)
@@ -153,6 +166,7 @@ set_target_properties(dump-trie-hcltj PROPERTIES CXX_STANDARD 17 CXX_STANDARD_RE
 
 add_cltj_executable(verify-mphf-hcltj src/bench/verify-mphf-hcltj.cpp analysis)
 set_target_properties(verify-mphf-hcltj PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+add_hcltj_policy_executables(verify-mphf-hcltj src/bench/verify-mphf-hcltj.cpp analysis)
 
 add_cltj_executable(inspect-node-hcltj src/bench/inspect-node-hcltj.cpp analysis)
 set_target_properties(inspect-node-hcltj PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
@@ -165,6 +179,7 @@ set_target_properties(bench-cursor-cost PROPERTIES CXX_STANDARD 17 CXX_STANDARD_
 
 add_cltj_executable(check-overlay-hcltj src/bench/check-overlay-hcltj.cpp analysis)
 set_target_properties(check-overlay-hcltj PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+add_hcltj_policy_executables(check-overlay-hcltj src/bench/check-overlay-hcltj.cpp analysis)
 
 add_cltj_executable(diff-overlay-hcltj src/bench/diff-overlay-hcltj.cpp analysis)
 set_target_properties(diff-overlay-hcltj PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
@@ -310,12 +325,14 @@ set_target_properties(test-children-histogram PROPERTIES CXX_STANDARD 17 CXX_STA
 
 add_cltj_executable(test-hcltj-correctness src/test/hcltj/test_hcltj_correctness.cpp test/hcltj)
 set_target_properties(test-hcltj-correctness PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+add_hcltj_policy_executables(test-hcltj-correctness src/test/hcltj/test_hcltj_correctness.cpp test/hcltj)
 
 add_cltj_executable(test-label-stream src/test/hcltj/test_label_stream.cpp test/hcltj)
 set_target_properties(test-label-stream PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
 add_cltj_executable(test-translation-overlay src/test/hcltj/test_translation_overlay.cpp test/hcltj)
 set_target_properties(test-translation-overlay PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+add_hcltj_policy_executables(test-translation-overlay src/test/hcltj/test_translation_overlay.cpp test/hcltj)
 
 add_cltj_executable(test-step-table-overlay src/test/hcltj/test_step_table_overlay.cpp test/hcltj)
 set_target_properties(test-step-table-overlay PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
