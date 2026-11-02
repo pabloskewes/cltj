@@ -22,6 +22,7 @@
 
 #include <cassert>
 #include <functional>
+#include <stdexcept>
 #include <triple_pattern.hpp>
 // #include <ltj_iterator.hpp>
 #include <dict/dict_map.hpp>
@@ -310,6 +311,12 @@ class ltj_algorithm_hash {
                 frame.emit();
             } else {
                 // TODO: add hash path here (same as search()) if join_str() needs it
+                for (ltj_iter_type* iter : itrs) {
+                    if (iter->current_node_has_hash(x_j))
+                        throw std::runtime_error(
+                            "join_str: leapfrog reached a hashed node, which search_str does not support"
+                        );
+                }
                 value_type c = seek(x_j);
                 // cout << "Seek (init): (" << (uint64_t) x_j << ": " << c << ")"
                 // <<endl;
