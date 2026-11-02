@@ -56,17 +56,15 @@ class StepTableOverlay : public OverlayPolicy<StepTableOverlay> {
         m_cum_deleted.swap(o.m_cum_deleted);
     }
 
-    bool has_dict(size_type v) const {
-        size_type r = rank(v);
-        return r < m_hashed_start.size() && m_hashed_start[r] == v;
-    }
+    bool has_dict(size_type v) const { return has_dict(v, rank(v)); }
+
+    bool has_dict(size_type v, size_type r) const { return r < m_hashed_start.size() && m_hashed_start[r] == v; }
 
     size_type dict_idx(size_type v) const { return rank(v); }
 
-    size_type plain_start(size_type v) const {
-        size_type r = rank(v);
-        return v - (r ? m_cum_deleted[r - 1] : 0);
-    }
+    size_type plain_start(size_type v) const { return plain_start(v, rank(v)); }
+
+    size_type plain_start(size_type v, size_type r) const { return v - (r ? m_cum_deleted[r - 1] : 0); }
 
     void begin(size_type, size_type) {
         m_hashed_start.clear();

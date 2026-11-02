@@ -64,9 +64,13 @@ class SepBitmapOverlay : public OverlayPolicy<SepBitmapOverlay> {
 
     bool has_dict(size_type v) const { return m_has_hash[v]; }
 
+    bool has_dict(size_type v, size_type) const { return m_has_hash[v]; }
+
     size_type dict_idx(size_type v) const { return m_hash_rank(v); }
 
-    size_type plain_start(size_type v) const { return m_lsep_select(m_bv_rank0(v) - m_hash_rank(v) + 1); }
+    size_type plain_start(size_type v) const { return plain_start(v, m_hash_rank(v)); }
+
+    size_type plain_start(size_type v, size_type r) const { return m_lsep_select(m_bv_rank0(v) - r + 1); }
 
     void begin(size_type louds_len, size_type plain_len) {
         m_has_hash = sdsl::bit_vector(louds_len, 0);

@@ -58,6 +58,12 @@ class OverlayPolicy {
 
     size_type plain_start(size_type v) const { return derived().plain_start(v); }
 
+    //! has_dict(v) when r = dict_idx(v) is already known
+    bool has_dict(size_type v, size_type r) const { return derived().has_dict(v, r); }
+
+    //! plain_start(v) when r = dict_idx(v) is already known
+    size_type plain_start(size_type v, size_type r) const { return derived().plain_start(v, r); }
+
     /**
      * @brief Start a build
      * @param louds_len |B|, sentinel included
