@@ -30,8 +30,8 @@ class compact_metatrie_hash {
     typedef Overlay overlay_type;
 
     // Every serialized trie starts with this tag; its low byte is the format version:
-    //   (no tag)  before LTJ-25: the stream starts with the bit size of B, which never
-    //             reaches the high bytes of the tag, so load() rejects it
+    //   (no tag)  pre-overlay format: the stream starts with the bit size of B, which
+    //             never reaches the high bytes of the tag, so load() rejects it
     //   1         dual phase: L and L_plain both stored, scheme A overlay
     static constexpr uint64_t format_tag = 0x48434C544A000000ULL | Overlay::format_version;
 
@@ -210,6 +210,9 @@ class compact_metatrie_hash {
         size_type mphf_idx = m_overlay.dict_idx(node_pos);
         return m_mphfs[mphf_idx].keys();
     }
+
+    //! Number of keys of the MPHF of the hashed node at @p node_pos.
+    uint32_t hash_size(size_type node_pos) const { return m_mphfs[m_overlay.dict_idx(node_pos)].n(); }
 
     //! True iff the MPHF of the hashed node at @p node_pos keeps part of its keys in the fallback.
     bool hash_has_fallback(size_type node_pos) const {
@@ -422,7 +425,8 @@ class compact_metatrie_hash {
                 if (is_hashed) {
                     // Hashed node: build permutation from MPHF
                     size_type mphf_idx = build_hash_rank(old_pos);
-                    assert(m_mphfs[mphf_idx].n() == n_children);
+                    if (m_mphfs[mphf_idx].n() != n_children)
+                        throw std::runtime_error("reorder_louds_by_mphf: MPHF size differs from the node degree");
                     assert(n_children >= m_threshold && "has_dict(v) implies deg(v) >= threshold");
                     for (size_type i = 0; i < n_children; i++) {
                         value_type key = m_seq[old_pos + i];
@@ -445,7 +449,8 @@ class compact_metatrie_hash {
                 }
                 seq_cursor += n_children;
                 if (!is_hashed) {
-                    assert(plain_cursor + n_children <= plain_len);
+                    if (plain_cursor + n_children > plain_len)
+                        throw std::runtime_error("reorder_louds_by_mphf: non-hashed blocks overflow L_plain");
                     for (size_type i = 0; i < n_children; i++)
                         new_plain[plain_cursor + i] = m_seq[old_pos + i];
                     plain_cursor += n_children;
@@ -472,7 +477,8 @@ class compact_metatrie_hash {
         }
 
         assert(seq_cursor + 1 == seq_len);
-        assert(plain_cursor == plain_len);
+        if (plain_cursor != plain_len)
+            throw std::runtime_error("reorder_louds_by_mphf: non-hashed blocks do not fill L_plain");
         new_bv[seq_cursor] = 0;  // Restore the trailing LOUDS sentinel after the last explicit node.
 
         // 4. Install new arrays and rebuild supports

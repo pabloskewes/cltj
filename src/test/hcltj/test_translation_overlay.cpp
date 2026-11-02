@@ -199,7 +199,7 @@ int main(int argc, char** argv) {
         }
     }
 
-    // A pre-LTJ-25 trie starts with the bit size of B; a wrong version byte is rejected too.
+    // A pre-overlay trie starts with the bit size of B; a wrong version byte is rejected too.
     {
         auto expect_rejected = [](std::stringstream& ss, const std::string& what) {
             trie_type trie;

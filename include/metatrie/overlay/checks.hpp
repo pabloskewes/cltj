@@ -35,6 +35,33 @@ inline void print_report(std::ostream& os, const std::string& name, const CheckR
         os << "    " << m << "\n";
 }
 
+// The key cursor of the hashed node v emits exactly deg keys, the k-th with slot k and key L[v + k].
+template <class Trie>
+void check_cursor(const Trie& trie, uint64_t v, uint64_t deg, CheckReport& rep) {
+    const auto& seq = trie.seq;
+    uint64_t k = 0;
+    bool extra = false;
+    for (auto cur = trie.hash_keys(v); cur.next(); k++) {
+        if (k >= deg) {
+            extra = true;
+            break;
+        }
+        rep.comparisons++;
+        if (cur.slot() != k || cur.key() != seq[v + k]) {
+            std::ostringstream m;
+            m << "v=" << v << " k=" << k << ": cursor (slot " << cur.slot() << ", key " << cur.key()
+              << ") vs L=" << seq[v + k];
+            rep.fail(m.str());
+        }
+    }
+    if (extra || k != deg) {
+        std::ostringstream m;
+        m << "v=" << v << ": cursor emitted " << (extra ? "more than" : "only") << " " << k
+          << " keys, deg=" << deg;
+        rep.fail(m.str());
+    }
+}
+
 /**
  * @brief Ground truth of the dual phase, for any translation policy.
  *
@@ -43,8 +70,8 @@ inline void print_report(std::ostream& os, const std::string& name, const CheckR
  *   - plain_start(v) equals that count, for every node, and dict_idx(v) == r for hashed ones;
  *   - non-hashed v: plain_start(v) + deg(v) <= |L_plain| and
  *     L_plain[plain_start(v) + k] == L[v + k] for every k < deg(v);
- *   - hashed v: deg(v) >= threshold, and the key cursor emits exactly deg(v) keys with
- *     slot k and key L[v + k];
+ *   - hashed v: deg(v) >= threshold, dict_idx(v) < mphf_count(), its MPHF has deg(v) keys,
+ *     and the key cursor emits exactly deg(v) keys with slot k and key L[v + k];
  *   - the blocks cover L_plain and L (minus its mock) exactly, and r ends at mphf_count().
  */
 template <class Trie>
@@ -79,26 +106,17 @@ CheckReport check_dual_phase(const Trie& trie) {
                 m << "v=" << v << ": dict_idx=" << ov.dict_idx(v) << ", expected " << r;
                 rep.fail(m.str());
             }
-            uint64_t k = 0;
-            bool extra = false;
-            for (auto cur = trie.hash_keys(v); cur.next(); k++) {
-                if (k >= deg) {
-                    extra = true;
-                    break;
-                }
-                rep.comparisons++;
-                if (cur.slot() != k || cur.key() != seq[v + k]) {
-                    std::ostringstream m;
-                    m << "v=" << v << " k=" << k << ": cursor (slot " << cur.slot() << ", key " << cur.key()
-                      << ") vs L=" << seq[v + k];
-                    rep.fail(m.str());
-                }
-            }
-            if (extra || k != deg) {
+            rep.comparisons++;
+            if (ov.dict_idx(v) >= trie.mphf_count()) {
                 std::ostringstream m;
-                m << "v=" << v << ": cursor emitted " << (extra ? "more than" : "only") << " " << k
-                  << " keys, deg=" << deg;
+                m << "v=" << v << ": dict_idx=" << ov.dict_idx(v) << " >= mphf_count=" << trie.mphf_count();
                 rep.fail(m.str());
+            } else if (trie.hash_size(v) != deg) {
+                std::ostringstream m;
+                m << "v=" << v << ": MPHF has " << trie.hash_size(v) << " keys, deg=" << deg;
+                rep.fail(m.str());
+            } else {
+                check_cursor(trie, v, deg, rep);
             }
             r++;
             rep.hashed_nodes++;
