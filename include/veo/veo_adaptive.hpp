@@ -251,9 +251,9 @@ public:
       list_iterator_type min_iter;
       // Lineal search on variables that are not is_bound
       for (auto iter = m_not_bound.begin(); iter != m_not_bound.end(); ++iter) {
-        // Take the one with the smallest weight
+        // Take the one with the smallest weight; ties go to the smallest pos
         const auto &v = m_var_info[*iter];
-        if (min > v.weight) {
+        if (min > v.weight || (min == v.weight && *iter < *min_iter)) {
           min = v.weight;
           min_iter = iter;
         }
