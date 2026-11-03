@@ -265,16 +265,20 @@ class compact_metatrie_hash {
      *
      * Must be called before reorder_louds_by_mphf() (which changes the layout).
      * Returns perm such that perm[slot] = old_child_index.
-     * If the root is not hashed, returns an empty vector (identity is implied).
+     * If the root is not hashed, returns the identity: the result is never empty,
+     * so the partial trie always takes the first-level path of reorder_louds_by_mphf().
      */
     std::vector<size_type> extract_root_permutation() const {
         assert(!m_build_has_hash.empty() && "call between build_hash_overlay() and reorder_louds_by_mphf()");
-        if (!m_build_has_hash[0])
-            return {};
         size_type d = children(0);
+        std::vector<size_type> perm(d);
+        if (!m_build_has_hash[0]) {
+            for (size_type i = 0; i < d; i++)
+                perm[i] = i;
+            return perm;
+        }
         // build_hash_overlay() visits the root first, so its MPHF is the first one.
         size_type mphf_idx = 0;
-        std::vector<size_type> perm(d);
         for (size_type i = 0; i < d; i++) {
             value_type key = m_build_seq[i];
             auto [found, slot] = m_mphfs[mphf_idx].locate(key);

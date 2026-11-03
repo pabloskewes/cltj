@@ -134,7 +134,8 @@ int main(int argc, char** argv) {
         expect(shapes[1].mphfs > 0 && shapes[1].root_hashed, "SOP (partial) hashed, node 0 included");
     }
 
-    // No MPHF anywhere: every trie takes the early return of reorder_louds_by_mphf().
+    // No MPHF anywhere: the full tries take the early return of reorder_louds_by_mphf(), the
+    // partial tries its first-level path with the identity permutation.
     {
         auto shapes = check_index(build_index(grid(5, 2, 6), 1000), "grid 5x2x6, t=1000");
         for (int i = 0; i < 6; i++)
