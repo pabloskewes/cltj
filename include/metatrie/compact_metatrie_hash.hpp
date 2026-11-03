@@ -17,6 +17,7 @@
 #include <hashing/storage/glgh.hpp>
 #include <metatrie/overlay/sep_bitmap.hpp>
 #include <metatrie/overlay/step_table.hpp>
+#include <metatrie/overlay/step_table_rb.hpp>
 #include <sdsl/rank_support_v.hpp>
 #include <stdexcept>
 #include <util/instrument.hpp>
@@ -42,8 +43,13 @@ class compact_metatrie_hash {
     //   2         scheme A overlay (SepBitmapOverlay)
     //   3         scheme C overlay (StepTableOverlay)
     //   4         cltj_index_metatrie_rb (X-CLTJ with root bitmap), one tag per index
+    //   5         scheme C overlay with the root block out of L_plain (StepTableRbOverlay)
     static constexpr uint64_t format_magic = 0x48434C544A000000ULL;
     static constexpr uint64_t format_tag = format_magic | Overlay::format_version;
+
+    // The children of the root of a full trie live in a root_bitmap: its block is not in L_plain
+    // and the root must not be hashed.
+    static constexpr bool drops_root_labels = Overlay::drops_root_labels;
 
   private:
     using mphf_type = hashing::MPHF<hashing::GlGhStorage, hashing::policies::QuotientKey>;
@@ -90,19 +96,25 @@ class compact_metatrie_hash {
      * @brief Builds L_plain and the overlay of a trie without MPHFs.
      *
      * The layout stays as built: every node is non-hashed and L_plain is L
-     * without its mock.
+     * without its mock (and without the root block, with drops_root_labels).
+     * Only reached on a full trie: a partial trie always gets a root_perm.
      */
     void build_plain_overlay() {
-        const size_type plain_len = m_build_seq.size() - 1;
+        const size_type dropped = drops_root_labels ? children(0) : 0;
+        const size_type plain_len = m_build_seq.size() - 1 - dropped;
         m_seq_plain = sdsl::int_vector<>(plain_len, 0, m_build_seq.width());
         for (size_type i = 0; i < plain_len; i++)
-            m_seq_plain[i] = m_build_seq[i];
+            m_seq_plain[i] = m_build_seq[dropped + i];
         sdsl::util::bit_compress(m_seq_plain);
 
         Overlay new_overlay;
         new_overlay.begin(m_bv.size(), plain_len);
-        for (size_type v = 0; v + 1 < m_bv.size(); v += children(v))
-            new_overlay.on_plain_node(v, children(v));
+        for (size_type v = 0; v + 1 < m_bv.size(); v += children(v)) {
+            if (drops_root_labels && v == 0)
+                new_overlay.on_dropped_root(children(v));
+            else
+                new_overlay.on_plain_node(v, children(v));
+        }
         m_overlay = std::move(new_overlay);
         m_overlay.finalize(m_bv, m_threshold);
         release_build_scratch();
@@ -406,6 +418,7 @@ class compact_metatrie_hash {
      * the build scratch (L included) is released.
      *
      * For non-hashed nodes children remain in their original (sorted) order.
+     * With drops_root_labels, the root block of a full trie is not copied to L_plain.
      *
      * @param root_perm  If non-empty, use this permutation for the root's
      *                   children instead of the root's own MPHF.  This is
@@ -420,12 +433,17 @@ class compact_metatrie_hash {
         }
 
         // 1. Init variables
+        const bool is_partial_trie = !root_perm.empty();
+        const bool drop_root = drops_root_labels && !is_partial_trie;
+        if (drop_root && m_build_has_hash[0])
+            throw std::runtime_error("reorder_louds_by_mphf: the root block leaves L_plain, so the root must not be hashed (skip_root)");
         const size_type bv_len = m_bv.size();
         const size_type seq_len = m_build_seq.size();
         size_type hashed_labels = 0;
         for (const auto& mphf : m_mphfs)
             hashed_labels += mphf.n();
-        const size_type plain_len = seq_len - 1 - hashed_labels;  // the -1 is the mock of L
+        const size_type dropped_labels = drop_root ? children(0) : 0;
+        const size_type plain_len = seq_len - 1 - hashed_labels - dropped_labels;  // the -1 is the mock of L
 
         sdsl::bit_vector new_bv(bv_len, 1);
         sdsl::int_vector<> new_plain(plain_len, 0, m_build_seq.width());
@@ -441,7 +459,6 @@ class compact_metatrie_hash {
         size_type num_zeros = count_bits(m_bv, 0);
 
         // 2. Initialize "current_level" queue for BFS
-        const bool is_partial_trie = !root_perm.empty();
         std::vector<size_type> current_level;
         if (is_partial_trie) {
             // Partial trie: must use the same permutation as its full trie counterpart
@@ -466,6 +483,7 @@ class compact_metatrie_hash {
             for (auto old_pos : current_level) {
                 size_type new_pos = seq_cursor;
                 size_type n_children = children(old_pos);
+                const bool is_dropped_root = drop_root && old_pos == 0;
 
                 // 3.1. Build permutation
                 std::vector<size_type> perm(n_children);
@@ -487,13 +505,16 @@ class compact_metatrie_hash {
                     // When not hashed, perm is the identity
                     for (size_type i = 0; i < n_children; i++)
                         perm[i] = i;
-                    new_overlay.on_plain_node(new_pos, n_children);
+                    if (is_dropped_root)
+                        new_overlay.on_dropped_root(n_children);
+                    else
+                        new_overlay.on_plain_node(new_pos, n_children);
                 }
 
                 // 3.2. Emit the block; the labels of non-hashed nodes go to L_plain in sorted order
                 new_bv[new_pos] = 0;
                 seq_cursor += n_children;
-                if (!is_hashed) {
+                if (!is_hashed && !is_dropped_root) {
                     if (plain_cursor + n_children > plain_len)
                         throw std::runtime_error("reorder_louds_by_mphf: non-hashed blocks overflow L_plain");
                     for (size_type i = 0; i < n_children; i++)
@@ -630,8 +651,19 @@ class compact_metatrie_hash {
         return node_pos - m_overlay.plain_start(node_pos, r);
     }
 
+    //! Labels of the root block that are not in L_plain: deg(root) in a full trie with drops_root_labels, else 0.
+    size_type dropped_root_labels() const {
+        if constexpr (drops_root_labels)
+            return m_overlay.root_deleted();
+        else
+            return 0;
+    }
+
     //! Label at LOUDS position @p pos of a non-hashed node with deleted_before() == @p off.
-    value_type plain_label(size_type pos, size_type off) const { return m_seq_plain[pos - off]; }
+    value_type plain_label(size_type pos, size_type off) const {
+        assert(pos >= off && pos - off < m_seq_plain.size() && "position outside L_plain");
+        return m_seq_plain[pos - off];
+    }
 
     /**
      * @brief Binary search in the block of a non-hashed node.

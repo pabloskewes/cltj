@@ -3,6 +3,7 @@
 #include <sdsl/structure_tree.hpp>
 #include <cstdint>
 #include <iostream>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -52,6 +53,9 @@ class OverlayPolicy {
   public:
     typedef uint64_t size_type;
 
+    //! True if the root block of a full trie is left out of L_plain (on_dropped_root() instead of on_plain_node())
+    static constexpr bool drops_root_labels = false;
+
     bool has_dict(size_type v) const { return derived().has_dict(v); }
 
     size_type dict_idx(size_type v) const { return derived().dict_idx(v); }
@@ -74,6 +78,8 @@ class OverlayPolicy {
     void on_hashed_node(size_type new_pos, size_type d) { derived().on_hashed_node(new_pos, d); }
 
     void on_plain_node(size_type new_pos, size_type d) { derived().on_plain_node(new_pos, d); }
+
+    void on_dropped_root(size_type) { throw std::logic_error("this policy keeps the root block in L_plain"); }
 
     void finalize(const sdsl::bit_vector& bv, uint32_t threshold) { derived().finalize(bv, threshold); }
 

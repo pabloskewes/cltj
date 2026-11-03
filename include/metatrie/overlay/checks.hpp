@@ -1,6 +1,7 @@
 #pragma once
 #include "sep_bitmap.hpp"
 #include "step_table.hpp"
+#include "step_table_rb.hpp"
 #include <cstdint>
 #include <iostream>
 #include <sdsl/structure_tree.hpp>
@@ -54,6 +55,8 @@ struct no_truth {};
  *   - hashed v: deg(v) >= threshold, dict_idx(v) < mphf_count(), its MPHF has deg(v) keys,
  *     and the key cursor emits exactly deg(v) keys, the k-th with slot k;
  *   - the blocks cover L_plain and B exactly, and r ends at mphf_count().
+ * With dropped_root_labels() > 0 the root block is not in L_plain: v = 0 has to be unhashed
+ * with that degree, and its labels only count for B.
  *
  * @p truth gives L: truth() returns the next label of L in position order. Then
  * L_plain[plain_start(v) + k] == L[v + k] for non-hashed v and cursor(v)[k] == L[v + k]
@@ -67,6 +70,8 @@ CheckReport check_labels(const Trie& trie, Truth truth = {}, uint64_t max_messag
     const auto& plain = trie.seq_plain();
     const auto& ov = trie.overlay();
     const uint64_t louds = trie.louds_size();
+    const uint64_t dropped = trie.dropped_root_labels();
+    uint64_t dropped_labels = 0;
     uint64_t plain_cursor = 0;
     uint64_t r = 0;
 
@@ -90,6 +95,17 @@ CheckReport check_labels(const Trie& trie, Truth truth = {}, uint64_t max_messag
 
     for (uint64_t v = 0, deg = 0; v + 1 < louds; v += deg) {
         deg = trie.children(v);
+        if (v == 0 && dropped) {
+            rep.comparisons += 2;
+            if (deg != dropped || ov.has_dict(0)) {
+                std::ostringstream m;
+                m << "v=0: dropped root block of " << dropped << " labels, deg=" << deg << ", hashed=" << ov.has_dict(0);
+                rep.fail(m.str());
+            }
+            skip(deg);
+            dropped_labels = deg;
+            continue;
+        }
         const uint64_t s = ov.plain_start(v);
         rep.comparisons++;
         if (s != plain_cursor) {
@@ -179,9 +195,9 @@ CheckReport check_labels(const Trie& trie, Truth truth = {}, uint64_t max_messag
         m << "non-hashed blocks hold " << plain_cursor << " labels, |L_plain|=" << plain.size();
         rep.fail(m.str());
     }
-    if (rep.plain_labels + rep.hashed_labels + 1 != louds) {
+    if (rep.plain_labels + rep.hashed_labels + dropped_labels + 1 != louds) {
         std::ostringstream m;
-        m << "blocks hold " << rep.plain_labels + rep.hashed_labels << " labels, |B|-1=" << louds - 1;
+        m << "blocks hold " << rep.plain_labels + rep.hashed_labels + dropped_labels << " labels, |B|-1=" << louds - 1;
         rep.fail(m.str());
     }
     if (r != trie.mphf_count()) {
@@ -259,7 +275,8 @@ CheckReport check_sep_bitmap(const Trie& trie) {
  *
  * The r-th hashed node v in position order has hashed_start[r] == v and
  * cum_deleted[r] - cum_deleted[r - 1] == deg(v); the table has one row per MPHF and its
- * last cum_deleted is |B| - 1 - |L_plain|, |B| - 1 being the number of labels of L.
+ * last cum_deleted is |B| - 1 - |L_plain| - dropped_root_labels(), |B| - 1 being the number of
+ * labels of L.
  */
 template <class Trie>
 CheckReport check_step_table(const Trie& trie) {
@@ -313,9 +330,10 @@ CheckReport check_step_table(const Trie& trie) {
         m << r << " hashed nodes, " << rows << " rows";
         rep.fail(m.str());
     }
-    if (cum + trie.seq_plain().size() + 1 != trie.louds_size()) {
+    const uint64_t dropped = trie.dropped_root_labels();
+    if (cum + dropped + trie.seq_plain().size() + 1 != trie.louds_size()) {
         std::ostringstream m;
-        m << "hashed blocks hold " << cum << " labels, |B|-1-|L_plain|=" << trie.louds_size() - 1 - trie.seq_plain().size();
+        m << "hashed blocks hold " << cum << " labels, |B|-1-|L_plain|-dropped_root=" << trie.louds_size() - 1 - trie.seq_plain().size() - dropped;
         rep.fail(m.str());
     }
     return rep;
@@ -329,6 +347,11 @@ CheckReport check_policy(const Trie& trie, const SepBitmapOverlay&) {
 
 template <class Trie>
 CheckReport check_policy(const Trie& trie, const StepTableOverlay&) {
+    return check_step_table(trie);
+}
+
+template <class Trie>
+CheckReport check_policy(const Trie& trie, const StepTableRbOverlay&) {
     return check_step_table(trie);
 }
 
