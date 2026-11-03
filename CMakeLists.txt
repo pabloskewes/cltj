@@ -159,6 +159,7 @@ set_target_properties(stats-hcltj PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIR
 if(CLTJ_COLLECT_QUERY_STATS)
   add_cltj_executable(stats-intersections src/bench/stats-intersections.cpp analysis)
   set_target_properties(stats-intersections PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+  add_hcltj_policy_executables(stats-intersections src/bench/stats-intersections.cpp analysis)
 endif()
 
 add_cltj_executable(dump-trie-hcltj src/bench/dump-trie-hcltj.cpp analysis)
