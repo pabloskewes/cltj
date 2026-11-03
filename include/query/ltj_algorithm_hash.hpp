@@ -504,6 +504,57 @@ class ltj_algorithm_hash {
                         iter->leap_done();
                     }
                     frame.emit();
+#ifdef LTJ26_MIXED_MIN
+                } else if (std::find(hashed_itrs.begin(), hashed_itrs.end(), itrs[min_idx]) != hashed_itrs.end()) {
+                    // Mixed frame whose smallest list is hashed: scan it, probe the other hashed iterators
+                    // with hash_contains and the sorted ones with exists().
+                    ltj_iter_type* mi = itrs[min_idx];
+                    auto [beg, end_pos] = mi->children_range();
+                    const auto* scan_trie = mi->resolve_trie();
+                    cltj::query::CandidateFrame<TRACE_QUERY, tuple_type> frame(
+                        m_tracer, "hybrid-min", j, x_j, tuple
+                    );
+
+                    auto keys = scan_trie->hash_keys(mi->parent(), mi->parent_r());
+                    while (keys.next()) {
+                        const size_type pos = beg + keys.slot();
+                        value_type c = keys.key();
+                        if constexpr (COLLECT_QUERY_STATS)
+                            stats.candidates++;
+                        if (!candidate_in_hashed_iterators(x_j, c, hashed_itrs, mi))
+                            continue;
+                        bool in_all = true;
+                        for (ltj_iter_type* iter : sorted_itrs) {
+                            if (!iter->exists(state_for(iter, x_j), c)) {
+                                in_all = false;
+                                break;
+                            }
+                        }
+                        if (!in_all)
+                            continue;
+                        if constexpr (COLLECT_QUERY_STATS)
+                            stats.result_size++;
+                        tuple[j] = {x_j, c};
+                        frame.add(c);
+                        mi->set_level_status(pos, beg, end_pos - beg);
+                        position_hashed_iterators(x_j, c, hashed_itrs, mi);
+                        for (ltj_iter_type* iter : itrs) {
+                            iter->down(x_j, c);
+                        }
+                        m_veo.down();
+                        ok = search(j + 1, tuple, res, start, limit_results, timeout_seconds);
+                        if (!ok)
+                            return false;
+                        for (ltj_iter_type* iter : itrs) {
+                            iter->up(x_j);
+                        }
+                        m_veo.up();
+                    }
+                    for (ltj_iter_type* iter : itrs) {
+                        iter->leap_done();
+                    }
+                    frame.emit();
+#endif
                 } else {
                     // At least one iterator is sorted: leapfrog on sorted_itrs, hash-filter on hashed_itrs.
                     value_type c = seek_on_iterators(x_j, sorted_itrs);
