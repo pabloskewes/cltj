@@ -171,6 +171,10 @@ add_cltj_executable(bench-query-hcltj-c-rb-mm src/bench/bench-query-hcltj.cpp be
 target_compile_definitions(bench-query-hcltj-c-rb-mm PRIVATE ADAPTIVE=1 CLTJ_OVERLAY_STEP_TABLE CLTJ_ROOT_BITMAP LTJ26_MIXED_MIN)
 set_target_properties(bench-query-hcltj-c-rb-mm PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
+add_cltj_executable(bench-query-hcltj-c-rb-ss src/bench/bench-query-hcltj.cpp bench)
+target_compile_definitions(bench-query-hcltj-c-rb-ss PRIVATE ADAPTIVE=1 CLTJ_OVERLAY_STEP_TABLE CLTJ_ROOT_BITMAP LTJ26_MIXED_MIN LTJ26_SORTED_SCAN)
+set_target_properties(bench-query-hcltj-c-rb-ss PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+
 add_cltj_executable(bench-query-hcltj-global src/bench/bench-query-hcltj.cpp bench)
 target_compile_definitions(bench-query-hcltj-global PRIVATE ADAPTIVE=0)
 
@@ -184,6 +188,9 @@ if(CLTJ_COLLECT_QUERY_STATS)
   add_cltj_executable(stats-intersections-c-mm src/bench/stats-intersections.cpp analysis)
   target_compile_definitions(stats-intersections-c-mm PRIVATE CLTJ_OVERLAY_STEP_TABLE LTJ26_MIXED_MIN)
   set_target_properties(stats-intersections-c-mm PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+  add_cltj_executable(stats-intersections-c-ss src/bench/stats-intersections.cpp analysis)
+  target_compile_definitions(stats-intersections-c-ss PRIVATE CLTJ_OVERLAY_STEP_TABLE LTJ26_MIXED_MIN LTJ26_SORTED_SCAN)
+  set_target_properties(stats-intersections-c-ss PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 endif()
 
 add_cltj_executable(dump-trie-hcltj src/bench/dump-trie-hcltj.cpp analysis)
