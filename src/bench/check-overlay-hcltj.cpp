@@ -1,5 +1,11 @@
 #include <CLI11.hpp>
+#ifdef CLTJ_ROOT_BITMAP
+#include <index/cltj_index_metatrie_hash_rb.hpp>
+using index_type = cltj::compact_ltj_metatrie_hash_rb;
+#else
 #include <index/cltj_index_metatrie.hpp>
+using index_type = cltj::compact_ltj_metatrie_hash;
+#endif
 #include <metatrie/overlay/checks.hpp>
 #include <iostream>
 
@@ -9,7 +15,7 @@ int main(int argc, char** argv) {
     app.add_option("index", index_file, "H-CLTJ index file (.hcltj)")->required();
     CLI11_PARSE(app, argc, argv);
 
-    cltj::compact_ltj_metatrie_hash index;
+    index_type index;
     if (!sdsl::load_from_file(index, index_file)) {
         std::cerr << "cannot load " << index_file << std::endl;
         return 1;

@@ -5,7 +5,13 @@
 //     slot} (zero false negatives)
 //   - sampled non-members must return hash_contains() == false (zero false positives)
 // Usage: verify-mphf-hcltj <path-to-index.hcltj>
+#ifdef CLTJ_ROOT_BITMAP
+#include <index/cltj_index_metatrie_hash_rb.hpp>
+using index_type = cltj::compact_ltj_metatrie_hash_rb;
+#else
 #include <index/cltj_index_metatrie.hpp>
+using index_type = cltj::compact_ltj_metatrie_hash;
+#endif
 
 #include <algorithm>
 #include <cstdint>
@@ -28,7 +34,7 @@ struct TrieStats {
     uint64_t cursor_mismatches = 0;
 };
 
-static TrieStats verify_trie(cltj::compact_metatrie_hash<>* trie, const char* name) {
+template <class Trie> static TrieStats verify_trie(Trie* trie, const char* name) {
     TrieStats stats;
 
     uint64_t bv_size = trie->louds_size();
@@ -140,7 +146,7 @@ int main(int argc, char** argv) {
     f.close();
 
     std::cout << "Loading index: " << index_path << std::endl;
-    cltj::compact_ltj_metatrie_hash index;
+    index_type index;
     sdsl::load_from_file(index, index_path);
     std::cout << "Index loaded: " << sdsl::size_in_bytes(index) << " bytes" << std::endl;
 

@@ -1,9 +1,17 @@
 // Serialized bytes of an H-CLTJ index, one line per trie with the bytes of every member
 // (get_size_breakdown), plus the sdsl structure tree as JSON. Exits with 1 if the members
-// do not add up to the serialized size.
+// do not add up to the serialized size. With the root bitmap, one more line with every bitmap
+// and support of the root bitmap; root_block_bits is the block of the root in B (its degree),
+// part of bv, which stays in B while its labels leave L_plain.
 // Usage: size-breakdown-hcltj <index.hcltj> <out.json>
 #include <CLI11.hpp>
+#ifdef CLTJ_ROOT_BITMAP
+#include <index/cltj_index_metatrie_hash_rb.hpp>
+using index_type = cltj::compact_ltj_metatrie_hash_rb;
+#else
 #include <index/cltj_index_metatrie.hpp>
+using index_type = cltj::compact_ltj_metatrie_hash;
+#endif
 #include <sdsl/io.hpp>
 
 #include <cstdint>
@@ -18,6 +26,8 @@ static void print_policy(const cltj::overlay::SepBitmapOverlay& ov) {
 
 static void print_policy(const cltj::overlay::StepTableOverlay&) {}
 
+static void print_policy(const cltj::overlay::StepTableRbOverlay& ov) { std::cout << " root_deleted=" << ov.root_deleted(); }
+
 int main(int argc, char** argv) {
     CLI::App app{"Size breakdown of an H-CLTJ index"};
     std::string index_file, json_file;
@@ -25,7 +35,6 @@ int main(int argc, char** argv) {
     app.add_option("out", json_file, "Output JSON with the sdsl structure tree")->required();
     CLI11_PARSE(app, argc, argv);
 
-    using index_type = cltj::compact_ltj_metatrie_hash;
     using overlay_type = index_type::trie_type::overlay_type;
     static const char* names[] = {"SPO", "SOP", "POS", "PSO", "OSP", "OPS"};
 
@@ -41,6 +50,10 @@ int main(int argc, char** argv) {
 
         bool ok = true;
         uint64_t sum_tries = 0;
+        uint64_t root_bytes = 0;
+#ifdef CLTJ_ROOT_BITMAP
+        uint64_t root_block_bits = 0;
+#endif
         for (int t = 0; t < 6; t++) {
             const auto* trie = index.get_trie(t);
             const uint64_t trie_bytes = sdsl::size_in_bytes(*trie);
@@ -59,6 +72,12 @@ int main(int argc, char** argv) {
                       << " plain_width=" << int(trie->seq_plain().width()) << " mphfs=" << trie->mphf_count()
                       << " hashed_nodes=" << hashed_nodes << " hashed_keys=" << hashed_keys;
             print_policy(trie->overlay());
+#ifdef CLTJ_ROOT_BITMAP
+            if (t % 2 == 0) {
+                std::cout << " root_block_bits=" << trie->root_degree();
+                root_block_bits += trie->root_degree();
+            }
+#endif
             for (const auto& c : breakdown.components)
                 std::cout << " " << c.first << "=" << c.second;
             std::cout << " sum=" << breakdown.total_bytes() << std::endl;
@@ -70,8 +89,28 @@ int main(int argc, char** argv) {
             }
             sum_tries += trie_bytes;
         }
-        if (sum_tries != index_bytes) {
-            std::cerr << "ERROR: tries add up to " << sum_tries << " of " << index_bytes << " bytes" << std::endl;
+#ifdef CLTJ_ROOT_BITMAP
+        root_bytes = sdsl::size_in_bytes(index.root());
+        uint64_t root_sum = 0;
+        std::cout << "root bytes=" << root_bytes;
+        for (const auto& c : index.root().size_components()) {
+            std::cout << " " << c.first << "=" << c.second;
+            root_sum += c.second;
+        }
+        for (int st = 0; st < 3; st++)
+            std::cout << " " << "spo"[st] << ".universe=" << index.root().universe(static_cast<state_type>(st))
+                      << " " << "spo"[st] << ".count=" << index.root().count(static_cast<state_type>(st));
+        std::cout << " sum=" << root_sum << std::endl;
+        if (root_sum != root_bytes) {
+            std::cerr << "ERROR: root bitmap members add up to " << root_sum << " of " << root_bytes << " bytes"
+                      << std::endl;
+            ok = false;
+        }
+        std::cout << "root_block_bits_in_b=" << root_block_bits << std::endl;
+#endif
+        if (sum_tries + root_bytes != index_bytes) {
+            std::cerr << "ERROR: tries and root bitmap add up to " << sum_tries + root_bytes << " of " << index_bytes
+                      << " bytes" << std::endl;
             ok = false;
         }
 

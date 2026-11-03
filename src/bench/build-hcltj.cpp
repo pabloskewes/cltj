@@ -1,9 +1,21 @@
 #include <CLI11.hpp>
+#ifdef CLTJ_ROOT_BITMAP
+#include <index/cltj_index_metatrie_hash_rb.hpp>
+#else
 #include <index/cltj_index_metatrie.hpp>
+#endif
 #include <iostream>
 
 using namespace std::chrono;
 using timer = std::chrono::high_resolution_clock;
+
+#ifdef CLTJ_ROOT_BITMAP
+using index_type = cltj::compact_ltj_metatrie_hash_rb;
+constexpr bool skip_root = true;  // the roots of the full tries go to the root bitmap
+#else
+using index_type = cltj::compact_ltj_metatrie_hash;
+constexpr bool skip_root = false;
+#endif
 
 int main(int argc, char** argv) {
     CLI::App app{"Build H-CLTJ index (metatrie + MPHF hash overlay)"};
@@ -37,7 +49,7 @@ int main(int argc, char** argv) {
         std::cout << "Dataset: " << 3 * D.size() * sizeof(uint32_t) << " bytes." << std::endl;
 
         auto start = timer::now();
-        cltj::compact_ltj_metatrie_hash index(D);
+        index_type index(D);
         auto stop = timer::now();
         std::cout << "Trie build: " << duration_cast<seconds>(stop - start).count() << "s" << std::endl;
 
@@ -55,7 +67,7 @@ int main(int argc, char** argv) {
             auto* full = index.get_trie(full_i);
             auto* part = index.get_trie(part_i);
 
-            full->build_hash_overlay(threshold, static_cast<uint32_t>(full_i));
+            full->build_hash_overlay(threshold, static_cast<uint32_t>(full_i), skip_root);
             auto root_perm = full->extract_root_permutation();
             full->reorder_louds_by_mphf();
 

@@ -18,7 +18,12 @@
  */
 
 #include <chrono>
+#ifdef CLTJ_ROOT_BITMAP
+#include <index/cltj_index_metatrie_hash_rb.hpp>
+#include <query/ltj_iterator_metatrie_hash_rb.hpp>
+#else
 #include <index/cltj_index_metatrie.hpp>
+#endif
 #include <iostream>
 #include <query/ltj_algorithm_hash.hpp>
 #include <results/results_counter.hpp>
@@ -36,6 +41,14 @@ using namespace std;
 // #include<ctime>
 
 using namespace ::util::time;
+
+#ifdef CLTJ_ROOT_BITMAP
+using index_type = cltj::compact_ltj_metatrie_hash_rb;
+template <class I, class V, class C> using iterator_t = ltj::ltj_iterator_metatrie_hash_rb<I, V, C>;
+#else
+using index_type = cltj::compact_ltj_metatrie_hash;
+template <class I, class V, class C> using iterator_t = ltj::ltj_iterator_metatrie_hash<I, V, C>;
+#endif
 
 template <class index_scheme_type, class trait_type, bool CountOnly = false>
 void query(
@@ -71,7 +84,7 @@ void query(
             // vector<Triple*> query;
             std::vector<ltj::triple_pattern> query = ::util::rdf::ids::get_query(query_string);
 
-            typedef ltj::ltj_iterator_metatrie_hash<index_scheme_type, uint8_t, uint64_t> iterator_type;
+            typedef iterator_t<index_scheme_type, uint8_t, uint64_t> iterator_type;
 #if ADAPTIVE
             typedef ltj::ltj_algorithm_hash<iterator_type, ltj::veo::veo_adaptive<iterator_type, trait_type>>
                 algorithm_type;
@@ -133,20 +146,20 @@ int main(int argc, char* argv[]) {
 
     if (type == "normal") {
         if (count_only)
-            query<cltj::compact_ltj_metatrie_hash, ltj::util::trait_distinct, true>(
+            query<index_type, ltj::util::trait_distinct, true>(
                 index, queries, limit, timeout, skip
             );
         else
-            query<cltj::compact_ltj_metatrie_hash, ltj::util::trait_distinct>(
+            query<index_type, ltj::util::trait_distinct>(
                 index, queries, limit, timeout, skip
             );
     } else if (type == "star") {
         if (count_only)
-            query<cltj::compact_ltj_metatrie_hash, ltj::util::trait_size, true>(
+            query<index_type, ltj::util::trait_size, true>(
                 index, queries, limit, timeout, skip
             );
         else
-            query<cltj::compact_ltj_metatrie_hash, ltj::util::trait_size>(
+            query<index_type, ltj::util::trait_size>(
                 index, queries, limit, timeout, skip
             );
     } else {
