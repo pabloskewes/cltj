@@ -1,4 +1,5 @@
-// Runs every query on X-CLTJ or H-CLTJ and writes its intersection stats aggregated per query.
+// Runs every query on X-CLTJ (with or without root bitmap) or H-CLTJ and writes its intersection
+// stats aggregated per query.
 // Characterization only: with CLTJ_COLLECT_QUERY_STATS the printed times are not measurements.
 #include <CLI11.hpp>
 #include <algorithm>
@@ -7,6 +8,7 @@
 #include <cstdint>
 #include <fstream>
 #include <index/cltj_index_metatrie.hpp>
+#include <index/cltj_index_metatrie_rb.hpp>
 #include <iostream>
 #include <map>
 #include <numeric>
@@ -14,6 +16,7 @@
 #include <query/ltj_algorithm_hash.hpp>
 #include <query/ltj_iterator_metatrie.hpp>
 #include <query/ltj_iterator_metatrie_hash.hpp>
+#include <query/ltj_iterator_metatrie_rb.hpp>
 #include <results/results_counter.hpp>
 #include <set>
 #include <string>
@@ -134,7 +137,9 @@ int main(int argc, char* argv[]) {
     uint64_t timeout = 600;
     uint64_t threshold = 4000;
     std::vector<uint64_t> skip_ids;
-    app.add_option("system", system, "Index type")->required()->check(CLI::IsMember({"xcltj", "hcltj"}));
+    app.add_option("system", system, "Index type")
+        ->required()
+        ->check(CLI::IsMember({"xcltj", "xcltj-rb", "hcltj"}));
     app.add_option("index", index, "Index file")->required();
     app.add_option("queries", queries, "Query file, one query per line")->required();
     app.add_option("-o,--output", out, "Output CSV")->required();
@@ -149,12 +154,18 @@ int main(int argc, char* argv[]) {
     using x_iter = ltj::ltj_iterator_metatrie<x_index, uint8_t, uint64_t>;
     using x_algo = ltj::ltj_algorithm<x_iter, ltj::veo::veo_adaptive<x_iter, ltj::util::trait_distinct>>;
 
+    using xrb_index = cltj::compact_ltj_metatrie_rb;
+    using xrb_iter = ltj::ltj_iterator_metatrie_rb<xrb_index, uint8_t, uint64_t>;
+    using xrb_algo = ltj::ltj_algorithm<xrb_iter, ltj::veo::veo_adaptive<xrb_iter, ltj::util::trait_distinct>>;
+
     using h_index = cltj::compact_ltj_metatrie_hash;
     using h_iter = ltj::ltj_iterator_metatrie_hash<h_index, uint8_t, uint64_t>;
     using h_algo = ltj::ltj_algorithm_hash<h_iter, ltj::veo::veo_adaptive<h_iter, ltj::util::trait_distinct>>;
 
     if (system == "xcltj")
         run<x_index, x_algo>(index, queries, timeout, threshold, out, skip);
+    else if (system == "xcltj-rb")
+        run<xrb_index, xrb_algo>(index, queries, timeout, threshold, out, skip);
     else
         run<h_index, h_algo>(index, queries, timeout, threshold, out, skip);
     return 0;
