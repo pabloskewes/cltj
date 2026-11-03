@@ -183,6 +183,12 @@ add_hcltj_policy_executables(size-breakdown-hcltj src/bench/size-breakdown-hcltj
 add_cltj_executable(size-breakdown-xcltj src/bench/size-breakdown-xcltj.cpp analysis)
 set_target_properties(size-breakdown-xcltj PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
+add_cltj_executable(size-breakdown-xcltj-rb src/bench/size-breakdown-xcltj-rb.cpp analysis)
+set_target_properties(size-breakdown-xcltj-rb PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+
+add_cltj_executable(check-root-bitmap-xcltj src/bench/check-root-bitmap-xcltj.cpp analysis)
+set_target_properties(check-root-bitmap-xcltj PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+
 add_cltj_executable(check-overlay-hcltj src/bench/check-overlay-hcltj.cpp analysis)
 set_target_properties(check-overlay-hcltj PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 add_hcltj_policy_executables(check-overlay-hcltj src/bench/check-overlay-hcltj.cpp analysis)
