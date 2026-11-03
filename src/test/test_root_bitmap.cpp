@@ -1,7 +1,8 @@
 // root_bitmap against a std::set over random id sets (with runs that cross the 64-bit words and the
 // 4096-bit blocks of the succ support), after copy, move and a serialization round trip; the
-// preconditions on the ids; and a round trip of cltj_index_metatrie_rb built from data/data.txt.
-// Run from the repository root.
+// preconditions on the ids; and round trips of cltj_index_metatrie_rb and cltj_index_metatrie_hash_rb
+// built from data/data.txt. Run from the repository root.
+#include <index/cltj_index_metatrie_hash_rb.hpp>
 #include <index/cltj_index_metatrie_rb.hpp>
 #include <index/root_bitmap.hpp>
 
@@ -109,13 +110,42 @@ void test_preconditions() {
     check(!throws({1, 2, 9}), "increasing ids from 1 are accepted");
 }
 
-void test_index_round_trip() {
+std::vector<cltj::spo_triple> read_data() {
     std::ifstream ifs("data/data.txt");
     std::vector<cltj::spo_triple> D;
     uint32_t s, p, o;
     while (ifs >> s >> p >> o)
         D.push_back({s, p, o});
     check(!D.empty(), "data/data.txt is readable");
+    return D;
+}
+
+// Same steps as build-hcltj.
+template <class Index> void build_hash_overlay(Index& index, uint32_t threshold, bool skip_root) {
+    for (int full_i : {0, 2, 4}) {
+        auto* full = index.get_trie(full_i);
+        auto* part = index.get_trie(full_i + 1);
+        full->build_hash_overlay(threshold, full_i, skip_root);
+        auto root_perm = full->extract_root_permutation();
+        full->reorder_louds_by_mphf();
+        part->build_hash_overlay(threshold, full_i + 1);
+        part->reorder_louds_by_mphf(root_perm);
+    }
+}
+
+template <class Index> std::string load_error(const std::string& bytes) {
+    std::stringstream ss(bytes);
+    Index index;
+    try {
+        index.load(ss);
+    } catch (const std::runtime_error& e) {
+        return e.what();
+    }
+    return "";
+}
+
+void test_index_round_trip() {
+    std::vector<cltj::spo_triple> D = read_data();
     if (D.empty())
         return;
 
@@ -141,12 +171,59 @@ void test_index_round_trip() {
     check(rejected, "an X-CLTJ index is rejected");
 }
 
+void test_hash_index_round_trip() {
+    using c_index = cltj::cltj_index_metatrie<cltj::compact_metatrie_hash<cltj::overlay::StepTableOverlay>>;
+    std::vector<cltj::spo_triple> D = read_data();
+    if (D.empty())
+        return;
+
+    cltj::compact_ltj_metatrie_hash_rb index(D);
+    build_hash_overlay(index, 2, true);
+    std::stringstream first;
+    index.serialize(first);
+    cltj::compact_ltj_metatrie_hash_rb loaded;
+    loaded.load(first);
+    std::stringstream second;
+    loaded.serialize(second);
+    check(first.str() == second.str(), "hash index round trip gives the same bytes");
+    for (int t : {0, 2, 4})
+        check(loaded.get_trie(t)->dropped_root_labels() == loaded.get_trie(t)->root_degree() &&
+                  !loaded.get_trie(t)->node_has_hash(0) && loaded.get_trie(t + 1)->dropped_root_labels() == 0,
+              "trie " + std::to_string(t) + ": unhashed root out of L_plain, nothing dropped in its partial trie");
+
+    const std::string version = "index format version ";
+    check(load_error<c_index>(first.str()).find(version + "5, this binary reads version 3") != std::string::npos,
+          "scheme C rejects the hash index with root bitmap");
+    std::stringstream c_stream;
+    c_index c(D);
+    build_hash_overlay(c, 2, false);
+    c.serialize(c_stream);
+    check(load_error<cltj::compact_ltj_metatrie_hash_rb>(c_stream.str()).find(version + "3, this binary reads version 5") !=
+              std::string::npos,
+          "the hash index with root bitmap rejects scheme C");
+    std::stringstream xrb_stream;
+    cltj::compact_ltj_metatrie_rb(D).serialize(xrb_stream);
+    check(load_error<cltj::compact_ltj_metatrie_hash_rb>(xrb_stream.str()).find(version + "4, this binary reads version 5") !=
+              std::string::npos,
+          "the hash index with root bitmap rejects X-CLTJ with root bitmap");
+
+    cltj::compact_ltj_metatrie_hash_rb hashed_root(D);
+    bool rejected = false;
+    try {
+        build_hash_overlay(hashed_root, 2, false);
+    } catch (const std::runtime_error&) {
+        rejected = true;
+    }
+    check(rejected, "a hashed root is rejected when its block leaves L_plain");
+}
+
 } // namespace
 
 int main() {
     test_random();
     test_preconditions();
     test_index_round_trip();
+    test_hash_index_round_trip();
     std::cout << (failures ? "FAILED" : "ALL PASS") << std::endl;
     return failures ? 1 : 0;
 }
