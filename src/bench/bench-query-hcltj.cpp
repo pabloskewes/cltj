@@ -22,6 +22,8 @@
 #include <iostream>
 #include <query/ltj_algorithm_hash.hpp>
 #include <results/results_counter.hpp>
+#include <set>
+#include <sstream>
 #include <triple_pattern.hpp>
 #include <type_traits>
 #include <util/file_util.hpp>
@@ -37,7 +39,11 @@ using namespace ::util::time;
 
 template <class index_scheme_type, class trait_type, bool CountOnly = false>
 void query(
-    const std::string& file, const std::string& queries, const uint64_t limit, const uint64_t timeout
+    const std::string& file,
+    const std::string& queries,
+    const uint64_t limit,
+    const uint64_t timeout,
+    const std::set<uint64_t>& skip
 ) {
     vector<string> dummy_queries;
     bool result = ::util::file::get_file_content(queries, dummy_queries);
@@ -57,6 +63,10 @@ void query(
     if (result) {
         int count = 1;
         for (string& query_string : dummy_queries) {
+            if (skip.count(nQ)) {
+                nQ++;
+                continue;
+            }
             // vector<Term*> terms_created;
             // vector<Triple*> query;
             std::vector<ltj::triple_pattern> query = ::util::rdf::ids::get_query(query_string);
@@ -97,8 +107,8 @@ void query(
 int main(int argc, char* argv[]) {
     // typedef ring::c_ring ring_type;
     if (argc < 5) {
-        std::cout << "Usage: " << argv[0] << " <index> <queries> <limit> <type> [timeout] [--count-only]"
-                  << std::endl;
+        std::cout << "Usage: " << argv[0]
+                  << " <index> <queries> <limit> <type> [timeout] [--count-only] [--skip <ids>]" << std::endl;
         return 0;
     }
 
@@ -108,28 +118,37 @@ int main(int argc, char* argv[]) {
     std::string type = argv[4];
     uint64_t timeout = 600;  // in seconds
     bool count_only = false;
+    std::set<uint64_t> skip;
     for (int i = 5; i < argc; ++i) {
         std::string arg = argv[i];
         if (arg == "--count-only")
             count_only = true;
-        else
+        else if (arg == "--skip" && i + 1 < argc) {
+            std::stringstream ids(argv[++i]);
+            for (std::string id; std::getline(ids, id, ',');)
+                skip.insert(std::stoull(id));
+        } else
             timeout = std::atoll(argv[i]);
     }
 
     if (type == "normal") {
         if (count_only)
             query<cltj::compact_ltj_metatrie_hash, ltj::util::trait_distinct, true>(
-                index, queries, limit, timeout
+                index, queries, limit, timeout, skip
             );
         else
-            query<cltj::compact_ltj_metatrie_hash, ltj::util::trait_distinct>(index, queries, limit, timeout);
+            query<cltj::compact_ltj_metatrie_hash, ltj::util::trait_distinct>(
+                index, queries, limit, timeout, skip
+            );
     } else if (type == "star") {
         if (count_only)
             query<cltj::compact_ltj_metatrie_hash, ltj::util::trait_size, true>(
-                index, queries, limit, timeout
+                index, queries, limit, timeout, skip
             );
         else
-            query<cltj::compact_ltj_metatrie_hash, ltj::util::trait_size>(index, queries, limit, timeout);
+            query<cltj::compact_ltj_metatrie_hash, ltj::util::trait_size>(
+                index, queries, limit, timeout, skip
+            );
     } else {
         std::cout << "Type of index: " << type << " is not supported." << std::endl;
     }
