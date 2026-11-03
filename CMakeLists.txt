@@ -118,6 +118,9 @@ add_cltj_executable(build-hcltj src/bench/build-hcltj.cpp bench hybridbv_gn)
 set_target_properties(build-hcltj PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 add_hcltj_policy_executables(build-hcltj src/bench/build-hcltj.cpp bench hybridbv_gn)
 
+add_cltj_executable(build-xcltj-rb src/bench/build-xcltj-rb.cpp bench)
+set_target_properties(build-xcltj-rb PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+
 add_cltj_executable(build-xcltj-dyn src/bench/build-xcltj-dyn.cpp bench hybridbv_gn)
 
 add_cltj_executable(build-uncltj src/bench/build-uncltj.cpp bench)
@@ -143,6 +146,10 @@ target_compile_definitions(bench-query-xcltj PRIVATE ADAPTIVE=1)
 
 add_cltj_executable(bench-query-xcltj-global src/bench/bench-query-xcltj.cpp bench)
 target_compile_definitions(bench-query-xcltj-global PRIVATE ADAPTIVE=0)
+
+add_cltj_executable(bench-query-xcltj-rb src/bench/bench-query-xcltj.cpp bench)
+target_compile_definitions(bench-query-xcltj-rb PRIVATE ADAPTIVE=1 CLTJ_ROOT_BITMAP)
+set_target_properties(bench-query-xcltj-rb PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
 add_cltj_executable(bench-query-hcltj src/bench/bench-query-hcltj.cpp bench)
 target_compile_definitions(bench-query-hcltj PRIVATE ADAPTIVE=1)
@@ -312,6 +319,9 @@ set_target_properties(test-modpolicy PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQ
 
 add_cltj_executable(test-mphf-move src/test/hashing/test_mphf_move.cpp test)
 set_target_properties(test-mphf-move PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+
+add_cltj_executable(test-root-bitmap src/test/test_root_bitmap.cpp test)
+set_target_properties(test-root-bitmap PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
 add_cltj_executable(test-pthash-simple src/test/hashing/test_pthash_simple.cpp test)
 target_link_libraries(test-pthash-simple PRIVATE PTHASH)
