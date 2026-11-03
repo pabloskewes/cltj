@@ -470,6 +470,43 @@ class ltj_algorithm_hash {
                     );
 
                     auto keys = scan_trie->hash_keys(itrs[min_idx]->parent(), itrs[min_idx]->parent_r());
+#ifdef LTJ26_SORTED_SCAN
+                    // When the next down() switches trie, filter first and descend in id order, so the
+                    // accesses to the root of the full trie are monotone.
+                    bool ltj26_sorted = false;
+                    for (ltj_iter_type* iter : itrs)
+                        ltj26_sorted = ltj26_sorted || iter->ltj26_next_down_switches();
+                    if (ltj26_sorted) {
+                        std::vector<std::pair<value_type, size_type>> cand;
+                        while (keys.next()) {
+                            value_type c = keys.key();
+                            if (candidate_in_hashed_iterators(x_j, c, hashed_itrs, itrs[min_idx]))
+                                cand.emplace_back(c, beg + keys.slot());
+                        }
+                        std::sort(cand.begin(), cand.end());
+                        for (const auto& cp : cand) {
+                            value_type c = cp.first;
+                            if constexpr (COLLECT_QUERY_STATS)
+                                stats.result_size++;
+                            tuple[j] = {x_j, c};
+                            frame.add(c);
+                            itrs[min_idx]->set_level_status(cp.second, beg, end_pos - beg);
+                            position_hashed_iterators(x_j, c, hashed_itrs, itrs[min_idx]);
+                            for (ltj_iter_type* iter : itrs) {
+                                iter->down(x_j, c);
+                            }
+                            m_veo.down();
+                            ok = search(j + 1, tuple, res, start, limit_results, timeout_seconds);
+                            if (!ok)
+                                return false;
+                            for (ltj_iter_type* iter : itrs) {
+                                iter->up(x_j);
+                            }
+                            m_veo.up();
+                        }
+                    }
+                    // Here the cursor is exhausted if the frame was sorted, so the scan below does nothing.
+#endif
                     while (keys.next()) {
                         const size_type pos = beg + keys.slot();
                         value_type c = keys.key();
@@ -516,9 +553,20 @@ class ltj_algorithm_hash {
                     );
 
                     auto keys = scan_trie->hash_keys(mi->parent(), mi->parent_r());
+#ifdef LTJ26_SORTED_SCAN
+                    std::vector<std::pair<value_type, size_type>> cand;
+                    cand.reserve(end_pos - beg);
+                    while (keys.next())
+                        cand.emplace_back(keys.key(), beg + keys.slot());
+                    std::sort(cand.begin(), cand.end());
+                    for (const auto& cp : cand) {
+                        const size_type pos = cp.second;
+                        value_type c = cp.first;
+#else
                     while (keys.next()) {
                         const size_type pos = beg + keys.slot();
                         value_type c = keys.key();
+#endif
                         if constexpr (COLLECT_QUERY_STATS)
                             stats.candidates++;
                         if (!candidate_in_hashed_iterators(x_j, c, hashed_itrs, mi))

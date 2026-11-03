@@ -303,6 +303,11 @@ class ltj_iterator_metatrie_hash_rb {
         m_redo[m_nfixed] = false;
     }
 
+#ifdef LTJ26_SORTED_SCAN
+    /** True iff the next down() goes from the partial trie to its full trie through trie_switch(). */
+    bool ltj26_next_down_switches() const { return m_nfixed == 1 && m_status_i == 1; }
+#endif
+
     inline size_type parent() const;
 
     /**
