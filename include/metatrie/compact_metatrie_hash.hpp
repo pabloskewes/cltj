@@ -41,6 +41,7 @@ class compact_metatrie_hash {
     //             never reaches the high bytes of the tag, so load() rejects it
     //   2         scheme A overlay (SepBitmapOverlay)
     //   3         scheme C overlay (StepTableOverlay)
+    //   4         cltj_index_metatrie_rb (X-CLTJ with root bitmap), one tag per index
     static constexpr uint64_t format_magic = 0x48434C544A000000ULL;
     static constexpr uint64_t format_tag = format_magic | Overlay::format_version;
 
