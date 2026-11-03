@@ -345,9 +345,12 @@ class compact_metatrie_hash {
      * For each node whose out-degree meets the threshold, extracts the keys
      * from L and builds an MPHF.  m_build_has_hash[node_pos] is set to 1
      * for each such node; the overlay itself is built by reorder_louds_by_mphf().
+     *
+     * @param skip_root  Leave node 0 unhashed. Only meaningful on a full trie,
+     *                   where node 0 is the root.
      */
     // TODO: move tracer metadata (e.g., trie_id) out of this functional API.
-    void build_hash_overlay(uint32_t threshold, uint32_t trie_id = UINT32_MAX) {
+    void build_hash_overlay(uint32_t threshold, uint32_t trie_id = UINT32_MAX, bool skip_root = false) {
         m_threshold = threshold;
         m_build_has_hash = sdsl::bit_vector(m_bv.size(), 0);
         m_mphfs.clear();
@@ -362,7 +365,7 @@ class compact_metatrie_hash {
             std::vector<size_type> next_level;
             for (auto node : current_level) {
                 size_type n_children = children(node);
-                if (n_children >= threshold) {
+                if (n_children >= threshold && !(skip_root && node == 0)) {
                     std::vector<uint32_t> keys;
                     keys.reserve(n_children);
                     for (size_type k = 0; k < n_children; k++)
