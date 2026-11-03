@@ -1,6 +1,7 @@
 // Correctness test: verifies that hcltj (hash path) produces the exact same
 // result tuples as xcltj (leapfrog only) for every query in a test set.
-// Also exercises the current H-CLTJ build pipeline and a serialize/load roundtrip.
+// Also exercises the current H-CLTJ build pipeline and a serialize/load roundtrip,
+// and full tries whose root is left unhashed while their partial tries are hashed.
 #include <algorithm>
 #include <chrono>
 #include <filesystem>
@@ -11,6 +12,7 @@
 #include <query/ltj_algorithm_hash.hpp>
 #include <query/ltj_iterator_metatrie.hpp>
 #include <query/ltj_iterator_metatrie_hash.hpp>
+#include <random>
 #include <results/results_collector.hpp>
 #include <stdexcept>
 #include <string>
@@ -58,6 +60,20 @@ std::vector<cltj::spo_triple> load_dataset(const std::string& dataset_path) {
     return triples;
 }
 
+std::vector<cltj::spo_triple> random_triples(uint32_t seed, uint32_t n, uint32_t n_so, uint32_t n_p) {
+    std::mt19937 rng(seed);
+    std::uniform_int_distribution<uint32_t> so(1, n_so), p(1, n_p);
+    std::vector<cltj::spo_triple> triples;
+    for (uint32_t i = 0; i < n; ++i) {
+        cltj::spo_triple spo;
+        spo[0] = so(rng);
+        spo[1] = p(rng);
+        spo[2] = so(rng);
+        triples.emplace_back(spo);
+    }
+    return triples;
+}
+
 template <class algorithm_type>
 std::vector<tuple_type> run_query(
     const std::string& query_str, typename algorithm_type::index_scheme_type& index
@@ -90,7 +106,7 @@ std::string tuple_to_string(const tuple_type& t) {
 }
 
 cltj::compact_ltj_metatrie_hash build_hcltj_index(
-    const std::vector<cltj::spo_triple>& triples, uint32_t threshold
+    const std::vector<cltj::spo_triple>& triples, uint32_t threshold, bool skip_root = false
 ) {
     auto build_data = triples;
     cltj::compact_ltj_metatrie_hash index(build_data);
@@ -104,7 +120,7 @@ cltj::compact_ltj_metatrie_hash build_hcltj_index(
         auto* full = index.get_trie(full_i);
         auto* part = index.get_trie(part_i);
 
-        full->build_hash_overlay(threshold, static_cast<uint32_t>(full_i));
+        full->build_hash_overlay(threshold, static_cast<uint32_t>(full_i), skip_root);
         auto root_perm = full->extract_root_permutation();
         full->reorder_louds_by_mphf();
 
@@ -153,6 +169,22 @@ int compare_query_results(
         }
     }
 
+    return failures;
+}
+
+// The roots of the full tries @p full_tries are unhashed while their partial tries have MPHFs.
+int expect_unhashed_roots(
+    const std::string& label, cltj::compact_ltj_metatrie_hash& index, const std::vector<int>& full_tries
+) {
+    int failures = 0;
+    for (int full_i : full_tries) {
+        bool ok = !index.get_trie(full_i)->node_has_hash(0) && index.get_trie(full_i + 1)->mphf_count() > 0;
+        if (!ok) {
+            std::cout << "  FAIL " << label << ": trie " << full_i
+                      << " root hashed or its partial trie has no MPHF" << std::endl;
+            failures++;
+        }
+    }
     return failures;
 }
 
@@ -206,6 +238,35 @@ int main() {
         int failures = 0;
         failures += compare_query_results<xcltj_algo, hcltj_algo>("built", queries, xcltj, built_hcltj);
         failures += compare_query_results<xcltj_algo, hcltj_algo>("loaded", queries, xcltj, loaded_hcltj);
+
+        // Full-trie roots left unhashed while the partial tries keep MPHFs: the first level of
+        // each partial trie must stay in id order, like the root it is paired with.
+        {
+            auto hcltj = build_hcltj_index(dataset, threshold, true);
+            failures += expect_unhashed_roots("skip_root", hcltj, {0, 2, 4});
+            failures += compare_query_results<xcltj_algo, hcltj_algo>("skip_root", queries, xcltj, hcltj);
+        }
+        {
+            const uint32_t n_predicates = 3;
+            const std::vector<std::string> few_predicate_queries = {
+                "?x 1 ?y",
+                "?x 2 ?y . ?x 3 ?z",
+                "?x ?p 5",
+                "?x 1 ?y . ?y 2 ?z",
+                "?x ?p ?y . ?x 2 7",
+                "5 ?p ?o",
+                "?s 3 ?o . ?s ?p 9",
+                "?a 1 ?b . ?b 2 ?c . ?a 3 ?c",
+            };
+            auto few_predicates = random_triples(7, 300, 30, n_predicates);
+            auto x_few = few_predicates;
+            xcltj_index xcltj_few(x_few);
+            auto hcltj = build_hcltj_index(few_predicates, n_predicates + 1);
+            failures += expect_unhashed_roots("POS root below t", hcltj, {2});
+            failures += compare_query_results<xcltj_algo, hcltj_algo>(
+                "POS root below t", few_predicate_queries, xcltj_few, hcltj
+            );
+        }
 
         std::cout << std::endl;
         if (failures == 0)
