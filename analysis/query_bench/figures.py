@@ -44,7 +44,8 @@ def _stat(ax, text: str) -> None:
 
 
 def _ticks(ax, ss: list[System]) -> None:
-    ax.set_xticks(range(len(ss)), [s.name for s in ss])
+    ax.set_xticks(range(len(ss)), [s.name for s in ss], rotation=45 if len(ss) > 5 else 0,
+                  ha="right" if len(ss) > 5 else "center")
     for lab, s in zip(ax.get_xticklabels(), ss):
         lab.set_color(MUTED if s.faded else INK)
 

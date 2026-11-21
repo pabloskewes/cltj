@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import html
+import os
 from pathlib import Path
 
 import pandas as pd
@@ -36,7 +37,7 @@ def systems_table(cfg: Config, exp_dir: Path, loaded: list[str], sizes: dict[str
     for s in cfg.systems:
         size = sizes.get(s.name)
         cells = [f'<span class=sw style="background:{s.color}"></span>{html.escape(s.name)}', html.escape(s.label),
-                 s.group, html.escape(s.commit or ""), html.escape(str(s.csv.relative_to(exp_dir))),
+                 s.group, html.escape(s.commit or ""), html.escape(os.path.relpath(s.csv, exp_dir)),
                  f"{size / 1e9:.2f}" if size else "", "loaded" if s.name in loaded else "pending"]
         rows.append((cells, " class=faded" if s.faded else ""))
     return _table(["system", "label", "group", "commit", "csv", "GB", "status"], rows, left=5)
@@ -55,7 +56,7 @@ def pair_summary(r: pd.DataFrame, subset: str, types: list[str], faded: set[str]
 
 def write(out: Path, cfg: Config, exp_dir: Path, loaded: list[str], sizes: dict[str, int | None], pending: list[str],
           d: pd.DataFrame, g: pd.DataFrame, r: pd.DataFrame, figs: list[str], types: list[str],
-          base: list[str], sub: str) -> Path:
+          base: list[str], sub: str, timeout_ns: float) -> Path:
     faded = {s.name for s in cfg.systems if s.faded}
     extra = [s.name for s in cfg.systems if s.group == "extra" and s.name in loaded]
     pend = "".join(f"<li>{html.escape(p)}</li>" for p in pending) or "<li>none</li>"
@@ -64,12 +65,14 @@ def write(out: Path, cfg: Config, exp_dir: Path, loaded: list[str], sizes: dict[
         f"<figcaption>{n}</figcaption></figure>" for n in figs)
     extra_note = (f" Extra systems ({', '.join(extra)}) do not define it: their own timeouts drop a query only from "
                   "their pairs." if extra else "")
+    skip = f" minus the {len(cfg.skip)} skipped ids {cfg.skip}" if cfg.skip else ""
     page = f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <title>{html.escape(cfg.title)} query benchmark</title><style>{CSS}</style></head><body>
 <h1>{html.escape(cfg.title)}: query benchmark of {len(loaded)} systems</h1>
 {systems_table(cfg, exp_dir, loaded, sizes)}
 <p><b>Convention:</b> {html.escape(CONVENTION)}. Cells: tot / median / % of queries where sys wins.</p>
-<p><b>Base set:</b> queries without timeout in {html.escape(', '.join(base))}, {_counts(d, types)}.{html.escape(extra_note)}</p>
+<p><b>Base set:</b> queries of types.txt{skip}, without timeout (t &gt;= {timeout_ns / 1e9:g} s) in {html.escape(', '.join(base))},
+{_counts(d, types)}.{html.escape(extra_note)}</p>
 <p><b>Main subset:</b> {html.escape(sub)}, {_counts(g, types)}.</p>
 <p>Pending:</p><ul>{pend}</ul>
 <h2>Pairs, {html.escape(sub)}</h2>{pair_summary(r, "main", types, faded)}

@@ -9,11 +9,16 @@ Run from ``analysis/``: ``python -m unittest query_bench.test_query_bench``
 
 from __future__ import annotations
 
+import contextlib
+import io
 import os
 import tempfile
 import unittest
 from pathlib import Path
 
+import pandas as pd
+
+from .__main__ import main
 from .filters import base_set, subset
 from .pairs import pair_table
 from .systems import load_config, load_systems
@@ -44,28 +49,12 @@ class Checks(unittest.TestCase):
                     self.assertEqual(round(got, digits), want, f"{sub} {pair} {t} {col}: {got}")
 
 
-class Synthetic(Checks):
-    def write(self, root: Path, name: str, rows: list[tuple[int, int, int]], header: str | None = "Index loaded: 1000 bytes."):
-        lines = ([header] if header else []) + [f"{q};{n};{t}" for q, n, t in rows]
-        (root / name).write_text("\n".join(lines) + "\n")
-
-    def test_pending_extra_timeouts_and_external_subset(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            (root / "types.txt").write_text("0;TYPE1\n1;TYPE1\n2;TYPE2\n3;TYPE2\n4;TYPE3\n")
-            ms = 10**6
-            self.write(root, "a.csv", [(0, 1, 200 * ms), (1, 1, 50 * ms), (2, 1, 400 * ms), (4, 1, 300 * ms)])
-            self.write(root, "b.csv", [(0, 1, 100 * ms), (1, 1, 50 * ms), (2, 1, 200 * ms), (4, 1, 100 * ms)])
-            self.write(root, "e.csv", [(0, 1, 100 * ms), (1, 1, 25 * ms), (2, 1, 600 * 10**9), (4, 1, 150 * ms)],
-                       header=None)
-            self.write(root, "half.csv", [(0, 1, ms)])
-            self.write(root, "old.csv", [(0, 1, 150 * ms), (1, 1, 99 * ms), (2, 1, 150 * ms), (4, 1, 150 * ms)])
-            (root / "systems.toml").write_text("""
+SYNTHETIC_TOML = """
 ref = "A"
 skip = [3]
-pairs = ["B/E"]
+pairs = ["B/E", "B/H"]
 [subset]
-csv = "old.csv"
+{subset}
 [[system]]
 name = "A"
 csv = "a.csv"
@@ -83,25 +72,93 @@ csv = "half.csv"
 [[system]]
 name = "M"
 csv = "missing.csv"
-""")
-            cfg = load_config(root / "systems.toml", root)
-            ld = load_systems(cfg, root / "types.txt")
-            self.assertEqual(ld.systems, ["A", "B", "E"])
-            self.assertEqual(len(ld.pending), 2)
-            self.assertEqual(ld.sizes, {"A": 1000, "B": 1000, "E": 7})
-            self.assertEqual(list(ld.wide.index), [0, 1, 2, 4])
-            self.assertEqual(len(ld.long()), 12)
-            d = base_set(ld.wide, cfg, ld.systems)
-            self.assertEqual(len(d), 4)
-            g = subset(d, cfg.min_ms * 1e6)
-            self.assertEqual(list(g.index), [0, 2, 4])
-            r = pair_table({"main": g}, [("A", "B"), ("A", "E"), ("B", "E")], TYPES).set_index(["pair", "type"])
-            self.assertEqual(r.loc[("A/B", "ALL"), "n"], 3)
-            self.assertAlmostEqual(r.loc[("A/B", "ALL"), "tot"], 900 / 400)
-            self.assertEqual(r.loc[("A/E", "ALL"), "n"], 2)
-            self.assertAlmostEqual(r.loc[("A/E", "ALL"), "tot"], 500 / 250)
-            self.assertAlmostEqual(r.loc[("B/E", "TYPE3"), "tot"], 100 / 150)
-            self.assertEqual(r.loc[("B/E", "TYPE3"), "win%"], 0.0)
+"""
+
+
+class Synthetic(Checks):
+    """A and B base, E extra with a timeout in q2, H incomplete, M missing; q3 skipped by the run.
+
+    The subset reference old.csv leaves out q1, which A alone would keep, and has q4 exactly at 100 ms.
+    """
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        (self.root / "types.txt").write_text("0;TYPE1\n1;TYPE1\n2;TYPE2\n3;TYPE2\n4;TYPE3\n")
+        ms = 10**6
+        self.write("a.csv", [(0, 1, 200 * ms), (1, 1, 150 * ms), (2, 1, 400 * ms), (4, 1, 300 * ms)])
+        self.write("b.csv", [(0, 1, 100 * ms), (1, 1, 50 * ms), (2, 1, 200 * ms), (4, 1, 100 * ms)])
+        self.write("e.csv", [(0, 1, 100 * ms), (1, 1, 25 * ms), (2, 1, 600 * 10**9), (4, 1, 150 * ms)], header=None)
+        self.write("half.csv", [(0, 1, ms)])
+        self.write("old.csv", [(0, 1, 150 * ms), (1, 1, 99 * ms), (2, 1, 150 * ms), (4, 1, 100 * ms)])
+        self.toml('csv = "old.csv"')
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def write(self, name: str, rows: list[tuple[int, int, int]], header: str | None = "Index loaded: 1000 bytes."):
+        lines = ([header] if header else []) + [f"{q};{n};{t}" for q, n, t in rows]
+        (self.root / name).write_text("\n".join(lines) + "\n")
+
+    def toml(self, subset: str) -> Path:
+        path = self.root / "systems.toml"
+        path.write_text(SYNTHETIC_TOML.format(subset=subset))
+        return path
+
+    def args(self, *extra: str) -> list[str]:
+        return [str(self.root), "--systems", str(self.root / "systems.toml"), "--types", str(self.root / "types.txt"),
+                "--out", str(self.root / "out"), *extra]
+
+    def test_pending_extra_timeouts_and_external_subset(self):
+        cfg = load_config(self.root / "systems.toml", self.root)
+        ld = load_systems(cfg, self.root / "types.txt")
+        self.assertEqual(ld.systems, ["A", "B", "E"])
+        self.assertEqual(len(ld.pending), 2)
+        self.assertEqual(ld.sizes, {"A": 1000, "B": 1000, "E": 7})
+        self.assertEqual(list(ld.wide.index), [0, 1, 2, 4])
+        self.assertEqual(len(ld.long()), 12)
+        d = base_set(ld.wide, cfg, ld.systems)
+        self.assertEqual(len(d), 4)
+        g = subset(d, cfg.min_ms * 1e6)
+        self.assertEqual(list(g.index), [0, 2, 4])
+        r = pair_table({"main": g}, [("A", "B"), ("A", "E"), ("B", "E")], TYPES).set_index(["pair", "type"])
+        self.assertEqual(r.loc[("A/B", "ALL"), "n"], 3)
+        self.assertAlmostEqual(r.loc[("A/B", "ALL"), "tot"], 900 / 400)
+        self.assertEqual(r.loc[("A/E", "ALL"), "n"], 2)
+        self.assertAlmostEqual(r.loc[("A/E", "ALL"), "tot"], 500 / 250)
+        self.assertAlmostEqual(r.loc[("B/E", "TYPE3"), "tot"], 100 / 150)
+        self.assertEqual(r.loc[("B/E", "TYPE3"), "win%"], 0.0)
+
+    def test_subset_from_the_reference(self):
+        cfg = load_config(self.toml(""), self.root)
+        ld = load_systems(cfg, self.root / "types.txt")
+        self.assertEqual(list(subset(base_set(ld.wide, cfg, ld.systems), 100e6).index), [0, 1, 2, 4])
+
+    def test_errors(self):
+        with self.assertRaisesRegex(ValueError, "subset reference H is pending"):
+            load_systems(load_config(self.toml('system = "H"'), self.root), self.root / "types.txt")
+        with self.assertRaisesRegex(ValueError, "unknown systems"):
+            load_config(self.toml('system = "Z"'), self.root)
+        self.toml('csv = "old.csv"')
+        with self.assertRaisesRegex(ValueError, r"unknown systems \['Bx'\]"):
+            main(self.args("--pairs", "A/Bx"))
+        with self.assertRaisesRegex(ValueError, "REF/SYS"):
+            main(self.args("--pairs", "AB"))
+        with self.assertRaisesRegex(ValueError, "reference H is pending"):
+            main(self.args("--ref", "H"))
+
+    def test_cli(self):
+        out = self.root / "out"
+        with contextlib.redirect_stdout(io.StringIO()):
+            main(self.args())
+        r = pd.read_csv(out / "pairs.csv")
+        self.assertEqual(list(dict.fromkeys(r.pair)), ["A/B", "A/E", "B/E"])
+        self.assertEqual(r[(r.subset == "main") & (r.type == "ALL")].set_index("pair").n.to_dict(),
+                         {"A/B": 3, "A/E": 2, "B/E": 2})
+        page = (out / "index.html").read_text()
+        self.assertIn("pair B/H: skipped, a system is pending", page)
+        self.assertIn("minus the 1 skipped ids [3]", page)
+        self.assertEqual(len(list(out.glob("*.png"))), 6)
 
 
 @unittest.skipUnless((EXP017 / "02-bench" / "bench-xcltj.csv").exists(), f"no EXP-017 CSVs under {EXPERIMENTS}")

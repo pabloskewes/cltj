@@ -6,6 +6,7 @@ Usage (from ``analysis/``):
 
 Defaults: ``--systems <exp_dir>/analysis/overview/systems.toml``, ``--out`` the folder of that file,
 ``--types`` ``Queries/types.txt`` of this repo. ``--ref``, ``--min-ms`` and ``--pairs`` override the toml.
+Without a ``[subset]`` in the toml, the main subset is taken from the reference, so ``--ref`` moves it too.
 Writes the PNGs, ``pairs.csv`` and a self-contained ``index.html``.
 """
 
@@ -17,13 +18,13 @@ from pathlib import Path
 from . import figures, report
 from .filters import base_set, subset
 from .pairs import CONVENTION, pair_table
-from .systems import load_config, load_systems, parse_pairs
+from .systems import TIMEOUT_NS, load_config, load_systems, parse_pairs, validate
 
 TYPES = ["TYPE1", "TYPE2", "TYPE3", "ALL"]
 DEFAULT_TYPES = Path(__file__).resolve().parents[2] / "Queries" / "types.txt"
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("exp_dir")
     ap.add_argument("--systems", help="systems.toml (default: <exp_dir>/analysis/overview/systems.toml)")
@@ -32,7 +33,7 @@ def main() -> None:
     ap.add_argument("--pairs", help="comma-separated ref/sys pairs, e.g. H/C,A/C")
     ap.add_argument("--types", default=str(DEFAULT_TYPES))
     ap.add_argument("--out")
-    a = ap.parse_args()
+    a = ap.parse_args(argv)
 
     exp = Path(a.exp_dir).resolve()
     toml = Path(a.systems).resolve() if a.systems else exp / "analysis" / "overview" / "systems.toml"
@@ -45,9 +46,11 @@ def main() -> None:
         cfg.min_ms = a.min_ms
     if a.pairs:
         cfg.pairs = parse_pairs(a.pairs)
+    validate(cfg)
 
     ld = load_systems(cfg, a.types)
-    assert cfg.ref in ld.systems, f"reference {cfg.ref} is not loaded: {ld.pending}"
+    if cfg.ref not in ld.systems:
+        raise ValueError(f"reference {cfg.ref} is pending: {ld.pending}")
     d = base_set(ld.wide, cfg, ld.systems)
     g = subset(d, cfg.min_ms * 1e6)
     sub_ref = cfg.subset_label or cfg.subset_system or cfg.ref
@@ -64,7 +67,7 @@ def main() -> None:
     ss = [cfg.system(s) for s in ld.systems]
     figs = figures.draw_all(d, g, cfg.system(cfg.ref), ss, [(cfg.system(x), cfg.system(y)) for x, y in pairs],
                             ld.sizes, TYPES, sub, out)
-    page = report.write(out, cfg, exp, ld.systems, ld.sizes, pending, d, g, r, figs, TYPES, base, sub)
+    page = report.write(out, cfg, exp, ld.systems, ld.sizes, pending, d, g, r, figs, TYPES, base, sub, TIMEOUT_NS)
 
     print(f"systems: {ld.systems}; pending: {pending or 'none'}")
     print(f"base set n={len(d)}; {sub} n={len(g)}; {CONVENTION}")

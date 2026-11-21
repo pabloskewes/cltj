@@ -66,7 +66,18 @@ class Config:
 
 def parse_pairs(spec: list[str] | str) -> list[tuple[str, str]]:
     items = spec.split(",") if isinstance(spec, str) else spec
-    return [tuple(p.strip().split("/")) for p in items if p.strip()]
+    pairs = [tuple(x.strip() for x in p.split("/")) for p in items if p.strip()]
+    bad = [p for p in pairs if len(p) != 2 or not all(p)]
+    if bad:
+        raise ValueError(f"pairs must look like REF/SYS: {['/'.join(p) for p in bad]}")
+    return pairs
+
+
+def validate(cfg: Config) -> None:
+    names = {s.name for s in cfg.systems}
+    unknown = [n for n in [cfg.ref, cfg.subset_system] + [x for p in cfg.pairs for x in p] if n and n not in names]
+    if unknown:
+        raise ValueError(f"unknown systems {sorted(set(unknown))}; declared: {sorted(names)}")
 
 
 def load_config(path: str | Path, exp_dir: str | Path) -> Config:
@@ -89,8 +100,7 @@ def load_config(path: str | Path, exp_dir: str | Path) -> Config:
         subset_csv=exp_dir / sub["csv"] if "csv" in sub else None, subset_system=sub.get("system"),
         subset_label=sub.get("label"),
     )
-    for a, b in cfg.pairs:
-        assert a in names and b in names, f"pair {a}/{b} names a system not in {path}"
+    validate(cfg)
     return cfg
 
 
@@ -149,4 +159,6 @@ def load_systems(cfg: Config, types_path: str | Path) -> Loaded:
         d[SUBSET_COL] = b.t.reindex(d.index)
     elif (cfg.subset_system or cfg.ref) in loaded:
         d[SUBSET_COL] = d[f"t_{cfg.subset_system or cfg.ref}"]
+    else:
+        raise ValueError(f"subset reference {cfg.subset_system or cfg.ref} is pending: {pending}")
     return Loaded(d, loaded, sizes, pending)
