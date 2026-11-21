@@ -25,10 +25,13 @@ namespace cltj {
         std::array<size_type, 3> m_gaps;
         sdsl::bit_vector m_subjects;
         sdsl::bit_vector m_objects;
+        sdsl::bit_vector m_predicates;
         cds::succ_support_v<1> m_succ_subj;
         cds::succ_support_v<1> m_succ_obj;
+        cds::succ_support_v<1> m_succ_pred;
         sdsl::rank_support_v<1> m_rank_subj;
         sdsl::rank_support_v<1> m_rank_obj;
+        sdsl::rank_support_v<1> m_rank_pred;
 
 
         void copy(const cltj_index_metatrie &o){
@@ -36,14 +39,19 @@ namespace cltj {
             m_gaps = o.m_gaps;
             m_subjects = o.m_subjects;
             m_objects = o.m_objects;
+            m_predicates = o.m_predicates;
             m_succ_subj = o.m_succ_subj;
             m_succ_obj = o.m_succ_obj;
+            m_succ_pred = o.m_succ_pred;
             m_succ_subj.set_vector(&m_subjects);
             m_succ_obj.set_vector(&m_objects);
+            m_succ_pred.set_vector(&m_predicates);
             m_rank_subj = o.m_rank_subj;
             m_rank_obj = o.m_rank_obj;
+            m_rank_pred = o.m_rank_pred;
             m_rank_subj.set_vector(&m_subjects);
             m_rank_obj.set_vector(&m_objects);
+            m_rank_pred.set_vector(&m_predicates);
         }
 
     public:
@@ -84,14 +92,13 @@ namespace cltj {
                         sdsl::util::init_support(m_succ_subj, &m_subjects);
                         sdsl::util::init_support(m_rank_subj, &m_subjects);
                     }
-                    //if (i==2) predicates -> the values are contiguous
                     if (i == 2) {
-                        for (size_type j = 0; j < m_gaps[1]; ++j) {
-                            if (syms_root[j] != j+1) {
-                                std::cerr << "Error: predicates are not contiguous!" << std::endl;
-                                std::exit(EXIT_FAILURE);
-                            }
+                        m_predicates = sdsl::bit_vector(syms_root.back()+1, 0);
+                        for(size_type j = 0; j < m_gaps[1]; ++j){
+                            m_predicates[syms_root[j]] = 1;
                         }
+                        sdsl::util::init_support(m_succ_pred, &m_predicates);
+                        sdsl::util::init_support(m_rank_pred, &m_predicates);
                     }
                     if (i == 4) {
                         m_objects = sdsl::bit_vector(syms_root.back()+1, 0);
@@ -131,14 +138,19 @@ namespace cltj {
                 m_gaps = std::move(o.m_gaps);
                 m_subjects = std::move(o.m_subjects);
                 m_objects = std::move(o.m_objects);
+                m_predicates = std::move(o.m_predicates);
                 m_succ_subj = std::move(o.m_succ_subj);
                 m_succ_obj = std::move(o.m_succ_obj);
+                m_succ_pred = std::move(o.m_succ_pred);
                 m_succ_subj.set_vector(&m_subjects);
                 m_succ_obj.set_vector(&m_objects);
+                m_succ_pred.set_vector(&m_predicates);
                 m_rank_subj = std::move(o.m_rank_subj);
                 m_rank_obj = std::move(o.m_rank_obj);
+                m_rank_pred = std::move(o.m_rank_pred);
                 m_rank_subj.set_vector(&m_subjects);
                 m_rank_obj.set_vector(&m_objects);
+                m_rank_pred.set_vector(&m_predicates);
             }
             return *this;
         }
@@ -159,10 +171,13 @@ namespace cltj {
             std::swap(m_gaps, o.m_gaps);
             std::swap(m_subjects, o.m_subjects);
             std::swap(m_objects, o.m_objects);
+            std::swap(m_predicates, o.m_predicates);
             sdsl::util::swap_support(m_succ_subj, o.m_succ_subj, &m_subjects, &o.m_subjects);
             sdsl::util::swap_support(m_succ_obj, o.m_succ_obj, &m_objects, &o.m_objects);
+            sdsl::util::swap_support(m_succ_pred, o.m_succ_pred, &m_predicates, &o.m_predicates);
             sdsl::util::swap_support(m_rank_subj, o.m_rank_subj, &m_subjects, &o.m_subjects);
             sdsl::util::swap_support(m_rank_obj, o.m_rank_obj, &m_objects, &o.m_objects);
+            sdsl::util::swap_support(m_rank_pred, o.m_rank_pred, &m_predicates, &o.m_predicates);
         }
 
         inline trie_type* get_trie(size_type i){
@@ -186,7 +201,15 @@ namespace cltj {
         }
 
         inline value_type max_predicate() const {
-            return m_gaps[1];
+            return m_predicates.size()-1;
+        }
+
+        inline value_type next_predicate(value_type c) {
+            return m_succ_pred(c);
+        }
+
+        inline value_type pos_predicate(value_type c) const {
+            return m_rank_pred(c+1)-1;
         }
 
         inline value_type pos_subject(value_type c) const {
@@ -208,10 +231,13 @@ namespace cltj {
             }
             written_bytes += m_subjects.serialize(out, child, "subjects");
             written_bytes += m_objects.serialize(out, child, "objects");
+            written_bytes += m_predicates.serialize(out, child, "predicates");
             written_bytes += m_succ_subj.serialize(out, child, "succ_subjects");
             written_bytes += m_succ_obj.serialize(out, child, "succ_objects");
+            written_bytes += m_succ_pred.serialize(out, child, "succ_predicates");
             written_bytes += m_rank_subj.serialize(out, child, "rank_subjects");
             written_bytes += m_rank_obj.serialize(out, child, "rank_objects");
+            written_bytes += m_rank_pred.serialize(out, child, "rank_predicates");
             /*auto pos = sdsl::size_in_bytes(m_tries[2]);
             auto pso = sdsl::size_in_bytes(m_tries[3]);
             std::cout << "POS: " << pos << std::endl;
@@ -230,10 +256,13 @@ namespace cltj {
             }
             m_subjects.load(in);
             m_objects.load(in);
+            m_predicates.load(in);
             m_succ_subj.load(in, &m_subjects);
             m_succ_obj.load(in, &m_objects);
+            m_succ_pred.load(in, &m_predicates);
             m_rank_subj.load(in, &m_subjects);
             m_rank_obj.load(in, &m_objects);
+            m_rank_pred.load(in, &m_predicates);
         }
 
     };

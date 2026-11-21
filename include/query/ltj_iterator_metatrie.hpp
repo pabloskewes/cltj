@@ -160,7 +160,7 @@ namespace ltj {
                     p0 = m_ptr_index->pos_subject(m_path_label[m_nfixed-1]);
                     break;
                 case p:
-                    p0 = m_path_label[m_nfixed-1]-1;
+                    p0 = m_ptr_index->pos_predicate(m_path_label[m_nfixed-1]);
                     break;
                 case o:
                     p0 = m_ptr_index->pos_object(m_path_label[m_nfixed-1]);
@@ -343,7 +343,8 @@ namespace ltj {
                         break;
                     case p:
                         if (c > m_ptr_index->max_predicate()) return false;
-                        m_status[m_nfixed+1].beg = c-1;
+                        if (m_ptr_index->next_predicate(c) != c) return false;
+                        m_status[m_nfixed+1].beg = m_ptr_index->pos_predicate(c);
                         m_redo[m_nfixed] = false;
                         break;
                     case o:
@@ -403,12 +404,13 @@ namespace ltj {
                         break;
                     case p:
                         if(c == -1ULL){
-                            value = 1;
+                            value = m_ptr_index->next_predicate(1);
                             m_status[m_nfixed+1].beg = 0;
                         }else{
                             if (c > m_ptr_index->max_predicate()) return 0;
-                            value = c;
-                            m_status[m_nfixed+1].beg = c-1;
+                            value = m_ptr_index->next_predicate(c);
+                            if (value > m_ptr_index->max_predicate()) return 0;
+                            m_status[m_nfixed+1].beg = m_ptr_index->pos_predicate(value);
                         }
                         break;
                     case o:
