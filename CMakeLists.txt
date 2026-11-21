@@ -400,6 +400,9 @@ add_hcltj_policy_executables(test-translation-overlay src/test/hcltj/test_transl
 add_cltj_executable(test-step-table-overlay src/test/hcltj/test_step_table_overlay.cpp test/hcltj)
 set_target_properties(test-step-table-overlay PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
+add_cltj_executable(test-level-widths-labels src/test/hcltj/test_level_widths_labels.cpp test/hcltj)
+set_target_properties(test-level-widths-labels PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+
 if(CLTJ_COLLECT_QUERY_STATS)
   add_cltj_executable(test-intersection-paths src/test/hcltj/test_intersection_paths.cpp test/hcltj)
   set_target_properties(test-intersection-paths PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)

@@ -1,7 +1,8 @@
 // root_bitmap against a std::set over random id sets (with runs that cross the 64-bit words and the
 // 4096-bit blocks of the succ support), after copy, move and a serialization round trip; the
 // preconditions on the ids; and round trips of cltj_index_metatrie_rb and cltj_index_metatrie_hash_rb
-// built from data/data.txt. Run from the repository root.
+// (with single_width_labels and level_widths_labels) built from data/data.txt. Run from the
+// repository root.
 #include <index/cltj_index_metatrie_hash_rb.hpp>
 #include <index/cltj_index_metatrie_rb.hpp>
 #include <index/root_bitmap.hpp>
@@ -217,6 +218,48 @@ void test_hash_index_round_trip() {
     check(rejected, "a hashed root is rejected when its block leaves L_plain");
 }
 
+void test_c3_index_round_trip() {
+    std::vector<cltj::spo_triple> D = read_data();
+    if (D.empty())
+        return;
+
+    for (uint32_t threshold : {2u, 3u, 1000u}) {
+        const std::string at = " (t=" + std::to_string(threshold) + ")";
+        cltj::compact_ltj_metatrie_hash_c3 index(D);
+        build_hash_overlay(index, threshold, true);
+        std::stringstream first;
+        index.serialize(first);
+        cltj::compact_ltj_metatrie_hash_c3 loaded;
+        loaded.load(first);
+        std::stringstream second;
+        loaded.serialize(second);
+        check(first.str() == second.str(), "C3 index round trip gives the same bytes" + at);
+
+        cltj::compact_ltj_metatrie_hash_rb c2(D);
+        build_hash_overlay(c2, threshold, true);
+        for (int t = 0; t < 6; t++) {
+            const auto& l3 = loaded.get_trie(t)->seq_plain();
+            const auto& l2 = c2.get_trie(t)->seq_plain();
+            bool same = l3.size() == l2.size() && l3 == index.get_trie(t)->seq_plain();
+            for (uint64_t i = 0; same && i < l2.size(); i++)
+                same = l3.access(i) == l2[i];
+            check(same, "trie " + std::to_string(t) + ": loaded C3 L_plain is the one of C2" + at);
+            if (t % 2)
+                check(l3.n2() == l3.size(), "trie " + std::to_string(t) + ": a partial trie has only level 2" + at);
+        }
+
+        std::stringstream c2_stream;
+        c2.serialize(c2_stream);
+        const std::string version = "index format version ";
+        check(load_error<cltj::compact_ltj_metatrie_hash_c3>(c2_stream.str()).find(version + "5, this binary reads version 6") !=
+                  std::string::npos,
+              "C3 rejects the C2 index with root bitmap" + at);
+        check(load_error<cltj::compact_ltj_metatrie_hash_rb>(first.str()).find(version + "6, this binary reads version 5") !=
+                  std::string::npos,
+              "C2 with root bitmap rejects the C3 index" + at);
+    }
+}
+
 } // namespace
 
 int main() {
@@ -224,6 +267,7 @@ int main() {
     test_preconditions();
     test_index_round_trip();
     test_hash_index_round_trip();
+    test_c3_index_round_trip();
     std::cout << (failures ? "FAILED" : "ALL PASS") << std::endl;
     return failures ? 1 : 0;
 }
