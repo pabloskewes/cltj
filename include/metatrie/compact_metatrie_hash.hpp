@@ -694,8 +694,7 @@ class compact_metatrie_hash {
      */
     pair<uint32_t, uint32_t> binary_search_seek(uint32_t val, uint32_t i, uint32_t f, size_type off) const {
         assert(i >= off && i <= f && f - off < m_seq_plain.size() && "range outside L_plain");
-        const auto p = m_seq_plain.seek(val, i - off, f - off);
-        return make_pair(p.first, p.second + off);
+        return m_seq_plain.seek(val, i, f, off);
     }
 
     void print() const {

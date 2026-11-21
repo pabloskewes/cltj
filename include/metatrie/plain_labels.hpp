@@ -11,9 +11,9 @@
 
 namespace cltj {
 
-// Storage of L_plain for compact_metatrie_hash. Positions are those of L_plain; seek(val, i, f)
-// returns the first position k in [i, f] with L_plain[k] >= val and its label, or {0, f + 1}.
-// [i, f] is (a suffix of) the block of one node.
+// Storage of L_plain for compact_metatrie_hash. seek(val, i, f, off) searches (a suffix of) the block
+// of one node, whose label at LOUDS position k is L_plain[k - off]: it returns the first k in [i, f]
+// with L_plain[k - off] >= val and its label, or {0, f + 1}.
 
 //! L_plain in one int_vector with a single width; binary search.
 class single_width_labels {
@@ -40,17 +40,19 @@ class single_width_labels {
 
     value_type access(size_type i) const { return m_seq[i]; }
 
-    std::pair<value_type, size_type> seek(value_type val, size_type i, size_type f) const {
-        if (m_seq[f] < val)
-            return {0, f + 1};
+    std::pair<uint32_t, uint32_t> seek(uint32_t val, uint32_t i, uint32_t f, size_type off) const {
+        if (m_seq[f - off] < val)
+            return std::make_pair(0, f + 1);
+        uint32_t mid;
         while (i < f) {
-            const size_type mid = (i + f) / 2;
-            if (m_seq[mid] < val)
+            mid = (i + f) / 2;
+            if (m_seq[mid - off] < val) {
                 i = mid + 1;
-            else
+            } else {
                 f = mid;
+            }
         }
-        return {m_seq[i], i};
+        return std::make_pair(value_type(m_seq[i - off]), i);
     }
 
     uint8_t width() const { return m_seq.width(); }
@@ -80,7 +82,7 @@ class single_width_labels {
  * @brief L_plain split by level, each part with its own width; galloping search.
  *
  * L_plain is [level 2 | level 3]: positions [0, n2) are labels of level 2 and [n2, |L_plain|)
- * of level 3. A block never crosses n2, so the level of a search is the level of f.
+ * of level 3. A block never crosses n2, so the level of a search is the level of f - off.
  */
 class level_widths_labels {
   public:
@@ -155,10 +157,10 @@ class level_widths_labels {
 
     value_type operator[](size_type i) const { return access(i); }
 
-    std::pair<value_type, size_type> seek(value_type val, size_type i, size_type f) const {
-        if (f < m_n2)
-            return gallop(m_plain2, 0, val, i, f);
-        return gallop(m_plain3, m_n2, val, i, f);
+    std::pair<uint32_t, uint32_t> seek(uint32_t val, uint32_t i, uint32_t f, size_type off) const {
+        if (f - off < m_n2)
+            return gallop(m_plain2, off, val, i, f);
+        return gallop(m_plain3, off + m_n2, val, i, f);
     }
 
     bool operator==(const level_widths_labels& o) const {

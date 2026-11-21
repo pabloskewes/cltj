@@ -1,7 +1,8 @@
 // level_widths_labels against single_width_labels and a linear scan, on random L_plain made of
-// sorted blocks of two levels with different widths: access(i) at every position, and seek(val, i, f)
-// inside every block from its start, from intermediate positions and from its end, for labels that
-// are present, absent, smaller than the whole block and larger than it. Also a serialization round trip.
+// sorted blocks of two levels with different widths: access(i) at every position, and
+// seek(val, i, f, off) inside every block from its start, from intermediate positions and from its end,
+// for labels that are present, absent, smaller than the whole block and larger than it, with the
+// block shifted by off as in B. Also a serialization round trip.
 #include <metatrie/plain_labels.hpp>
 
 #include <algorithm>
@@ -57,15 +58,18 @@ void add_level(std::mt19937_64& rng, std::vector<uint32_t>& L, std::vector<Block
     }
 }
 
+// Searches L_plain positions [i, f] as LOUDS positions [i + off, f + off].
 void check_seek(const std::vector<uint32_t>& L, const single_width_labels& one, const level_widths_labels& two,
-                uint32_t val, uint64_t i, uint64_t f, const std::string& what) {
+                uint32_t val, uint64_t i, uint64_t f, uint64_t off, const std::string& what) {
     seeks++;
-    const auto expected = linear_seek(L, val, i, f);
-    const auto a = one.seek(val, i, f);
-    const auto b = two.seek(val, i, f);
+    auto expected = linear_seek(L, val, i, f);
+    expected.second += off;
+    const std::pair<uint32_t, uint64_t> a = one.seek(val, i + off, f + off, off);
+    const std::pair<uint32_t, uint64_t> b = two.seek(val, i + off, f + off, off);
     if (a != expected || b != expected) {
         std::ostringstream m;
-        m << what << ": seek(" << val << ", " << i << ", " << f << ") linear {" << expected.first << ", "
+        m << what << ": seek(" << val << ", " << i << " + " << off << ", " << f << " + " << off << ") linear {"
+          << expected.first << ", "
           << expected.second << "} single {" << a.first << ", " << a.second << "} level {" << b.first << ", "
           << b.second << "}";
         expect(false, m.str());
@@ -79,8 +83,9 @@ void check_case(uint64_t seed, uint64_t blocks2, uint64_t blocks3, uint64_t max_
     add_level(rng, L, blocks, blocks2, 1 + rng() % 4, 5000 + rng() % 4000, max_deg);
     const uint64_t n2 = L.size();
     add_level(rng, L, blocks, blocks3, 1 + rng() % 4, (1u << 28) + uint32_t(rng() % (1u << 28)), max_deg);
+    const uint64_t off = (seed % 2) ? 0 : rng() % 100000000;
     const std::string what = "seed=" + std::to_string(seed) + " n2=" + std::to_string(n2) + " n=" +
-                             std::to_string(L.size());
+                             std::to_string(L.size()) + " off=" + std::to_string(off);
 
     sdsl::int_vector<> v1(L.size(), 0, 32), v2(L.size(), 0, 32);
     for (uint64_t k = 0; k < L.size(); k++)
@@ -108,7 +113,7 @@ void check_case(uint64_t seed, uint64_t blocks2, uint64_t blocks3, uint64_t max_
             for (int r = 0; r < 8; r++)
                 vals.push_back(L[b.start] + uint32_t(rng() % (uint64_t(L[f] - L[b.start]) + 2)));
             for (uint32_t val : vals)
-                check_seek(L, one, two, val, i, f, what);
+                check_seek(L, one, two, val, i, f, off, what);
         }
     }
 
