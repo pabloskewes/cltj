@@ -280,3 +280,12 @@ endforeach()
 add_executable(test-compact-trie-ef src/test/test-compact-trie-ef.cpp)
 target_link_libraries(test-compact-trie-ef sdsl divsufsort divsufsort64)
 set_target_properties(test-compact-trie-ef PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
+
+add_executable(size-breakdown-xcltj src/bench/size-breakdown-xcltj.cpp)
+target_link_libraries(size-breakdown-xcltj sdsl divsufsort divsufsort64)
+set_target_properties(size-breakdown-xcltj PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
+
+add_executable(size-breakdown-xcltj-ef src/bench/size-breakdown-xcltj.cpp)
+target_compile_definitions(size-breakdown-xcltj-ef PUBLIC CLTJ_EF=1)
+target_link_libraries(size-breakdown-xcltj-ef sdsl divsufsort divsufsort64)
+set_target_properties(size-breakdown-xcltj-ef PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
