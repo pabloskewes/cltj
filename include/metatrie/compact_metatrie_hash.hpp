@@ -18,11 +18,16 @@
 #include <metatrie/overlay/sep_bitmap.hpp>
 #include <metatrie/overlay/step_table.hpp>
 #include <metatrie/overlay/step_table_rb.hpp>
+#include <metatrie/plain_labels.hpp>
 #include <sdsl/rank_support_v.hpp>
 #include <stdexcept>
 #include <util/instrument.hpp>
 
 namespace cltj {
+
+#if defined(CLTJ_LEVEL_WIDTHS) && !defined(CLTJ_ROOT_BITMAP)
+#error "CLTJ_LEVEL_WIDTHS selects the root-bitmap index with level_widths_labels; it needs CLTJ_ROOT_BITMAP"
+#endif
 
 #ifdef CLTJ_OVERLAY_STEP_TABLE
 using default_overlay = overlay::StepTableOverlay;
@@ -30,12 +35,13 @@ using default_overlay = overlay::StepTableOverlay;
 using default_overlay = overlay::SepBitmapOverlay;
 #endif
 
-template <class Overlay = default_overlay>
+template <class Overlay = default_overlay, class Labels = single_width_labels>
 class compact_metatrie_hash {
   public:
     typedef uint64_t size_type;
     typedef uint32_t value_type;
     typedef Overlay overlay_type;
+    typedef Labels labels_type;
 
     // Every serialized trie starts with this tag; its low byte is the format version:
     //   (no tag)  pre-overlay format: the stream starts with the bit size of B, which
@@ -44,18 +50,23 @@ class compact_metatrie_hash {
     //   3         scheme C overlay (StepTableOverlay)
     //   4         cltj_index_metatrie_rb (X-CLTJ with root bitmap), one tag per index
     //   5         scheme C overlay with the root block out of L_plain (StepTableRbOverlay)
+    //   6         version 5 with L_plain split by level, one width each (level_widths_labels)
     static constexpr uint64_t format_magic = 0x48434C544A000000ULL;
-    static constexpr uint64_t format_tag = format_magic | Overlay::format_version;
+    static constexpr uint8_t format_version = Labels::level_widths ? 6 : Overlay::format_version;
+    static constexpr uint64_t format_tag = format_magic | format_version;
 
     // The children of the root of a full trie live in a root_bitmap: its block is not in L_plain
     // and the root must not be hashed.
     static constexpr bool drops_root_labels = Overlay::drops_root_labels;
 
+    // Level 2 of a full trie starts L_plain only when the root block is out of it.
+    static_assert(!Labels::level_widths || drops_root_labels, "level_widths_labels needs an overlay with drops_root_labels");
+
   private:
     using mphf_type = hashing::MPHF<hashing::GlGhStorage, hashing::policies::QuotientKey>;
 
     sdsl::bit_vector m_bv;  // LOUDS bitvector (B)
-    sdsl::int_vector<> m_seq_plain;  // L_plain: L without the blocks of hashed nodes
+    Labels m_seq_plain;  // L_plain: L without the blocks of hashed nodes
     // sdsl::rank_support_v<1> m_rank1;
     cds::succ_support_v<0> m_succ0;
     sdsl::select_support_mcl<0> m_select0;
@@ -102,22 +113,28 @@ class compact_metatrie_hash {
     void build_plain_overlay() {
         const size_type dropped = drops_root_labels ? children(0) : 0;
         const size_type plain_len = m_build_seq.size() - 1 - dropped;
-        m_seq_plain = sdsl::int_vector<>(plain_len, 0, m_build_seq.width());
+        sdsl::int_vector<> plain(plain_len, 0, m_build_seq.width());
         for (size_type i = 0; i < plain_len; i++)
-            m_seq_plain[i] = m_build_seq[dropped + i];
-        sdsl::util::bit_compress(m_seq_plain);
+            plain[i] = m_build_seq[dropped + i];
 
+        // B is in level order: block 0 is the root and the next deg(root) blocks are the
+        // level-1 nodes, all internal in a full trie.
+        const size_type level1_nodes = children(0);
+        size_type n2 = 0;
         Overlay new_overlay;
         new_overlay.begin(m_bv.size(), plain_len);
-        for (size_type v = 0; v + 1 < m_bv.size(); v += children(v)) {
+        for (size_type v = 0, block = 0; v + 1 < m_bv.size(); v += children(v), block++) {
             if (drops_root_labels && v == 0)
                 new_overlay.on_dropped_root(children(v));
             else
                 new_overlay.on_plain_node(v, children(v));
+            if (block == level1_nodes)
+                n2 = v + children(v) - dropped;
         }
         m_overlay = std::move(new_overlay);
         m_overlay.finalize(m_bv, m_threshold);
         release_build_scratch();
+        m_seq_plain = Labels(std::move(plain), n2);
     }
 
     void release_build_scratch() {
@@ -196,7 +213,7 @@ class compact_metatrie_hash {
 
     const sdsl::bit_vector& bv() const { return m_bv; }
 
-    const sdsl::int_vector<>& seq_plain() const { return m_seq_plain; }
+    const Labels& seq_plain() const { return m_seq_plain; }
 
     const Overlay& overlay() const { return m_overlay; }
 
@@ -455,6 +472,10 @@ class compact_metatrie_hash {
 
         size_type seq_cursor = 0;
         size_type plain_cursor = 0;
+        // Labels of level 2 in L_plain: the blocks of the level-1 nodes, which come right after the
+        // root in a full trie and are all of the first BFS level in a partial one.
+        size_type n2 = plain_len;
+        uint32_t depth = is_partial_trie ? 1 : 0;
 
         size_type num_zeros = count_bits(m_bv, 0);
 
@@ -540,6 +561,8 @@ class compact_metatrie_hash {
             }
             in_partial_trie_first_level = false;
             current_level = std::move(next_level);
+            if (depth++ == 1)
+                n2 = plain_cursor;
         }
 
         assert(seq_cursor + 1 == seq_len);
@@ -552,13 +575,11 @@ class compact_metatrie_hash {
         sdsl::util::init_support(m_succ0, &m_bv);
         sdsl::util::init_support(m_select0, &m_bv);
 
-        m_seq_plain.swap(new_plain);
-        sdsl::util::bit_compress(m_seq_plain);
-
         m_mphfs.swap(new_mphfs);
         m_overlay = std::move(new_overlay);
         m_overlay.finalize(m_bv, m_threshold);
         release_build_scratch();
+        m_seq_plain = Labels(std::move(new_plain), n2);
         m_root_degree = m_succ0(1);
     }
 
@@ -662,27 +683,19 @@ class compact_metatrie_hash {
     //! Label at LOUDS position @p pos of a non-hashed node with deleted_before() == @p off.
     value_type plain_label(size_type pos, size_type off) const {
         assert(pos >= off && pos - off < m_seq_plain.size() && "position outside L_plain");
-        return m_seq_plain[pos - off];
+        return m_seq_plain.access(pos - off);
     }
 
     /**
-     * @brief Binary search in the block of a non-hashed node.
+     * @brief Search in the block of a non-hashed node: binary, or galloping from @p i with
+     *        level_widths_labels.
      * @param off deleted_before() of the node; [i, f] and the result are LOUDS positions
      * @return {first label >= val, its position}, or {0, f + 1} if there is none.
      */
     pair<uint32_t, uint32_t> binary_search_seek(uint32_t val, uint32_t i, uint32_t f, size_type off) const {
-        if (plain_label(f, off) < val)
-            return make_pair(0, f + 1);
-        uint32_t mid;
-        while (i < f) {
-            mid = (i + f) / 2;
-            if (plain_label(mid, off) < val) {
-                i = mid + 1;
-            } else {
-                f = mid;
-            }
-        }
-        return make_pair(plain_label(i, off), i);
+        assert(i >= off && i <= f && f - off < m_seq_plain.size() && "range outside L_plain");
+        const auto p = m_seq_plain.seek(val, i - off, f - off);
+        return make_pair(p.first, p.second + off);
     }
 
     void print() const {
@@ -725,11 +738,12 @@ class compact_metatrie_hash {
         b.components = {
             {"format_tag", sizeof(format_tag)              },
             {"bv",         sdsl::size_in_bytes(m_bv)       },
-            {"seq_plain",  sdsl::size_in_bytes(m_seq_plain)},
-            {"succ0",      sdsl::size_in_bytes(m_succ0)    },
-            {"select0",    sdsl::size_in_bytes(m_select0)  },
-            {"threshold",  sizeof(m_threshold)             },
         };
+        for (const auto& c : m_seq_plain.get_size_breakdown().components)
+            b.components.push_back(c);
+        b.components.push_back({"succ0", sdsl::size_in_bytes(m_succ0)});
+        b.components.push_back({"select0", sdsl::size_in_bytes(m_select0)});
+        b.components.push_back({"threshold", sizeof(m_threshold)});
         for (const auto& c : m_overlay.get_size_breakdown().components)
             b.components.push_back({"overlay." + c.first, c.second});
         b.components.push_back({"n_mphfs", sizeof(uint32_t)});
@@ -745,7 +759,7 @@ class compact_metatrie_hash {
             msg << "compact_metatrie_hash::load: ";
             if (in && (tag & ~0xFFULL) == format_magic)
                 msg << "index format version " << (tag & 0xFF) << ", this binary reads version "
-                    << int(Overlay::format_version);
+                    << int(format_version);
             else
                 msg << "not an index with a format version (tag 0x" << std::hex << tag << ")";
             msg << "; rebuild the index with this binary";

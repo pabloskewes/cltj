@@ -7,6 +7,7 @@
 #include <index/root_bitmap.hpp>
 #include <metatrie/compact_metatrie_hash.hpp>
 #include <metatrie/overlay/step_table_rb.hpp>
+#include <metatrie/plain_labels.hpp>
 
 #include <array>
 #include <stdexcept>
@@ -15,13 +16,15 @@ namespace cltj {
 
 // H-CLTJ (scheme C) with the children of the roots of SPO, POS and OSP in a root_bitmap instead of
 // L_plain or an MPHF. The roots stay in B as node 0, unhashed, with their children in id order, so
-// the partial tries get the identity permutation. Every trie carries its own format tag (version 5).
-// The hash overlay is built afterwards, pair by pair, with skip_root on the full tries.
+// the partial tries get the identity permutation. Every trie carries its own format tag (version 5,
+// or 6 with level_widths_labels). The hash overlay is built afterwards, pair by pair, with skip_root
+// on the full tries.
+template <class Labels = single_width_labels>
 class cltj_index_metatrie_hash_rb {
   public:
     typedef uint64_t size_type;
     typedef uint32_t value_type;
-    typedef compact_metatrie_hash<overlay::StepTableRbOverlay> trie_type;
+    typedef compact_metatrie_hash<overlay::StepTableRbOverlay, Labels> trie_type;
 
   private:
     std::array<trie_type, 6> m_tries;
@@ -71,7 +74,8 @@ class cltj_index_metatrie_hash_rb {
     }
 };
 
-typedef cltj::cltj_index_metatrie_hash_rb compact_ltj_metatrie_hash_rb;
+typedef cltj::cltj_index_metatrie_hash_rb<> compact_ltj_metatrie_hash_rb;
+typedef cltj::cltj_index_metatrie_hash_rb<level_widths_labels> compact_ltj_metatrie_hash_c3;
 
 } // namespace cltj
 
