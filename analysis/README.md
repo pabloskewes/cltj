@@ -13,9 +13,10 @@ The tools are organized into self-contained modules by topic. Each module has it
 ### MPHF Strategy Evaluation
 - [`hashing/`](hashing/): Performance comparison of different MPHF families (BDZ, GlGh, PTHash) and storage policies (Quotienting) in isolation.
 
-### Query benchmark (X-CLTJ vs H-CLTJ)
+### Query benchmark
 
-- [`query_bench/`](query_bench/): CLI `main.py` merges `bench-xcltj.csv` / `bench-hcltj.csv`, writes `comparison.csv`, summaries, `report.txt`, and figures under `figures/`: `time_scatter.png`, `median_by_type.png`, `mean_by_type.png` (mean times per query type; sensitive to tails/timeouts), `speedup_boxplot.png`, `winrate_by_type.png` (stacked bar of win-rate per type), `timeout_heatmap.png` (timeouts per engine/type), `summary_card.png` (dashboard with key metrics).
+- [`query_bench/`](query_bench/), N systems: `python -m query_bench <exp_dir> [--systems TOML] [--ref NAME] [--min-ms 100] [--pairs A/B,C/D]`, run from `analysis/`. The systems of an experiment are declared in a `systems.toml` (format in `query_bench/systems.py`; default `<exp_dir>/analysis/overview/systems.toml`). Shared query sets (base set without timeouts in the `base` systems, main subset by the time of a reference that may come from another experiment), paired per-query ratios `t_ref / t_sys` for the reference against every system plus the declared pairs, figures with one panel per query type, `pairs.csv` and a self-contained `index.html`. Tests: `python -m unittest query_bench.test_query_bench` (the experiment cases need the CSVs of `cltj-experiments`, found through `CLTJ_EXPERIMENTS`).
+- [`query_bench/`](query_bench/), X-CLTJ vs H-CLTJ: CLI `main.py` merges `bench-xcltj.csv` / `bench-hcltj.csv`, writes `comparison.csv`, summaries, `report.txt`, and figures under `figures/`: `time_scatter.png`, `median_by_type.png`, `mean_by_type.png` (mean times per query type; sensitive to tails/timeouts), `speedup_boxplot.png`, `winrate_by_type.png` (stacked bar of win-rate per type), `timeout_heatmap.png` (timeouts per engine/type), `summary_card.png` (dashboard with key metrics).
 
 ## Setup
 - [`children_histogram/`](children_histogram/): Analyzes trie node size distributions to determine optimal hashing thresholds.
