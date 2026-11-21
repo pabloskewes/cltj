@@ -29,6 +29,16 @@
 #include <unordered_set>
 #include <vector>
 
+// 0: smallest weight. 1: 0, and lonely pairs bound along the cycle s->p->o->s.
+// 2: 1, and smallest weight * (1 + LTJ_VEO_SWITCH_COST * switching patterns), integer cost.
+// 3: 1, and fewest expected switches (weight * switching patterns), then smallest weight.
+#ifndef LTJ_VEO_VARIANT
+#define LTJ_VEO_VARIANT 0
+#endif
+#if LTJ_VEO_VARIANT == 2 && !defined(LTJ_VEO_SWITCH_COST)
+#error "LTJ_VEO_VARIANT 2 needs LTJ_VEO_SWITCH_COST"
+#endif
+
 namespace ltj {
 
 using namespace std;
@@ -185,6 +195,13 @@ public:
       if (p && o) {
         var_to_related(var_p, var_o);
       }
+#if LTJ_VEO_VARIANT >= 1
+      // With p fixed, binding o first stays in POS; s first goes through PSO.
+      if (triple_pattern.s_is_variable() && !s && triple_pattern.o_is_variable() && !o &&
+          !(triple_pattern.p_is_variable() && !p)) {
+        std::swap(m_lonely[m_lonely.size() - 2], m_lonely.back());
+      }
+#endif
       ++i;
     }
     m_index = 0;
@@ -244,9 +261,51 @@ public:
     std::swap(m_not_bound, o.m_not_bound);
   }
 
+#if LTJ_VEO_VARIANT >= 2
+  // Patterns of var whose iterator would pay a trie_switch() per value of var.
+  size_type switching_patterns(var_type var) const {
+    size_type n = 0;
+    for (ltj_iter_type *iter : m_ptr_var_iterators->at(var)) {
+      state_type state = o;
+      if (iter->is_variable_subject(var)) {
+        state = s;
+      } else if (iter->is_variable_predicate(var)) {
+        state = p;
+      }
+      n += iter->binding_enters_partial_trie(state);
+    }
+    return n;
+  }
+#endif
+
   inline var_type next() {
 
     if (m_index < m_var_info.size()) { // No lonely
+#if LTJ_VEO_VARIANT == 2
+      size_type min = -1ULL;
+      list_iterator_type min_iter;
+      for (auto iter = m_not_bound.begin(); iter != m_not_bound.end(); ++iter) {
+        const auto &v = m_var_info[*iter];
+        size_type cost = v.weight * (1 + (size_type)LTJ_VEO_SWITCH_COST * switching_patterns(v.name));
+        if (min > cost || (min == cost && *iter < *min_iter)) {
+          min = cost;
+          min_iter = iter;
+        }
+      }
+#elif LTJ_VEO_VARIANT == 3
+      size_type min = -1ULL, min_w = -1ULL;
+      list_iterator_type min_iter;
+      for (auto iter = m_not_bound.begin(); iter != m_not_bound.end(); ++iter) {
+        const auto &v = m_var_info[*iter];
+        size_type expected = v.weight * switching_patterns(v.name);
+        if (min > expected ||
+            (min == expected && (min_w > v.weight || (min_w == v.weight && *iter < *min_iter)))) {
+          min = expected;
+          min_w = v.weight;
+          min_iter = iter;
+        }
+      }
+#else
       size_type min = -1ULL;
       list_iterator_type min_iter;
       // Lineal search on variables that are not is_bound
@@ -258,6 +317,7 @@ public:
           min_iter = iter;
         }
       }
+#endif
       // Remove from list
       size_type min_pos = *min_iter;
       m_var_info[min_pos].is_bound = true;
