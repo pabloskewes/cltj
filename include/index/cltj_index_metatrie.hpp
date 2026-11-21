@@ -64,6 +64,11 @@ namespace cltj {
         cltj_index_metatrie(vector<spo_triple> &D) {
             for(size_type i = 0; i < 6; ++i){
                 std::sort(D.begin(), D.end(), comparator_order(i));
+                auto last = std::unique(D.begin(), D.end());
+                if(last != D.end()){
+                    std::cout << "Removed " << std::distance(last, D.end()) << " duplicate triples" << std::endl;
+                    D.erase(last, D.end());
+                }
                 std::vector<uint32_t> syms_root, syms;
                 std::vector<size_type> lengths;
                 auto end_level = 3 - (i & 0x1);
