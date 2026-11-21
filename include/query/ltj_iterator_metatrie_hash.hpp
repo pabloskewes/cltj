@@ -311,6 +311,15 @@ class ltj_iterator_metatrie_hash {
     bool ltj26_next_down_switches() const { return m_nfixed == 1 && m_status_i == 1; }
 #endif
 
+    // True iff binding `state` now leaves the iterator in a partial trie (same rule as choose_trie),
+    // so each value bound to it pays a trie_switch().
+    inline bool binding_enters_partial_trie(state_type state) const {
+        if (m_nfixed != 1) return false;
+        if (state == s) return m_fixed[0] != o;
+        if (state == p) return m_fixed[0] != s;
+        return m_fixed[0] != p;
+    }
+
     inline size_type parent() const;
 
     /**
