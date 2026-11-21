@@ -26,6 +26,12 @@
 #include <utility>
 #include <vector>
 
+#ifdef CLTJ_LEVEL_WIDTHS
+using rb_index = cltj::compact_ltj_metatrie_hash_c3;
+#else
+using rb_index = cltj::compact_ltj_metatrie_hash_rb;
+#endif
+
 namespace {
 
 const uint64_t max_reported = 5;
@@ -135,7 +141,7 @@ int main(int argc, char** argv) {
     CLI11_PARSE(app, argc, argv);
 
     try {
-        cltj::compact_ltj_metatrie_hash_rb rb;
+        rb_index rb;
         if (!sdsl::load_from_file(rb, rb_file)) {
             std::cerr << "ERROR: cannot load " << rb_file << std::endl;
             return 2;

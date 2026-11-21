@@ -1,5 +1,5 @@
 // Runs every query on X-CLTJ or H-CLTJ (with or without root bitmap) and writes its intersection
-// stats aggregated per query. hcltj-rb is always scheme C.
+// stats aggregated per query. hcltj-rb and hcltj-c3 are always scheme C.
 // Characterization only: with CLTJ_COLLECT_QUERY_STATS the printed times are not measurements.
 #include <CLI11.hpp>
 #include <algorithm>
@@ -141,7 +141,7 @@ int main(int argc, char* argv[]) {
     std::vector<uint64_t> skip_ids;
     app.add_option("system", system, "Index type")
         ->required()
-        ->check(CLI::IsMember({"xcltj", "xcltj-rb", "hcltj", "hcltj-rb"}));
+        ->check(CLI::IsMember({"xcltj", "xcltj-rb", "hcltj", "hcltj-rb", "hcltj-c3"}));
     app.add_option("index", index, "Index file")->required();
     app.add_option("queries", queries, "Query file, one query per line")->required();
     app.add_option("-o,--output", out, "Output CSV")->required();
@@ -168,12 +168,18 @@ int main(int argc, char* argv[]) {
     using hrb_iter = ltj::ltj_iterator_metatrie_hash_rb<hrb_index, uint8_t, uint64_t>;
     using hrb_algo = ltj::ltj_algorithm_hash<hrb_iter, ltj::veo::veo_adaptive<hrb_iter, ltj::util::trait_distinct>>;
 
+    using hc3_index = cltj::compact_ltj_metatrie_hash_c3;
+    using hc3_iter = ltj::ltj_iterator_metatrie_hash_rb<hc3_index, uint8_t, uint64_t>;
+    using hc3_algo = ltj::ltj_algorithm_hash<hc3_iter, ltj::veo::veo_adaptive<hc3_iter, ltj::util::trait_distinct>>;
+
     if (system == "xcltj")
         run<x_index, x_algo>(index, queries, timeout, threshold, out, skip);
     else if (system == "xcltj-rb")
         run<xrb_index, xrb_algo>(index, queries, timeout, threshold, out, skip);
     else if (system == "hcltj-rb")
         run<hrb_index, hrb_algo>(index, queries, timeout, threshold, out, skip);
+    else if (system == "hcltj-c3")
+        run<hc3_index, hc3_algo>(index, queries, timeout, threshold, out, skip);
     else
         run<h_index, h_algo>(index, queries, timeout, threshold, out, skip);
     return 0;

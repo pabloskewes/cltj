@@ -7,7 +7,11 @@
 // Usage: verify-mphf-hcltj <path-to-index.hcltj>
 #ifdef CLTJ_ROOT_BITMAP
 #include <index/cltj_index_metatrie_hash_rb.hpp>
+#ifdef CLTJ_LEVEL_WIDTHS
+using index_type = cltj::compact_ltj_metatrie_hash_c3;
+#else
 using index_type = cltj::compact_ltj_metatrie_hash_rb;
+#endif
 #else
 #include <index/cltj_index_metatrie.hpp>
 using index_type = cltj::compact_ltj_metatrie_hash;

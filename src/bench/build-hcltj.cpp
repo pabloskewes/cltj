@@ -10,7 +10,11 @@ using namespace std::chrono;
 using timer = std::chrono::high_resolution_clock;
 
 #ifdef CLTJ_ROOT_BITMAP
+#ifdef CLTJ_LEVEL_WIDTHS
+using index_type = cltj::compact_ltj_metatrie_hash_c3;
+#else
 using index_type = cltj::compact_ltj_metatrie_hash_rb;
+#endif
 constexpr bool skip_root = true;  // the roots of the full tries go to the root bitmap
 #else
 using index_type = cltj::compact_ltj_metatrie_hash;

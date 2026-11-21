@@ -43,7 +43,11 @@ using namespace std;
 using namespace ::util::time;
 
 #ifdef CLTJ_ROOT_BITMAP
+#ifdef CLTJ_LEVEL_WIDTHS
+using index_type = cltj::compact_ltj_metatrie_hash_c3;
+#else
 using index_type = cltj::compact_ltj_metatrie_hash_rb;
+#endif
 template <class I, class V, class C> using iterator_t = ltj::ltj_iterator_metatrie_hash_rb<I, V, C>;
 #else
 using index_type = cltj::compact_ltj_metatrie_hash;

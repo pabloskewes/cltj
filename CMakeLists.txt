@@ -109,6 +109,13 @@ function(add_hcltj_c_rb_executable name source_file output_dir)
   target_compile_definitions(${name}-c-rb PRIVATE CLTJ_OVERLAY_STEP_TABLE CLTJ_ROOT_BITMAP)
 endfunction()
 
+# C++17 binary of C3: H-CLTJ with root bitmap (scheme C) and one width per level in L_plain: ${name}-c3-rb
+function(add_hcltj_c3_rb_executable name source_file output_dir)
+  add_cltj_executable(${name}-c3-rb ${source_file} ${output_dir} ${ARGN})
+  set_target_properties(${name}-c3-rb PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+  target_compile_definitions(${name}-c3-rb PRIVATE CLTJ_OVERLAY_STEP_TABLE CLTJ_ROOT_BITMAP CLTJ_LEVEL_WIDTHS)
+endfunction()
+
 # Suppress warnings from external C library (hybridBV)
 if(TARGET hybridbv_gn)
   target_compile_options(hybridbv_gn PRIVATE -w)
@@ -125,6 +132,7 @@ add_cltj_executable(build-hcltj src/bench/build-hcltj.cpp bench hybridbv_gn)
 set_target_properties(build-hcltj PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 add_hcltj_policy_executables(build-hcltj src/bench/build-hcltj.cpp bench hybridbv_gn)
 add_hcltj_c_rb_executable(build-hcltj src/bench/build-hcltj.cpp bench hybridbv_gn)
+add_hcltj_c3_rb_executable(build-hcltj src/bench/build-hcltj.cpp bench hybridbv_gn)
 
 add_cltj_executable(build-xcltj-rb src/bench/build-xcltj-rb.cpp bench)
 set_target_properties(build-xcltj-rb PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
@@ -175,6 +183,13 @@ add_cltj_executable(bench-query-hcltj-c-rb-ss src/bench/bench-query-hcltj.cpp be
 target_compile_definitions(bench-query-hcltj-c-rb-ss PRIVATE ADAPTIVE=1 CLTJ_OVERLAY_STEP_TABLE CLTJ_ROOT_BITMAP LTJ26_MIXED_MIN LTJ26_SORTED_SCAN)
 set_target_properties(bench-query-hcltj-c-rb-ss PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
+add_hcltj_c3_rb_executable(bench-query-hcltj src/bench/bench-query-hcltj.cpp bench)
+target_compile_definitions(bench-query-hcltj-c3-rb PRIVATE ADAPTIVE=1)
+
+add_cltj_executable(bench-query-hcltj-c3-rb-ss src/bench/bench-query-hcltj.cpp bench)
+target_compile_definitions(bench-query-hcltj-c3-rb-ss PRIVATE ADAPTIVE=1 CLTJ_OVERLAY_STEP_TABLE CLTJ_ROOT_BITMAP CLTJ_LEVEL_WIDTHS LTJ26_MIXED_MIN LTJ26_SORTED_SCAN)
+set_target_properties(bench-query-hcltj-c3-rb-ss PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+
 add_cltj_executable(bench-query-hcltj-global src/bench/bench-query-hcltj.cpp bench)
 target_compile_definitions(bench-query-hcltj-global PRIVATE ADAPTIVE=0)
 
@@ -200,11 +215,13 @@ add_cltj_executable(verify-mphf-hcltj src/bench/verify-mphf-hcltj.cpp analysis)
 set_target_properties(verify-mphf-hcltj PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 add_hcltj_policy_executables(verify-mphf-hcltj src/bench/verify-mphf-hcltj.cpp analysis)
 add_hcltj_c_rb_executable(verify-mphf-hcltj src/bench/verify-mphf-hcltj.cpp analysis)
+add_hcltj_c3_rb_executable(verify-mphf-hcltj src/bench/verify-mphf-hcltj.cpp analysis)
 
 add_hcltj_policy_executables(verify-labels-hcltj src/bench/verify-labels-hcltj.cpp analysis)
 
 add_hcltj_policy_executables(size-breakdown-hcltj src/bench/size-breakdown-hcltj.cpp analysis)
 add_hcltj_c_rb_executable(size-breakdown-hcltj src/bench/size-breakdown-hcltj.cpp analysis)
+add_hcltj_c3_rb_executable(size-breakdown-hcltj src/bench/size-breakdown-hcltj.cpp analysis)
 
 add_cltj_executable(size-breakdown-xcltj src/bench/size-breakdown-xcltj.cpp analysis)
 set_target_properties(size-breakdown-xcltj PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
@@ -216,11 +233,13 @@ add_cltj_executable(check-root-bitmap-xcltj src/bench/check-root-bitmap-xcltj.cp
 set_target_properties(check-root-bitmap-xcltj PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
 add_hcltj_c_rb_executable(check-root-bitmap-hcltj src/bench/check-root-bitmap-hcltj.cpp analysis)
+add_hcltj_c3_rb_executable(check-root-bitmap-hcltj src/bench/check-root-bitmap-hcltj.cpp analysis)
 
 add_cltj_executable(check-overlay-hcltj src/bench/check-overlay-hcltj.cpp analysis)
 set_target_properties(check-overlay-hcltj PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 add_hcltj_policy_executables(check-overlay-hcltj src/bench/check-overlay-hcltj.cpp analysis)
 add_hcltj_c_rb_executable(check-overlay-hcltj src/bench/check-overlay-hcltj.cpp analysis)
+add_hcltj_c3_rb_executable(check-overlay-hcltj src/bench/check-overlay-hcltj.cpp analysis)
 
 add_cltj_executable(diff-overlay-hcltj src/bench/diff-overlay-hcltj.cpp analysis)
 set_target_properties(diff-overlay-hcltj PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)

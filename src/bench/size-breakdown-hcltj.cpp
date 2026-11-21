@@ -7,7 +7,11 @@
 #include <CLI11.hpp>
 #ifdef CLTJ_ROOT_BITMAP
 #include <index/cltj_index_metatrie_hash_rb.hpp>
+#ifdef CLTJ_LEVEL_WIDTHS
+using index_type = cltj::compact_ltj_metatrie_hash_c3;
+#else
 using index_type = cltj::compact_ltj_metatrie_hash_rb;
+#endif
 #else
 #include <index/cltj_index_metatrie.hpp>
 using index_type = cltj::compact_ltj_metatrie_hash;
@@ -28,6 +32,13 @@ static void print_policy(const cltj::overlay::StepTableOverlay&) {}
 
 static void print_policy(const cltj::overlay::StepTableRbOverlay& ov) { std::cout << " root_deleted=" << ov.root_deleted(); }
 
+static void print_labels(const cltj::single_width_labels& l) { std::cout << " plain_width=" << int(l.width()); }
+
+static void print_labels(const cltj::level_widths_labels& l) {
+    std::cout << " plain2_size=" << l.plain2().size() << " plain2_width=" << int(l.plain2().width())
+              << " plain3_size=" << l.plain3().size() << " plain3_width=" << int(l.plain3().width());
+}
+
 int main(int argc, char** argv) {
     CLI::App app{"Size breakdown of an H-CLTJ index"};
     std::string index_file, json_file;
@@ -35,7 +46,7 @@ int main(int argc, char** argv) {
     app.add_option("out", json_file, "Output JSON with the sdsl structure tree")->required();
     CLI11_PARSE(app, argc, argv);
 
-    using overlay_type = index_type::trie_type::overlay_type;
+    using trie_type = index_type::trie_type;
     static const char* names[] = {"SPO", "SOP", "POS", "PSO", "OSP", "OPS"};
 
     try {
@@ -45,7 +56,7 @@ int main(int argc, char** argv) {
             return 2;
         }
         const uint64_t index_bytes = sdsl::size_in_bytes(index);
-        std::cout << "index_bytes=" << index_bytes << " format_version=" << int(overlay_type::format_version)
+        std::cout << "index_bytes=" << index_bytes << " format_version=" << int(trie_type::format_version)
                   << std::endl;
 
         bool ok = true;
@@ -68,9 +79,10 @@ int main(int argc, char** argv) {
             }
             std::cout << "trie=" << t << " name=" << names[t] << " bytes=" << trie_bytes
                       << " louds_size=" << trie->louds_size() << " n_labels=" << trie->louds_size() - 1
-                      << " plain_size=" << trie->seq_plain().size()
-                      << " plain_width=" << int(trie->seq_plain().width()) << " mphfs=" << trie->mphf_count()
-                      << " hashed_nodes=" << hashed_nodes << " hashed_keys=" << hashed_keys;
+                      << " plain_size=" << trie->seq_plain().size();
+            print_labels(trie->seq_plain());
+            std::cout << " mphfs=" << trie->mphf_count() << " hashed_nodes=" << hashed_nodes
+                      << " hashed_keys=" << hashed_keys;
             print_policy(trie->overlay());
 #ifdef CLTJ_ROOT_BITMAP
             if (t % 2 == 0) {
