@@ -25,6 +25,9 @@
 #include <string>
 #include <triple_pattern.hpp>
 #include <vector>
+#ifdef LTJ_VEO_TRACE
+#include <veo/veo_trace.hpp>
+#endif
 
 #define VERBOSE 0
 
@@ -153,6 +156,9 @@ private:
   }
 
   size_type trie_switch() {
+#ifdef LTJ_VEO_TRACE
+    ++veo::trace::switches;
+#endif
     size_type trie_aux;
     switch (m_trie_i) {
     case 1:

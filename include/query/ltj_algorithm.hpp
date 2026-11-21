@@ -34,6 +34,9 @@
 #include <util/rdf_util.hpp>
 #include <veo/veo_adaptive.hpp>
 #include <veo/veo_simple.hpp>
+#ifdef LTJ_VEO_TRACE
+#include <veo/veo_trace.hpp>
+#endif
 
 #define EXPT_TIME_SOL 0
 
@@ -299,6 +302,9 @@ public:
       res.add(t_str);
     } else {
       var_type x_j = m_veo.next();
+#ifdef LTJ_VEO_TRACE
+      veo::trace::record(tuple, j, x_j);
+#endif
       // cout << "Variable: " << (uint64_t) x_j << endl;
       // cout << (uint64_t) x_j << endl;
       vector<ltj_iter_type *> &itrs = m_var_to_iterators[x_j];
@@ -416,6 +422,9 @@ public:
       cout << endl;*/
     } else {
       var_type x_j = m_veo.next();
+#ifdef LTJ_VEO_TRACE
+      veo::trace::record(tuple, j, x_j);
+#endif
       // cout << "Variable: " << (uint64_t) x_j << endl;
       // cout << (uint64_t) x_j << endl;
       vector<ltj_iter_type *> &itrs = m_var_to_iterators[x_j];
