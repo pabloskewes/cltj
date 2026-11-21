@@ -106,10 +106,17 @@ void query(
             auto start = std::chrono::high_resolution_clock::now();
             algorithm_type ltj(&query, &graph);
             ltj.set_query_id(nQ);
+#ifdef LTJ_VEO_TRACE
+            ltj::veo::trace::reset();
+#endif
             ltj.join(res, limit, timeout);
             auto stop = std::chrono::high_resolution_clock::now();
             auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(stop - start).count();
             cout << nQ << ";" << res.size() << ";" << time << endl;
+#ifdef LTJ_VEO_TRACE
+            cerr << "TRACE;" << nQ << ";" << ltj::veo::trace::signature << ";" << ltj::veo::trace::decisions << ";"
+                 << ltj::veo::trace::switches << endl;
+#endif
             nQ++;
 
             // cout << std::chrono::duration_cast<std::chrono::nanoseconds> (end -
