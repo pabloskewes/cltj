@@ -51,6 +51,7 @@ class compact_metatrie_hash {
     //   4         cltj_index_metatrie_rb (X-CLTJ with root bitmap), one tag per index
     //   5         scheme C overlay with the root block out of L_plain (StepTableRbOverlay)
     //   6         version 5 with L_plain split by level, one width each (level_widths_labels)
+    //   7         version 4 with L split by level, one width each (level_widths_labels)
     static constexpr uint64_t format_magic = 0x48434C544A000000ULL;
     static constexpr uint8_t format_version = Labels::level_widths ? 6 : Overlay::format_version;
     static constexpr uint64_t format_tag = format_magic | format_version;

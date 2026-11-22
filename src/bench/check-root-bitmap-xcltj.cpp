@@ -54,7 +54,7 @@ int main(int argc, char** argv) {
             const auto* xt = x.get_trie(t);
             const auto* rt = rb.get_trie(t);
             const auto& xseq = xt->seq;
-            const auto& rseq = rt->base().seq;
+            const auto& rseq = rt->labels();
             const bool full = (t % 2 == 0);
             const uint64_t deg = xt->root_degree();
             const uint64_t expected_offset = full ? deg : 0;

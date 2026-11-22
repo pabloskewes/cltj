@@ -3,6 +3,8 @@
 // support of the root bitmap, plus the sdsl structure tree as JSON. root_block_bits is the block of
 // the root in B (its degree), which stays in B; it is part of bv, not an extra member. |B| is the
 // first word of the serialized B, read from the file. Exits with 1 if the members do not add up.
+// Under CLTJ_LEVEL_WIDTHS (index with one width per level of L), seq is split into plain2, plain3
+// and n2, with the length and width of each level.
 // Usage: size-breakdown-xcltj-rb <index.xcltj-rb> <out.json>
 #include <CLI11.hpp>
 #include <index/cltj_index_metatrie_rb.hpp>
@@ -15,6 +17,12 @@
 #include <utility>
 #include <vector>
 
+#ifdef CLTJ_LEVEL_WIDTHS
+using index_type = cltj::compact_ltj_metatrie_rb_wg;
+#else
+using index_type = cltj::compact_ltj_metatrie_rb;
+#endif
+
 int main(int argc, char** argv) {
     CLI::App app{"Size breakdown of an X-CLTJ index with root bitmap"};
     std::string index_file, json_file;
@@ -25,15 +33,19 @@ int main(int argc, char** argv) {
     static const char* names[] = {"SPO", "SOP", "POS", "PSO", "OSP", "OPS"};
 
     try {
-        cltj::compact_ltj_metatrie_rb index;
+        index_type index;
         if (!sdsl::load_from_file(index, index_file)) {
             std::cerr << "ERROR: cannot load " << index_file << std::endl;
             return 2;
         }
 
         const uint64_t index_bytes = sdsl::size_in_bytes(index);
-        const uint64_t tag_bytes = sizeof(cltj::compact_ltj_metatrie_rb::format_tag);
-        std::cout << "index_bytes=" << index_bytes << " format_tag=" << tag_bytes << std::endl;
+        const uint64_t tag_bytes = sizeof(index_type::format_tag);
+        std::cout << "index_bytes=" << index_bytes << " format_tag=" << tag_bytes;
+#ifdef CLTJ_LEVEL_WIDTHS
+        std::cout << " format_version=" << int(index_type::format_version);
+#endif
+        std::cout << std::endl;
 
         std::ifstream file(index_file, std::ios::binary);
         bool ok = true;
@@ -43,8 +55,11 @@ int main(int argc, char** argv) {
             const uint64_t trie_bytes = sdsl::size_in_bytes(*trie);
             sdsl::structure_tree_node node("trie", "trie");
             sdsl::nullstream trie_ns;
-            trie->base().serialize(trie_ns, &node, "trie");
-            const auto* trie_node = node.children.begin()->second.get();
+            trie->serialize(trie_ns, &node, "trie");
+            const sdsl::structure_tree_node* trie_node = nullptr;
+            for (const auto& c : node.children.begin()->second->children)
+                if (c.second->name == "trie")
+                    trie_node = c.second.get();
 
             // In serialization order; a member missing here makes the sum fall short.
             std::vector<std::pair<std::string, uint64_t>> members;
@@ -70,16 +85,26 @@ int main(int argc, char** argv) {
                 ok = false;
             }
 
-            const auto& seq = trie->base().seq;
+            const auto& seq = trie->labels();
             std::cout << "trie=" << t << " name=" << names[t] << " bytes=" << trie_bytes << " louds_size=" << b_bits
-                      << " seq_size=" << seq.size() << " seq_width=" << int(seq.width())
-                      << " label_offset=" << trie->offset();
+                      << " seq_size=" << seq.size();
+#ifdef CLTJ_LEVEL_WIDTHS
+            std::cout << " plain2_size=" << seq.plain2().size() << " plain2_width=" << int(seq.plain2().width())
+                      << " plain3_size=" << seq.plain3().size() << " plain3_width=" << int(seq.plain3().width());
+#else
+            std::cout << " seq_width=" << int(seq.width());
+#endif
+            std::cout << " label_offset=" << trie->offset();
             if (t % 2 == 0) {
                 std::cout << " root_block_bits=" << trie->root_degree();
                 root_block_bits += trie->root_degree();
             }
             for (const auto& m : members)
                 std::cout << " " << m.first << "=" << m.second;
+#ifdef CLTJ_LEVEL_WIDTHS
+            for (const auto& c : seq.get_size_breakdown().components)
+                std::cout << " " << c.first << "=" << c.second;
+#endif
             std::cout << " sum=" << sum << std::endl;
             if (sum != trie_bytes) {
                 std::cerr << "ERROR: trie " << t << ": members add up to " << sum << " of " << trie_bytes << " bytes"

@@ -32,15 +32,16 @@ struct raw_louds_trie {
 
 // X-CLTJ with the children of the roots of SPO, POS and OSP in a root_bitmap instead of L. The
 // tries keep the root in B, so every position in B is the same as in X-CLTJ.
+template <class Labels = single_width_labels>
 class cltj_index_metatrie_rb {
   public:
     typedef uint64_t size_type;
     typedef uint32_t value_type;
-    typedef compact_metatrie_rb trie_type;
+    typedef compact_metatrie_rb<Labels> trie_type;
 
     // Same tag scheme as compact_metatrie_hash (versions table next to its format_magic), written
     // once at the start of the index.
-    static constexpr uint8_t format_version = 4;
+    static constexpr uint8_t format_version = Labels::level_widths ? 7 : 4;
     static constexpr uint64_t format_tag = compact_metatrie_hash<>::format_magic | format_version;
 
   private:
@@ -104,7 +105,8 @@ class cltj_index_metatrie_rb {
     }
 };
 
-typedef cltj::cltj_index_metatrie_rb compact_ltj_metatrie_rb;
+typedef cltj::cltj_index_metatrie_rb<> compact_ltj_metatrie_rb;
+typedef cltj::cltj_index_metatrie_rb<level_widths_labels> compact_ltj_metatrie_rb_wg;
 
 } // namespace cltj
 

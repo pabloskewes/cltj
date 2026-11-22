@@ -14,6 +14,7 @@
 namespace cltj {
 
 class compact_metatrie {
+  template <class Labels> friend class compact_metatrie_rb;
 
 public:
   typedef uint64_t size_type;
