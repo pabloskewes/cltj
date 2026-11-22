@@ -114,6 +114,32 @@ class ltj_iterator_metatrie_hash_rb {
         std::cout << std::endl;
     }
 
+#ifdef CLTJ_INVERSE_CYCLE
+    // Binds the constants along the cycle, starting from one whose predecessor on the cycle is a
+    // variable, so that a pattern with two constants starts in a full trie.
+    void process_constants() {
+        const triple_pattern* tp = m_ptr_triple_pattern;
+        const std::array<bool, 3> is_const = {!tp->s_is_variable(), !tp->p_is_variable(), !tp->o_is_variable()};
+        const std::array<uint64_t, 3> value = {tp->term_s.value, tp->term_p.value, tp->term_o.value};
+        state_type x = s;
+        for (state_type y : {s, p, o}) {
+            if (is_const[y] && !is_const[cltj::cycle_prev(y)]) {
+                x = y;
+                break;
+            }
+        }
+        for (int i = 0; i < 3; ++i, x = cltj::cycle_next(x)) {
+            if (!is_const[x])
+                continue;
+            if (!exists(x, value[x])) {
+                m_is_empty = true;
+                return;
+            }
+            m_path_label[m_nfixed] = value[x];
+            down(x);
+        }
+    }
+#else
     void process_constants() {
         if (!m_ptr_triple_pattern->s_is_variable()) {
             if (!exists(s, m_ptr_triple_pattern->term_s.value)) {
@@ -142,12 +168,17 @@ class ltj_iterator_metatrie_hash_rb {
             down(o);
         }
     }
+#endif
 
     void choose_trie(state_type state) {
         if (m_nfixed == 0) {
             m_trie_i = 2 * state;
             m_status_i = 0;
         } else if (m_nfixed == 1) {
+#ifdef CLTJ_INVERSE_CYCLE
+            m_trie_i = cltj::trie_slot(m_fixed[m_nfixed - 1], state);
+            m_status_i = m_trie_i % 2;
+#else
             if (state == s) {  // Fix variables
                 m_trie_i = (m_fixed[m_nfixed - 1] == o) ? 4 : 3;
                 m_status_i = (m_fixed[m_nfixed - 1] == o) ? 0 : 1;
@@ -158,6 +189,7 @@ class ltj_iterator_metatrie_hash_rb {
                 m_trie_i = (m_fixed[m_nfixed - 1] == p) ? 2 : 1;
                 m_status_i = (m_fixed[m_nfixed - 1] == p) ? 0 : 1;
             }
+#endif
         }
     }
 
@@ -166,6 +198,9 @@ class ltj_iterator_metatrie_hash_rb {
         ++veo::trace::switches;
 #endif
         size_type trie_aux;
+#ifdef CLTJ_INVERSE_CYCLE
+        trie_aux = cltj::switch_target(m_trie_i);
+#else
         switch (m_trie_i) {
             case 1:
                 trie_aux = 4;  // switches SOP -> OSP
@@ -177,6 +212,7 @@ class ltj_iterator_metatrie_hash_rb {
                 trie_aux = 2;  // switches OPS -> POS
                 break;
         }
+#endif
 
         const auto* trie = m_ptr_index->get_trie(trie_aux);  // switches to the corresponding trie
         // Now gets down using the labels of the current path, reversed
@@ -211,6 +247,9 @@ class ltj_iterator_metatrie_hash_rb {
     const typename index_scheme_type::trie_type* resolve_trie() const {
         const auto* trie = m_ptr_index->get_trie(m_trie_i);
         if (m_nfixed == 2 && m_status_i == 1) {
+#ifdef CLTJ_INVERSE_CYCLE
+            trie = m_ptr_index->get_trie(cltj::switch_target(m_trie_i));
+#else
             switch (m_trie_i) {
                 case 1:
                     trie = m_ptr_index->get_trie(4);
@@ -224,6 +263,7 @@ class ltj_iterator_metatrie_hash_rb {
                 default:
                     break;
             }
+#endif
         }
         return trie;
     }
@@ -317,10 +357,14 @@ class ltj_iterator_metatrie_hash_rb {
     // True iff binding `state` now leaves the iterator in a partial trie (same rule as choose_trie),
     // so each value bound to it pays a trie_switch().
     inline bool binding_enters_partial_trie(state_type state) const {
+#ifdef CLTJ_INVERSE_CYCLE
+        return m_nfixed == 1 && cltj::trie_slot(m_fixed[0], state) % 2 == 1;
+#else
         if (m_nfixed != 1) return false;
         if (state == s) return m_fixed[0] != o;
         if (state == p) return m_fixed[0] != s;
         return m_fixed[0] != p;
+#endif
     }
 
     inline size_type parent() const;
@@ -509,6 +553,9 @@ class ltj_iterator_metatrie_hash_rb {
 
         // TODO: duplicated from original iterator logic; keep behavior for now, deduplicate with resolve_trie().
         if (m_nfixed == 2 && m_status_i == 1) {
+#ifdef CLTJ_INVERSE_CYCLE
+            trie = m_ptr_index->get_trie(cltj::switch_target(m_trie_i));
+#else
             switch (m_trie_i) {
                 case 1:
                     trie = m_ptr_index->get_trie(4);  // switches SOP -> OSP
@@ -520,6 +567,7 @@ class ltj_iterator_metatrie_hash_rb {
                     trie = m_ptr_index->get_trie(2);  // switches OPS -> POS
                     break;
             }
+#endif
         }
 
         // General case path: full trie or depth > 1
@@ -576,6 +624,9 @@ class ltj_iterator_metatrie_hash_rb {
 
         // TODO: duplicated from original iterator logic; keep behavior for now, deduplicate with resolve_trie().
         if (m_nfixed == 2 && m_status_i == 1) {
+#ifdef CLTJ_INVERSE_CYCLE
+            trie = m_ptr_index->get_trie(cltj::switch_target(m_trie_i));
+#else
             switch (m_trie_i) {
                 case 1:
                     trie = m_ptr_index->get_trie(4);  // switches SOP -> OSP
@@ -587,6 +638,7 @@ class ltj_iterator_metatrie_hash_rb {
                     trie = m_ptr_index->get_trie(2);  // switches OPS -> POS
                     break;
             }
+#endif
         }
         assert(!trie->node_has_hash(parent()));
 
@@ -634,6 +686,10 @@ class ltj_iterator_metatrie_hash_rb {
         if (m_nfixed == 0) {
             t_i = 2 * state;
         } else if (m_nfixed == 1) {
+#ifdef CLTJ_INVERSE_CYCLE
+            t_i = cltj::trie_slot(m_fixed[m_nfixed - 1], state);
+            s_i = t_i % 2;
+#else
             if (state == s) {  // Fix variables
                 t_i = (m_fixed[m_nfixed - 1] == o) ? 4 : 3;
                 s_i = (m_fixed[m_nfixed - 1] == o) ? 0 : 1;
@@ -644,12 +700,16 @@ class ltj_iterator_metatrie_hash_rb {
                 t_i = (m_fixed[m_nfixed - 1] == p) ? 2 : 1;
                 s_i = (m_fixed[m_nfixed - 1] == p) ? 0 : 1;
             }
+#endif
         } else {
             t_i = m_trie_i;  // Previously decided
             s_i = m_status_i;  // Previously decided
 
             // TODO: duplicated from original iterator logic; keep behavior for now, deduplicate with resolve_trie().
             if (m_nfixed == 2 && m_status_i == 1) {
+#ifdef CLTJ_INVERSE_CYCLE
+                t_i = cltj::switch_target(m_trie_i);
+#else
                 switch (m_trie_i) {
                     case 1:
                         t_i = 4;  // switches SOP -> OSP
@@ -661,6 +721,7 @@ class ltj_iterator_metatrie_hash_rb {
                         t_i = 2;  // switches OPS -> POS
                         break;
                 }
+#endif
             }
         }
         auto trie = m_ptr_index->get_trie(t_i);
@@ -670,6 +731,10 @@ class ltj_iterator_metatrie_hash_rb {
 
     inline size_type subtree_size_fixed1(state_type state) const {
         size_type t_i, s_i;
+#ifdef CLTJ_INVERSE_CYCLE
+        t_i = cltj::trie_slot(m_fixed[m_nfixed - 1], state);
+        s_i = t_i % 2;
+#else
         if (state == s) {  // Fix variables
             t_i = (m_fixed[m_nfixed - 1] == o) ? 4 : 3;
             s_i = (m_fixed[m_nfixed - 1] == o) ? 0 : 1;
@@ -680,6 +745,7 @@ class ltj_iterator_metatrie_hash_rb {
             t_i = (m_fixed[m_nfixed - 1] == p) ? 2 : 1;
             s_i = (m_fixed[m_nfixed - 1] == p) ? 0 : 1;
         }
+#endif
 
         size_type leftmost_leaf, rightmost_leaf;
         const auto* trie = m_ptr_index->get_trie(t_i);
@@ -714,6 +780,9 @@ class ltj_iterator_metatrie_hash_rb {
         const auto* trie = m_ptr_index->get_trie(m_trie_i);
         // TODO: duplicated from original iterator logic; keep behavior for now, deduplicate with resolve_trie().
         if (m_nfixed == 2 && m_status_i == 1) {
+#ifdef CLTJ_INVERSE_CYCLE
+            trie = m_ptr_index->get_trie(cltj::switch_target(m_trie_i));
+#else
             switch (m_trie_i) {
                 case 1:
                     trie = m_ptr_index->get_trie(4);  // switches SOP -> OSP
@@ -725,6 +794,7 @@ class ltj_iterator_metatrie_hash_rb {
                     trie = m_ptr_index->get_trie(2);  // switches OPS -> POS
                     break;
             }
+#endif
         }
 
         auto it = m_status[m_nfixed].it[m_status_i];
@@ -736,6 +806,9 @@ class ltj_iterator_metatrie_hash_rb {
         size_type t_i;
         // TODO: duplicated from original iterator logic; keep behavior for now, deduplicate with resolve_trie().
         if (m_nfixed == 2 && m_status_i == 1) {
+#ifdef CLTJ_INVERSE_CYCLE
+            t_i = cltj::switch_target(m_trie_i);
+#else
             switch (m_trie_i) {
                 case 1:
                     t_i = 4;  // switches SOP -> OSP
@@ -749,6 +822,7 @@ class ltj_iterator_metatrie_hash_rb {
                 default:
                     t_i = m_trie_i;
             }
+#endif
         } else
             t_i = m_trie_i;
 

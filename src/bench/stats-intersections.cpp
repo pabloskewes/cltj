@@ -139,9 +139,13 @@ int main(int argc, char* argv[]) {
     uint64_t timeout = 600;
     uint64_t threshold = 4000;
     std::vector<uint64_t> skip_ids;
+#ifdef CLTJ_INVERSE_CYCLE
+    app.add_option("system", system, "Index type")->required()->check(CLI::IsMember({"xcltj-rb", "hcltj-rb"}));
+#else
     app.add_option("system", system, "Index type")
         ->required()
         ->check(CLI::IsMember({"xcltj", "xcltj-rb", "hcltj", "hcltj-rb"}));
+#endif
     app.add_option("index", index, "Index file")->required();
     app.add_option("queries", queries, "Query file, one query per line")->required();
     app.add_option("-o,--output", out, "Output CSV")->required();
@@ -168,6 +172,12 @@ int main(int argc, char* argv[]) {
     using hrb_iter = ltj::ltj_iterator_metatrie_hash_rb<hrb_index, uint8_t, uint64_t>;
     using hrb_algo = ltj::ltj_algorithm_hash<hrb_iter, ltj::veo::veo_adaptive<hrb_iter, ltj::util::trait_distinct>>;
 
+#ifdef CLTJ_INVERSE_CYCLE
+    if (system == "xcltj-rb")
+        run<xrb_index, xrb_algo>(index, queries, timeout, threshold, out, skip);
+    else
+        run<hrb_index, hrb_algo>(index, queries, timeout, threshold, out, skip);
+#else
     if (system == "xcltj")
         run<x_index, x_algo>(index, queries, timeout, threshold, out, skip);
     else if (system == "xcltj-rb")
@@ -176,5 +186,6 @@ int main(int argc, char* argv[]) {
         run<hrb_index, hrb_algo>(index, queries, timeout, threshold, out, skip);
     else
         run<h_index, h_algo>(index, queries, timeout, threshold, out, skip);
+#endif
     return 0;
 }
