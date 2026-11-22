@@ -39,6 +39,12 @@
 #ifdef LTJ_VEO_TRACE
 #include <veo/veo_trace.hpp>
 #endif
+#ifdef LTJ26_SS_RADIX
+#ifndef LTJ26_SS_PACK
+#error "LTJ26_SS_RADIX sorts the packed candidates of LTJ26_SS_PACK"
+#endif
+#include <util/radix_sort.hpp>
+#endif
 
 #define EXPT_TIME_SOL 0
 
@@ -63,6 +69,12 @@ class ltj_algorithm_hash {
     typedef vector<std::string> tuple_str_type;
     typedef chrono::high_resolution_clock::time_point time_point_type;
     // typedef ::util::results_collector<tuple_type> results_type;
+#ifdef LTJ26_SS_PACK
+    // Key in the high 32 bits and slot in the low 32 bits, so integer order is key order.
+    typedef uint64_t sorted_cand_type;
+#else
+    typedef std::pair<value_type, size_type> sorted_cand_type;
+#endif
 
   private:
     const vector<triple_pattern>* m_ptr_triple_patterns;
@@ -74,6 +86,13 @@ class ltj_algorithm_hash {
     std::vector<IntersectionStats> m_stats;
     cltj::query::QueryTracer<cltj::TRACE_QUERY> m_tracer{"query_traces"};
     std::function<void(const IntersectionStats&)> m_stats_sink;
+#ifdef LTJ26_SS_REUSE
+    // One buffer per depth: the frame at depth j is the only one using m_ss_cand[j] while it descends.
+    std::vector<std::vector<sorted_cand_type>> m_ss_cand;
+#ifdef LTJ26_SS_RADIX
+    std::vector<uint64_t> m_ss_tmp;
+#endif
+#endif
 
     void copy(const ltj_algorithm_hash& o) {
         m_ptr_triple_patterns = o.m_ptr_triple_patterns;
@@ -212,6 +231,9 @@ class ltj_algorithm_hash {
             return;
         time_point_type start = chrono::high_resolution_clock::now();
         tuple_type t(m_veo.size());
+#ifdef LTJ26_SS_REUSE
+        m_ss_cand.resize(m_veo.size());
+#endif
         search(0, t, res, start, limit_results, timeout_seconds);
     };
 
@@ -486,20 +508,49 @@ class ltj_algorithm_hash {
                     for (ltj_iter_type* iter : itrs)
                         ltj26_sorted = ltj26_sorted || iter->ltj26_next_down_switches();
                     if (ltj26_sorted) {
-                        std::vector<std::pair<value_type, size_type>> cand;
+#ifdef LTJ26_SS_REUSE
+                        std::vector<sorted_cand_type>& cand = m_ss_cand[j];
+                        cand.clear();
+#else
+                        std::vector<sorted_cand_type> cand;
+#endif
+#ifdef LTJ26_SS_RESERVE
+                        cand.reserve(end_pos - beg);
+#endif
                         while (keys.next()) {
                             value_type c = keys.key();
                             if (candidate_in_hashed_iterators(x_j, c, hashed_itrs, itrs[min_idx]))
+#ifdef LTJ26_SS_PACK
+                                cand.push_back(c << 32 | keys.slot());
+#else
                                 cand.emplace_back(c, beg + keys.slot());
+#endif
                         }
+#ifdef LTJ26_SS_RADIX
+#ifdef LTJ26_SS_REUSE
+                        ::util::radix_sort_high32(cand, m_ss_tmp);
+#else
+                        std::vector<uint64_t> tmp;
+                        ::util::radix_sort_high32(cand, tmp);
+#endif
+#else
                         std::sort(cand.begin(), cand.end());
+#endif
                         for (const auto& cp : cand) {
+#ifdef LTJ26_SS_PACK
+                            value_type c = cp >> 32;
+#else
                             value_type c = cp.first;
+#endif
                             if constexpr (COLLECT_QUERY_STATS)
                                 stats.result_size++;
                             tuple[j] = {x_j, c};
                             frame.add(c);
+#ifdef LTJ26_SS_PACK
+                            itrs[min_idx]->set_level_status(beg + static_cast<uint32_t>(cp), beg, end_pos - beg);
+#else
                             itrs[min_idx]->set_level_status(cp.second, beg, end_pos - beg);
+#endif
                             position_hashed_iterators(x_j, c, hashed_itrs, itrs[min_idx]);
                             for (ltj_iter_type* iter : itrs) {
                                 iter->down(x_j, c);
