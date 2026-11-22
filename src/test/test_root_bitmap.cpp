@@ -1,7 +1,7 @@
 // root_bitmap against a std::set over random id sets (with runs that cross the 64-bit words and the
 // 4096-bit blocks of the succ support), after copy, move and a serialization round trip; the
 // preconditions on the ids; and round trips of cltj_index_metatrie_rb and cltj_index_metatrie_hash_rb
-// (with single_width_labels and level_widths_labels) built from data/data.txt. Run from the
+// (each with single_width_labels and level_widths_labels) built from data/data.txt. Run from the
 // repository root.
 #include <index/cltj_index_metatrie_hash_rb.hpp>
 #include <index/cltj_index_metatrie_rb.hpp>
@@ -260,6 +260,54 @@ void test_c3_index_round_trip() {
     }
 }
 
+void test_wg_index_round_trip() {
+    std::vector<cltj::spo_triple> D = read_data();
+    if (D.empty())
+        return;
+
+    cltj::compact_ltj_metatrie_rb_wg index(D);
+    std::stringstream first;
+    index.serialize(first);
+    cltj::compact_ltj_metatrie_rb_wg loaded;
+    loaded.load(first);
+    std::stringstream second;
+    loaded.serialize(second);
+    check(first.str() == second.str(), "X-rb-wg index round trip gives the same bytes");
+
+    cltj::compact_ltj_metatrie_rb xrb(D);
+    for (int t = 0; t < 6; t++) {
+        const auto& lw = loaded.get_trie(t)->labels();
+        const auto& lx = xrb.get_trie(t)->labels();
+        bool same = lw.size() == lx.size() && lw == index.get_trie(t)->labels() &&
+                    loaded.get_trie(t)->offset() == xrb.get_trie(t)->offset();
+        for (uint64_t i = 0; same && i < lx.size(); i++)
+            same = lw.access(i) == lx[i];
+        check(same, "trie " + std::to_string(t) + ": loaded X-rb-wg L is the one of X-rb");
+        if (t % 2)
+            check(lw.n2() == lw.size(), "trie " + std::to_string(t) + ": a partial trie has only level 2");
+    }
+
+    std::stringstream xrb_stream;
+    xrb.serialize(xrb_stream);
+    std::stringstream c3_stream;
+    cltj::compact_ltj_metatrie_hash_c3 c3(D);
+    build_hash_overlay(c3, 2, true);
+    c3.serialize(c3_stream);
+    const std::string version = "index format version ";
+    check(load_error<cltj::compact_ltj_metatrie_rb_wg>(xrb_stream.str()).find(version + "4, this binary reads version 7") !=
+              std::string::npos,
+          "X-rb-wg rejects the X-rb index");
+    check(load_error<cltj::compact_ltj_metatrie_rb>(first.str()).find(version + "7, this binary reads version 4") !=
+              std::string::npos,
+          "X-rb rejects the X-rb-wg index");
+    check(load_error<cltj::compact_ltj_metatrie_rb_wg>(c3_stream.str()).find(version + "6, this binary reads version 7") !=
+              std::string::npos,
+          "X-rb-wg rejects the C3 index");
+    check(load_error<cltj::compact_ltj_metatrie_hash_c3>(first.str()).find(version + "7, this binary reads version 6") !=
+              std::string::npos,
+          "C3 rejects the X-rb-wg index");
+}
+
 } // namespace
 
 int main() {
@@ -268,6 +316,7 @@ int main() {
     test_index_round_trip();
     test_hash_index_round_trip();
     test_c3_index_round_trip();
+    test_wg_index_round_trip();
     std::cout << (failures ? "FAILED" : "ALL PASS") << std::endl;
     return failures ? 1 : 0;
 }
