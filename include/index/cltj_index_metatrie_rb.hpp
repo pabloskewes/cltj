@@ -40,7 +40,11 @@ class cltj_index_metatrie_rb {
 
     // Same tag scheme as compact_metatrie_hash (versions table next to its format_magic), written
     // once at the start of the index.
+#ifdef CLTJ_INVERSE_CYCLE
+    static constexpr uint8_t format_version = 6;
+#else
     static constexpr uint8_t format_version = 4;
+#endif
     static constexpr uint64_t format_tag = compact_metatrie_hash<>::format_magic | format_version;
 
   private:

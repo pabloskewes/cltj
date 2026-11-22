@@ -35,6 +35,33 @@ const static std::array<uint8_t, 3> ts_full_map = {4, 0, 2};
 // ts_part_map[i/2]
 const static std::array<uint8_t, 3> ts_part_map = {3, 5, 1};
 
+#ifdef CLTJ_INVERSE_CYCLE
+// Full tries SOP, PSO, OPS (the cycle s -> o -> p -> s) and partial tries SPO, POS, OSP. As in the
+// default cycle, slot 2k holds the full trie that starts with state k and slot 2k+1 its partial,
+// which shares level 1 with it. Only the rb indexes and iterators support this cycle.
+const static std::array<uint8_t, 6> trie_slot_order = {1, 0, 3, 2, 5, 4};
+
+inline constexpr state_type cycle_next(state_type x) {
+  return x == s ? o : (x == o ? p : s);
+}
+
+inline constexpr state_type cycle_prev(state_type x) {
+  return x == s ? p : (x == p ? o : s);
+}
+
+// Slot that binding `second` after `first` uses: the full trie of `first` if `second` follows it
+// on the cycle, its partial otherwise.
+inline constexpr uint64_t trie_slot(state_type first, state_type second) {
+  return 2 * first + (second == cycle_next(first) ? 0 : 1);
+}
+
+// A partial trie fixes (first, cycle_prev(first)); trie_switch() goes to the full trie that starts
+// with the second one.
+inline constexpr uint64_t switch_target(uint64_t partial_slot) {
+  return 2 * cycle_prev(static_cast<state_type>(partial_slot / 2));
+}
+#endif
+
 struct comparator_order {
   uint64_t i;
   comparator_order(uint64_t pi) {

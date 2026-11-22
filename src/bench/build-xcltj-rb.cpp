@@ -16,8 +16,13 @@ int main(int argc, char** argv) {
     app.add_option("dataset", dataset, "Triples file, one `s p o` per line")->required();
     app.add_option("-o,--output", index_name, "Output index (default: <dataset>.xcltj-rb)");
     CLI11_PARSE(app, argc, argv);
+#ifdef CLTJ_INVERSE_CYCLE
+    if (index_name.empty())
+        index_name = dataset + ".xcltj-rb-inv";
+#else
     if (index_name.empty())
         index_name = dataset + ".xcltj-rb";
+#endif
 
     try {
         std::vector<cltj::spo_triple> D;

@@ -44,6 +44,7 @@ class compact_metatrie_hash {
     //   3         scheme C overlay (StepTableOverlay)
     //   4         cltj_index_metatrie_rb (X-CLTJ with root bitmap), one tag per index
     //   5         scheme C overlay with the root block out of L_plain (StepTableRbOverlay)
+    //   6, 7      4 and 5 with the tries of CLTJ_INVERSE_CYCLE (cltj_config.hpp)
     static constexpr uint64_t format_magic = 0x48434C544A000000ULL;
     static constexpr uint64_t format_tag = format_magic | Overlay::format_version;
 

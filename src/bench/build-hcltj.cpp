@@ -28,7 +28,11 @@ int main(int argc, char** argv) {
     CLI11_PARSE(app, argc, argv);
 
     try {
+#ifdef CLTJ_INVERSE_CYCLE
+        std::string index_name = output.empty() ? dataset + ".inv.hcltj" : output;
+#else
         std::string index_name = output.empty() ? dataset + ".hcltj" : output;
+#endif
         std::vector<cltj::spo_triple> D;
 
         std::ifstream ifs(dataset);

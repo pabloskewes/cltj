@@ -205,12 +205,18 @@ public:
   cltj_index_metatrie() = default;
 
   cltj_index_metatrie(vector<spo_triple> &D) {
+#ifdef CLTJ_INVERSE_CYCLE
+    for (size_type t = 0; t < 6; ++t)
+      m_tries[t] = (t % 2 == 0) ? create_full_trie(D, trie_slot_order[t])
+                                : create_partial_trie(D, trie_slot_order[t]);
+#else
     m_tries[0] = create_full_trie(D, 0);    // trie for SPO
     m_tries[1] = create_partial_trie(D, 1); // trie for SOP
     m_tries[2] = create_full_trie(D, 2);    // trie for POS
     m_tries[3] = create_partial_trie(D, 3); // trie for PSO
     m_tries[4] = create_full_trie(D, 4);    // trie for OSP
     m_tries[5] = create_partial_trie(D, 5); // trie for OPS
+#endif
   }
 
   //! Copy constructor

@@ -36,7 +36,11 @@ int main(int argc, char** argv) {
     CLI11_PARSE(app, argc, argv);
 
     using overlay_type = index_type::trie_type::overlay_type;
+#ifdef CLTJ_INVERSE_CYCLE
+    static const char* names[] = {"SOP", "SPO", "PSO", "POS", "OPS", "OSP"};
+#else
     static const char* names[] = {"SPO", "SOP", "POS", "PSO", "OSP", "OPS"};
+#endif
 
     try {
         index_type index;

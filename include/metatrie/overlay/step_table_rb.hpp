@@ -23,7 +23,11 @@ class StepTableRbOverlay : public OverlayPolicy<StepTableRbOverlay> {
   public:
     typedef uint64_t size_type;
 
+#ifdef CLTJ_INVERSE_CYCLE
+    static constexpr uint8_t format_version = 7;
+#else
     static constexpr uint8_t format_version = 5;
+#endif
     static constexpr bool drops_root_labels = true;
 
   private:

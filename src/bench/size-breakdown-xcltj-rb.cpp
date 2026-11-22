@@ -22,7 +22,11 @@ int main(int argc, char** argv) {
     app.add_option("out", json_file, "Output JSON with the sdsl structure tree")->required();
     CLI11_PARSE(app, argc, argv);
 
+#ifdef CLTJ_INVERSE_CYCLE
+    static const char* names[] = {"SOP", "SPO", "PSO", "POS", "OPS", "OSP"};
+#else
     static const char* names[] = {"SPO", "SOP", "POS", "PSO", "OSP", "OPS"};
+#endif
 
     try {
         cltj::compact_ltj_metatrie_rb index;
