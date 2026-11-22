@@ -1,5 +1,6 @@
 // Runs every query on X-CLTJ or H-CLTJ (with or without root bitmap) and writes its intersection
-// stats aggregated per query. hcltj-rb and hcltj-c3 are always scheme C.
+// stats aggregated per query. hcltj-rb and hcltj-c3 are always scheme C; xcltj-rb-wg is xcltj-rb with
+// one width per level of L.
 // Characterization only: with CLTJ_COLLECT_QUERY_STATS the printed times are not measurements.
 #include <CLI11.hpp>
 #include <algorithm>
@@ -141,7 +142,7 @@ int main(int argc, char* argv[]) {
     std::vector<uint64_t> skip_ids;
     app.add_option("system", system, "Index type")
         ->required()
-        ->check(CLI::IsMember({"xcltj", "xcltj-rb", "hcltj", "hcltj-rb", "hcltj-c3"}));
+        ->check(CLI::IsMember({"xcltj", "xcltj-rb", "xcltj-rb-wg", "hcltj", "hcltj-rb", "hcltj-c3"}));
     app.add_option("index", index, "Index file")->required();
     app.add_option("queries", queries, "Query file, one query per line")->required();
     app.add_option("-o,--output", out, "Output CSV")->required();
@@ -160,6 +161,10 @@ int main(int argc, char* argv[]) {
     using xrb_iter = ltj::ltj_iterator_metatrie_rb<xrb_index, uint8_t, uint64_t>;
     using xrb_algo = ltj::ltj_algorithm<xrb_iter, ltj::veo::veo_adaptive<xrb_iter, ltj::util::trait_distinct>>;
 
+    using xwg_index = cltj::compact_ltj_metatrie_rb_wg;
+    using xwg_iter = ltj::ltj_iterator_metatrie_rb<xwg_index, uint8_t, uint64_t>;
+    using xwg_algo = ltj::ltj_algorithm<xwg_iter, ltj::veo::veo_adaptive<xwg_iter, ltj::util::trait_distinct>>;
+
     using h_index = cltj::compact_ltj_metatrie_hash;
     using h_iter = ltj::ltj_iterator_metatrie_hash<h_index, uint8_t, uint64_t>;
     using h_algo = ltj::ltj_algorithm_hash<h_iter, ltj::veo::veo_adaptive<h_iter, ltj::util::trait_distinct>>;
@@ -176,6 +181,8 @@ int main(int argc, char* argv[]) {
         run<x_index, x_algo>(index, queries, timeout, threshold, out, skip);
     else if (system == "xcltj-rb")
         run<xrb_index, xrb_algo>(index, queries, timeout, threshold, out, skip);
+    else if (system == "xcltj-rb-wg")
+        run<xwg_index, xwg_algo>(index, queries, timeout, threshold, out, skip);
     else if (system == "hcltj-rb")
         run<hrb_index, hrb_algo>(index, queries, timeout, threshold, out, skip);
     else if (system == "hcltj-c3")

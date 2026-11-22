@@ -1,5 +1,6 @@
-// Builds X-CLTJ with the children of the three roots in a root bitmap (cltj_index_metatrie_rb).
-// Usage: build-xcltj-rb <dataset> [-o <output>]   (default output: <dataset>.xcltj-rb)
+// Builds X-CLTJ with the children of the three roots in a root bitmap (cltj_index_metatrie_rb),
+// with one width per level of L under CLTJ_LEVEL_WIDTHS.
+// Usage: build-xcltj-rb <dataset> [-o <output>]   (default output: <dataset>.xcltj-rb or .xcltj-rb-wg)
 #include <CLI11.hpp>
 #include <index/cltj_index_metatrie_rb.hpp>
 
@@ -14,10 +15,15 @@ int main(int argc, char** argv) {
     CLI::App app{"Build an X-CLTJ index with a root bitmap"};
     std::string dataset, index_name;
     app.add_option("dataset", dataset, "Triples file, one `s p o` per line")->required();
-    app.add_option("-o,--output", index_name, "Output index (default: <dataset>.xcltj-rb)");
+#ifdef CLTJ_LEVEL_WIDTHS
+    const std::string suffix = ".xcltj-rb-wg";
+#else
+    const std::string suffix = ".xcltj-rb";
+#endif
+    app.add_option("-o,--output", index_name, "Output index (default: <dataset>" + suffix + ")");
     CLI11_PARSE(app, argc, argv);
     if (index_name.empty())
-        index_name = dataset + ".xcltj-rb";
+        index_name = dataset + suffix;
 
     try {
         std::vector<cltj::spo_triple> D;
@@ -34,7 +40,11 @@ int main(int argc, char** argv) {
         D.shrink_to_fit();
 
         auto start = std::chrono::high_resolution_clock::now();
+#ifdef CLTJ_LEVEL_WIDTHS
+        cltj::compact_ltj_metatrie_rb_wg index(D);
+#else
         cltj::compact_ltj_metatrie_rb index(D);
+#endif
         auto stop = std::chrono::high_resolution_clock::now();
 
         if (!sdsl::store_to_file(index, index_name)) {

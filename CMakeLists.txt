@@ -137,6 +137,10 @@ add_hcltj_c3_rb_executable(build-hcltj src/bench/build-hcltj.cpp bench hybridbv_
 add_cltj_executable(build-xcltj-rb src/bench/build-xcltj-rb.cpp bench)
 set_target_properties(build-xcltj-rb PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
+add_cltj_executable(build-xcltj-rb-wg src/bench/build-xcltj-rb.cpp bench)
+target_compile_definitions(build-xcltj-rb-wg PRIVATE CLTJ_ROOT_BITMAP CLTJ_LEVEL_WIDTHS)
+set_target_properties(build-xcltj-rb-wg PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+
 add_cltj_executable(build-xcltj-dyn src/bench/build-xcltj-dyn.cpp bench hybridbv_gn)
 
 add_cltj_executable(build-uncltj src/bench/build-uncltj.cpp bench)
@@ -166,6 +170,10 @@ target_compile_definitions(bench-query-xcltj-global PRIVATE ADAPTIVE=0)
 add_cltj_executable(bench-query-xcltj-rb src/bench/bench-query-xcltj.cpp bench)
 target_compile_definitions(bench-query-xcltj-rb PRIVATE ADAPTIVE=1 CLTJ_ROOT_BITMAP)
 set_target_properties(bench-query-xcltj-rb PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+
+add_cltj_executable(bench-query-xcltj-rb-wg src/bench/bench-query-xcltj.cpp bench)
+target_compile_definitions(bench-query-xcltj-rb-wg PRIVATE ADAPTIVE=1 CLTJ_ROOT_BITMAP CLTJ_LEVEL_WIDTHS)
+set_target_properties(bench-query-xcltj-rb-wg PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
 add_cltj_executable(bench-query-hcltj src/bench/bench-query-hcltj.cpp bench)
 target_compile_definitions(bench-query-hcltj PRIVATE ADAPTIVE=1)
@@ -228,6 +236,10 @@ set_target_properties(size-breakdown-xcltj PROPERTIES CXX_STANDARD 17 CXX_STANDA
 
 add_cltj_executable(size-breakdown-xcltj-rb src/bench/size-breakdown-xcltj-rb.cpp analysis)
 set_target_properties(size-breakdown-xcltj-rb PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+
+add_cltj_executable(size-breakdown-xcltj-rb-wg src/bench/size-breakdown-xcltj-rb.cpp analysis)
+target_compile_definitions(size-breakdown-xcltj-rb-wg PRIVATE CLTJ_ROOT_BITMAP CLTJ_LEVEL_WIDTHS)
+set_target_properties(size-breakdown-xcltj-rb-wg PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
 add_cltj_executable(check-root-bitmap-xcltj src/bench/check-root-bitmap-xcltj.cpp analysis)
 set_target_properties(check-root-bitmap-xcltj PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
