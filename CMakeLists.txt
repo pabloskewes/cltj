@@ -256,6 +256,9 @@ add_hcltj_c3_rb_executable(check-overlay-hcltj src/bench/check-overlay-hcltj.cpp
 add_cltj_executable(compare-c3-hcltj src/bench/compare-c3-hcltj.cpp analysis)
 set_target_properties(compare-c3-hcltj PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
+add_cltj_executable(compare-xcltj-rb-wg src/bench/compare-xcltj-rb-wg.cpp analysis)
+set_target_properties(compare-xcltj-rb-wg PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+
 add_cltj_executable(diff-overlay-hcltj src/bench/diff-overlay-hcltj.cpp analysis)
 set_target_properties(diff-overlay-hcltj PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
