@@ -199,6 +199,10 @@ target_compile_definitions(bench-query-xcltj-rb-inv PRIVATE ADAPTIVE=1 CLTJ_ROOT
 add_cltj_executable(bench-query-hcltj-c-rb-ss-inv src/bench/bench-query-hcltj.cpp bench)
 target_compile_definitions(bench-query-hcltj-c-rb-ss-inv PRIVATE ADAPTIVE=1 CLTJ_OVERLAY_STEP_TABLE CLTJ_ROOT_BITMAP LTJ26_MIXED_MIN LTJ26_SORTED_SCAN LTJ_VEO_VARIANT=1 CLTJ_INVERSE_CYCLE)
 list(APPEND veo_bench_targets bench-query-xcltj-rb-inv bench-query-hcltj-c-rb-ss-inv)
+# The inverse cycle with V0, only as a control: same plan as -inv in queries without two lonely in a pattern
+add_cltj_executable(bench-query-xcltj-rb-inv-veo0 src/bench/bench-query-xcltj.cpp bench)
+target_compile_definitions(bench-query-xcltj-rb-inv-veo0 PRIVATE ADAPTIVE=1 CLTJ_ROOT_BITMAP LTJ_VEO_VARIANT=0 CLTJ_INVERSE_CYCLE)
+list(APPEND veo_bench_targets bench-query-xcltj-rb-inv-veo0)
 foreach(t ${veo_bench_targets})
   set_target_properties(${t} PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
   if(t MATCHES "-veo2$")
