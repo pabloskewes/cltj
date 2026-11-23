@@ -22,6 +22,9 @@ int main(int argc, char **argv){
         std::string index_name = dataset + ".xcltj";
         typedef cltj::compact_ltj_metatrie index_type;
 #endif
+#ifdef CLTJ_INVERSE_CYCLE
+        index_name += "-inv";
+#endif
         vector<cltj::spo_triple> D;
 
         std::ifstream ifs(dataset);

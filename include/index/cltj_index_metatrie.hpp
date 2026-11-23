@@ -9,6 +9,10 @@
 #include <trie/cltj_compact_trie_ef.hpp>
 #include <cltj_config.hpp>
 #include <cltj_helper.hpp>
+#ifdef CLTJ_INVERSE_CYCLE
+#include <stdexcept>
+#include <type_traits>
+#endif
 
 namespace cltj {
 
@@ -19,6 +23,13 @@ namespace cltj {
         typedef uint64_t size_type;
         typedef uint32_t value_type;
         typedef Trie trie_type;
+#ifdef CLTJ_INVERSE_CYCLE
+        // Written first, so that a binary of the default cycle, or of the other trie type, fails to
+        // load the index instead of reading it wrong.
+        static constexpr uint64_t format_tag = std::is_same<Trie, compact_trie_ef>::value
+                                               ? 0x58434C544A454649ULL   // "XCLTJEFI"
+                                               : 0x58434C544A494E56ULL;  // "XCLTJINV"
+#endif
 
     private:
         std::array<trie_type, 6> m_tries;
@@ -71,7 +82,12 @@ namespace cltj {
 
         cltj_index_metatrie(vector<spo_triple> &D) {
             for(size_type i = 0; i < 6; ++i){
-                std::sort(D.begin(), D.end(), comparator_order(i));
+#ifdef CLTJ_INVERSE_CYCLE
+                const size_type order = trie_slot_order[i];
+#else
+                const size_type order = i;
+#endif
+                std::sort(D.begin(), D.end(), comparator_order(order));
                 auto last = std::unique(D.begin(), D.end());
                 if(last != D.end()){
                     std::cout << "Removed " << std::distance(last, D.end()) << " duplicate triples" << std::endl;
@@ -80,9 +96,9 @@ namespace cltj {
                 std::vector<uint32_t> syms_root, syms;
                 std::vector<size_type> lengths;
                 auto end_level = 3 - (i & 0x1);
-                helper::sym_level(D,  spo_orders[i], 1, end_level, syms, lengths);
+                helper::sym_level(D,  spo_orders[order], 1, end_level, syms, lengths);
                 if(!(i & 0x1)){
-                    helper::sym_root(D, spo_orders[i], syms_root);
+                    helper::sym_root(D, spo_orders[order], syms_root);
                     m_gaps[i/2] = syms_root.size();
                     if (i == 0) {
                         m_subjects = sdsl::bit_vector(syms_root.back()+1, 0);
@@ -223,6 +239,10 @@ namespace cltj {
         size_type serialize(std::ostream &out, sdsl::structure_tree_node *v = nullptr, std::string name = "") const {
             sdsl::structure_tree_node *child = sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
             size_type written_bytes = 0;
+#ifdef CLTJ_INVERSE_CYCLE
+            const uint64_t tag = format_tag;
+            written_bytes += sdsl::write_member(tag, out, child, "format_tag");
+#endif
             for(const auto & trie : m_tries){
                 written_bytes += trie.serialize(out, child, "tries");
             }
@@ -248,6 +268,13 @@ namespace cltj {
         }
 
         void load(std::istream &in) {
+#ifdef CLTJ_INVERSE_CYCLE
+            uint64_t tag = 0;
+            sdsl::read_member(tag, in);
+            if(tag != format_tag){
+                throw std::runtime_error("cltj_index_metatrie::load: not an index of this trie type in the inverse cycle; rebuild it with this binary");
+            }
+#endif
             for(auto & trie : m_tries){
                 trie.load(in);
             }

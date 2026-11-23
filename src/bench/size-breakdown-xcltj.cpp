@@ -24,7 +24,11 @@ typedef cltj::compact_ltj_metatrie index_type;
 
 typedef std::vector<std::pair<std::string, uint64_t>> members_type;
 
+#ifdef CLTJ_INVERSE_CYCLE
+static const char *names[] = {"SOP", "SPO", "PSO", "POS", "OPS", "OSP"};
+#else
 static const char *names[] = {"SPO", "SOP", "POS", "PSO", "OSP", "OPS"};
+#endif
 
 struct reader {
     std::ifstream in;
@@ -187,6 +191,11 @@ int main(int argc, char **argv) {
     r.in.seekg(0);
 
     bool ok = true;
+#ifdef CLTJ_INVERSE_CYCLE
+    uint64_t tag = 0;
+    const uint64_t tag_bytes = r.read(tag);
+    std::cout << "format_tag bytes=" << tag_bytes << std::endl;
+#endif
     std::map<std::string, uint64_t> totals;
     std::vector<std::string> class_lines;
     uint64_t sum_tries = 0;
@@ -234,7 +243,11 @@ int main(int argc, char **argv) {
     for (const auto &x: totals) std::cout << " " << x.first << "=" << x.second;
     std::cout << " tries=" << sum_tries << " gaps=" << gaps_bytes << " root=" << root_bytes << std::endl;
 
+#ifdef CLTJ_INVERSE_CYCLE
+    const uint64_t parsed = tag_bytes + sum_tries + gaps_bytes + root_bytes;
+#else
     const uint64_t parsed = sum_tries + gaps_bytes + root_bytes;
+#endif
     std::cout << "index_bytes=" << index_bytes << " file_bytes=" << file_bytes << " parsed_bytes=" << parsed
               << std::endl;
     if (parsed != index_bytes || parsed != file_bytes || r.pos != file_bytes) {
