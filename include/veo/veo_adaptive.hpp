@@ -30,6 +30,14 @@
 #include <cltj_config.hpp>
 #include<index/cltj_index_spo_lite.hpp>
 
+// 0: smallest weight. 1: 0, and the lonely variables of each pattern bound along the cycle of full tries.
+#ifndef LTJ_VEO_VARIANT
+#define LTJ_VEO_VARIANT 0
+#endif
+#if LTJ_VEO_VARIANT > 1
+#error "LTJ_VEO_VARIANT must be 0 or 1"
+#endif
+
 namespace ltj {
 
     using namespace std;
@@ -191,6 +199,23 @@ namespace ltj {
                     if (p && o) {
                         var_to_related(var_p, var_o);
                     }
+#if LTJ_VEO_VARIANT >= 1 && defined(CLTJ_INVERSE_CYCLE)
+                    // The lonely variables of a pattern sit at the end of m_lonely in s, p, o order. Along
+                    // s -> o -> p -> s: with s fixed bind o before p, with o fixed p before s, and with none
+                    // fixed s, o, p. With p fixed, s before o already follows the cycle.
+                    const bool lonely_s = triple_pattern.s_is_variable() && !s;
+                    const bool lonely_p = triple_pattern.p_is_variable() && !p;
+                    const bool lonely_o = triple_pattern.o_is_variable() && !o;
+                    if (lonely_p && (lonely_s || lonely_o)) {
+                        std::swap(m_lonely[m_lonely.size() - 2], m_lonely.back());
+                    }
+#elif LTJ_VEO_VARIANT >= 1
+                    // With p fixed, binding o first stays in POS; s first goes through PSO.
+                    if (triple_pattern.s_is_variable() && !s && triple_pattern.o_is_variable() && !o &&
+                        !(triple_pattern.p_is_variable() && !p)) {
+                        std::swap(m_lonely[m_lonely.size() - 2], m_lonely.back());
+                    }
+#endif
                     ++i;
                 }
                 m_index = 0;
