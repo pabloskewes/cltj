@@ -32,6 +32,9 @@ namespace ltj {
 
     template<class index_scheme_t, class var_t, class cons_t>
     class ltj_iterator_metatrie_dyn {
+#ifdef CLTJ_INVERSE_CYCLE
+        static_assert(sizeof(index_scheme_t) == 0, "CLTJ_INVERSE_CYCLE is only supported by ltj_iterator_metatrie");
+#endif
 
     public:
         typedef cons_t value_type;

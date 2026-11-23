@@ -25,6 +25,9 @@
 #include <vector>
 #include <cltj_utils.hpp>
 #include <string>
+#ifdef LTJ_VEO_TRACE
+#include <veo/veo_trace.hpp>
+#endif
 
 #define VERBOSE 0
 
@@ -103,6 +106,31 @@ namespace ltj {
             std::cout << std::endl;
         }
 
+#ifdef CLTJ_INVERSE_CYCLE
+        // Binds the constants along the cycle, starting from one whose predecessor on the cycle is a
+        // variable, so that a pattern with two constants starts in a full trie.
+        void process_constants() {
+            const triple_pattern* tp = m_ptr_triple_pattern;
+            const std::array<bool, 3> is_const = {!tp->s_is_variable(), !tp->p_is_variable(), !tp->o_is_variable()};
+            const std::array<uint64_t, 3> value = {tp->term_s.value, tp->term_p.value, tp->term_o.value};
+            state_type x = s;
+            for(state_type y : {s, p, o}) {
+                if(is_const[y] && !is_const[cltj::cycle_prev(y)]) {
+                    x = y;
+                    break;
+                }
+            }
+            for(int i = 0; i < 3; ++i, x = cltj::cycle_next(x)) {
+                if(!is_const[x]) continue;
+                if(!exists(x, value[x])) {
+                    m_is_empty = true;
+                    return;
+                }
+                m_path_label[m_nfixed] = value[x];
+                down(x);
+            }
+        }
+#else
         void process_constants() {
             if(!m_ptr_triple_pattern->s_is_variable()) {
                 if(!exists(s, m_ptr_triple_pattern->term_s.value)) {
@@ -131,12 +159,17 @@ namespace ltj {
                 down(o);
             }
         }
+#endif
 
         void choose_trie(state_type state) {
             if(m_nfixed == 0) {
                 m_trie_i = 2*state;
                 m_status_i = 0;
             }else if (m_nfixed == 1) {
+#ifdef CLTJ_INVERSE_CYCLE
+                m_trie_i = cltj::trie_slot(m_fixed[m_nfixed-1], state);
+                m_status_i = m_trie_i % 2;
+#else
                 if (state == s) { //Fix variables
                     m_trie_i = (m_fixed[m_nfixed-1] == o) ? 4 : 3 ;
                     m_status_i = (m_fixed[m_nfixed-1] == o) ? 0 : 1;
@@ -147,11 +180,19 @@ namespace ltj {
                     m_trie_i = (m_fixed[m_nfixed-1] == p) ? 2 : 1 ;
                     m_status_i = (m_fixed[m_nfixed-1] == p) ? 0 : 1;
                 }
+#endif
             }
         }
 
         size_type trie_switch() {
+#ifdef LTJ_VEO_TRACE
+            ++ltj::veo::trace::switches;
+#endif
+#ifdef CLTJ_INVERSE_CYCLE
+            size_type fti = cltj::switch_target(m_trie_i); //full trie index
+#else
             size_type fti = cltj::ts_full_map[m_trie_i/2]; //full trie index
+#endif
             const auto* trie = m_ptr_index->get_trie(fti);   // switches to the corresponding trie
             // Now gets down using the labels of the current path, reversed
             size_type p0; //position in first level
@@ -358,7 +399,11 @@ namespace ltj {
                 size_type cnt, beg, end;
                 const auto* trie = m_ptr_index->get_trie(m_trie_i);
                 if (m_status_i && m_nfixed == 2) { //partial trie
+#ifdef CLTJ_INVERSE_CYCLE
+                    size_type fti = cltj::switch_target(m_trie_i);
+#else
                     size_type fti = cltj::ts_full_map[m_trie_i/2];
+#endif
                     trie = m_ptr_index->get_trie(fti);   // switches to the corresponding trie
                 }
                 cnt = trie->children(parent());
@@ -430,7 +475,11 @@ namespace ltj {
             }
             const auto* trie = m_ptr_index->get_trie(m_trie_i);
             if (m_status_i && m_nfixed == 2) { //partial trie
+#ifdef CLTJ_INVERSE_CYCLE
+                size_type fti = cltj::switch_target(m_trie_i);
+#else
                 size_type fti = cltj::ts_full_map[m_trie_i/2];
+#endif
                 trie = m_ptr_index->get_trie(fti);   // switches to the corresponding trie
             }
 
@@ -477,6 +526,10 @@ namespace ltj {
             size_type t_i, s_i=0;
             if(m_nfixed == 0) return m_ptr_index->gaps[state];
             if (m_nfixed == 1){
+#ifdef CLTJ_INVERSE_CYCLE
+                t_i = cltj::trie_slot(m_fixed[m_nfixed-1], state);
+                s_i = t_i % 2;
+#else
                 if (state == s) { //Fix variables
                     t_i = (m_fixed[m_nfixed-1] == o) ? 4 : 3 ;
                     s_i = (m_fixed[m_nfixed-1] == o) ? 0 : 1;
@@ -487,11 +540,16 @@ namespace ltj {
                     t_i = (m_fixed[m_nfixed - 1] == p) ? 2 : 1;
                     s_i = (m_fixed[m_nfixed - 1] == p) ? 0 : 1;
                 }
+#endif
             }else{
                 t_i = m_trie_i; //Previously decided
                 s_i = m_status_i; //Previously decided
                 if (m_status_i && m_nfixed == 2) { //partial trie
+#ifdef CLTJ_INVERSE_CYCLE
+                    t_i = cltj::switch_target(m_trie_i);
+#else
                     t_i = cltj::ts_full_map[m_trie_i/2];
+#endif
                 }
             }
             auto trie = m_ptr_index->get_trie(t_i);
@@ -511,6 +569,10 @@ namespace ltj {
 
         inline size_type subtree_size_fixed1(state_type state) const {
             size_type t_i, s_i;
+#ifdef CLTJ_INVERSE_CYCLE
+            t_i = cltj::trie_slot(m_fixed[m_nfixed-1], state);
+            s_i = t_i % 2;
+#else
             if (state == s) { //Fix variables
                 t_i = (m_fixed[m_nfixed-1] == o) ? 4 : 3 ;
                 s_i = (m_fixed[m_nfixed-1] == o) ? 0 : 1;
@@ -521,6 +583,7 @@ namespace ltj {
                 t_i = (m_fixed[m_nfixed - 1] == p) ? 2 : 1;
                 s_i = (m_fixed[m_nfixed - 1] == p) ? 0 : 1;
             }
+#endif
 
             //we always use the full trie
             //if s_i = 1 then we move to the full trie
@@ -543,7 +606,11 @@ namespace ltj {
         inline size_type subtree_size_fixed2() const {
             const auto* trie =  m_ptr_index->get_trie(m_trie_i);
             if (m_status_i && m_nfixed == 2) { //partial trie
+#ifdef CLTJ_INVERSE_CYCLE
+                size_type fti = cltj::switch_target(m_trie_i);
+#else
                 size_type fti = cltj::ts_full_map[m_trie_i/2];
+#endif
                 trie = m_ptr_index->get_trie(fti);   // switches to the corresponding trie
             }
             auto it = m_status[m_nfixed].it[m_status_i];
@@ -554,7 +621,11 @@ namespace ltj {
             std::vector<uint64_t> results;
             size_type t_i = m_trie_i;
             if (m_nfixed == 2 && m_status_i == 1) {
+#ifdef CLTJ_INVERSE_CYCLE
+               t_i = cltj::switch_target(t_i);
+#else
                t_i = cltj::ts_full_map[t_i/2];
+#endif
             }
             const auto* trie = m_ptr_index->get_trie(t_i);
             uint32_t cnt = trie->children(parent());
