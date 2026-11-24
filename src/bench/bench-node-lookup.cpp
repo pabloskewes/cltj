@@ -457,15 +457,16 @@ void bench_replay(const std::string& name, const S& copies, uint64_t node_bytes,
     for (uint32_t rep = 0; rep < cfg.reps; ++rep) {
         for (const auto& regime : cfg.replay_regimes) {
             const bool cold = regime == "cold";
-            const uint64_t seed = cfg.seed ^ (1ULL << 61) ^ (uint64_t(cold) << 58) ^ (uint64_t(rep) << 40);
-            const std::vector<Query> qs = replay_queries(t, cold, ncopies, seed);
-            // In cold, verification and warm-up go to another draw of copies, so that they do not warm
-            // the measured ones.
-            std::vector<Query> other;
-            if (cold)
-                other = replay_queries(t, true, ncopies, ~seed);
-            const std::vector<Query>& pre = cold ? other : qs;
             for (int mode : cfg.modes) {
+                // In cold, every measurement, and its verification or warm-up, gets its own draw of
+                // copies, so that no earlier run warms the measured ones.
+                const uint64_t seed = cfg.seed ^ (1ULL << 61) ^ (uint64_t(cold) << 58) ^ (uint64_t(rep) << 40) ^
+                    (uint64_t(mode) << 36);
+                const std::vector<Query> qs = replay_queries(t, cold, ncopies, seed);
+                std::vector<Query> other;
+                if (cold)
+                    other = replay_queries(t, true, ncopies, ~seed);
+                const std::vector<Query>& pre = cold ? other : qs;
                 if (rep == 0) {
                     if (uint64_t bad = mismatches(pre)) {
                         std::cerr << "VERIFY FAILED replay " << name << " regime=" << regime << " bad=" << bad
