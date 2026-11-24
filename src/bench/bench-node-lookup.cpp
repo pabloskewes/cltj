@@ -32,6 +32,7 @@
 
 #ifdef __linux__
 #include <sys/mman.h>
+#include <sys/prctl.h>
 #ifndef MADV_COLLAPSE
 #define MADV_COLLAPSE 25  // linux/mman.h, kernel 6.1; glibc < 2.37 does not define it
 #endif
@@ -412,8 +413,10 @@ int main(int argc, char** argv) {
     app.add_option("--structures", structures, "Subset of glgh,packed,ef,gallop");
     app.add_option("--modes", modes, "Subset of indep,chain,fence");
     app.add_option("--seed", cfg.seed, "Seed");
-    app.add_option("--pages", pages, "huge: collapse the structures to huge pages before measuring; default: leave them")
-        ->check(CLI::IsMember({"huge", "default"}));
+    app.add_option("--pages", pages,
+                   "huge: collapse the structures to huge pages before measuring; default: leave them; "
+                   "small: disable transparent huge pages for the process")
+        ->check(CLI::IsMember({"huge", "default", "small"}));
     app.add_flag("--random-gaps", cfg.random_gaps, "Seek gaps geometric with mean g instead of fixed");
     app.add_flag("--no-point", no_point, "Skip point lookups");
     app.add_flag("--no-seek", no_seek, "Skip seek sweeps");
@@ -421,6 +424,10 @@ int main(int argc, char** argv) {
 
     cfg.width = static_cast<uint8_t>(width);
     g_collapse = pages == "huge";
+#ifdef __linux__
+    if (pages == "small" && prctl(PR_SET_THP_DISABLE, 1, 0, 0, 0) != 0)
+        throw std::runtime_error("prctl(PR_SET_THP_DISABLE) failed");
+#endif
     cfg.point = !no_point;
     cfg.seek = !no_seek;
     cfg.gaps = parse_list(gaps);
