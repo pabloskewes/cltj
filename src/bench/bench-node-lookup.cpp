@@ -15,6 +15,12 @@
 // positions (from a random offset; with --random-gaps, geometric jumps of that mean), each seek starting at the answer of the
 // previous one, as a leap of LTJ does. The MPHF answers the same targets with
 // lookups, since it has no order.
+//
+// Replay (--x-trace, --h-trace): the visits recorded from a query, in their
+// order. EF and galloping replay the seeks of the X trace, each visit from the
+// start of the node; the MPHF replays the probes of the H trace with locate.
+// Regimes: single (one instance, the reuse between visits of the query) and
+// cold (every visit to a random copy).
 
 #include <bench/node_lookup.hpp>
 
@@ -73,6 +79,16 @@ struct Config {
     bool point = true, seek = true;
     bool random_gaps = false;
     uint64_t seed = 42;
+    std::vector<std::string> replay_regimes;
+};
+
+// Visits [visit_offset, visit_offset + len.size()) of a trace. Visit v has
+// len[v] operations; operation i has key[i] and res[i] (result_offset in the X
+// trace, found in the H trace).
+struct Trace {
+    uint64_t visit_offset = 0;
+    std::vector<uint32_t> len;
+    std::vector<uint32_t> key, res;
 };
 
 std::vector<uint32_t> read_keys(const std::string& path) {
@@ -319,6 +335,168 @@ void bench_structure(const std::string& name, const S& copies, uint64_t node_byt
     }
 }
 
+// Reads whole visits of a trace: skips the first visit_offset and stops after
+// max_visits, or at the first visit boundary with at least max_ops operations.
+Trace read_trace(const std::string& path, uint64_t visit_offset, uint64_t max_visits, uint64_t max_ops) {
+    std::ifstream in(path, std::ios::binary | std::ios::ate);
+    if (!in)
+        throw std::runtime_error("cannot open " + path);
+    const uint64_t bytes = in.tellg();
+    in.seekg(0);
+    Trace t;
+    t.visit_offset = visit_offset;
+    std::vector<uint32_t> buf;
+    uint64_t pos = 0, v = 0;
+    while (pos < bytes && t.len.size() < max_visits && t.key.size() < max_ops) {
+        uint32_t m;
+        if (bytes - pos < 4 || !in.read(reinterpret_cast<char*>(&m), 4))
+            throw std::runtime_error("truncated visit header in " + path);
+        pos += 4 + 8 * uint64_t(m);
+        if (pos > bytes)
+            throw std::runtime_error("truncated visit " + std::to_string(v) + " in " + path);
+        if (v++ < visit_offset) {
+            in.seekg(8 * uint64_t(m), std::ios::cur);
+            continue;
+        }
+        buf.resize(2 * uint64_t(m));
+        in.read(reinterpret_cast<char*>(buf.data()), buf.size() * sizeof(uint32_t));
+        t.len.push_back(m);
+        for (uint64_t i = 0; i < m; ++i) {
+            t.key.push_back(buf[2 * i]);
+            t.res.push_back(buf[2 * i + 1]);
+        }
+    }
+    if (v < visit_offset)
+        throw std::runtime_error(path + " has " + std::to_string(v) + " visits, fewer than --visit-offset");
+    return t;
+}
+
+// The X trace must be what a leap of X answers on these keys: the first
+// position >= target from the cursor, which starts at 0 in every visit and
+// then is the previous result. A visit ends at the first exhausted seek.
+void check_x_trace(const Trace& t, const std::vector<uint32_t>& keys, const std::string& path) {
+    const uint64_t n = keys.size();
+    uint64_t i = 0;
+    for (uint64_t v = 0; v < t.len.size(); ++v) {
+        uint64_t cur = 0;
+        for (uint32_t j = 0; j < t.len[v]; ++j, ++i) {
+            const std::string where = path + ": visit " + std::to_string(t.visit_offset + v) + ", seek " +
+                std::to_string(j);
+            if (cur == n)
+                throw std::runtime_error(where + " follows an exhausted seek");
+            const uint64_t want = std::max<uint64_t>(cur, lower_pos(keys, t.key[i]));
+            if (t.res[i] != want)
+                throw std::runtime_error(where + ": result_offset " + std::to_string(t.res[i]) + ", the keys give " +
+                                         std::to_string(want));
+            cur = want;
+        }
+    }
+}
+
+void check_h_trace(const Trace& t, const std::vector<uint32_t>& keys, const std::string& path) {
+    for (uint64_t i = 0; i < t.key.size(); ++i)
+        if (t.res[i] > 1 || bool(t.res[i]) != member(keys, t.key[i]))
+            throw std::runtime_error(path + ": probe " + std::to_string(i) + " has found = " +
+                                     std::to_string(t.res[i]) + ", the keys disagree");
+}
+
+std::vector<Query> replay_queries(const Trace& t, bool cold, uint64_t copies, uint64_t seed) {
+    std::mt19937_64 rng(seed);
+    std::vector<Query> qs;
+    qs.reserve(t.key.size());
+    uint64_t i = 0;
+    for (uint32_t m : t.len) {
+        const uint32_t copy = cold ? rng() % copies : 0;
+        for (uint32_t j = 0; j < m; ++j, ++i)
+            qs.push_back({t.key[i], copy, j == 0 ? 1u : 0u});
+    }
+    return qs;
+}
+
+// EF and galloping replay the X trace with seeks; the MPHF replays the H trace with lookups.
+template <class S>
+void bench_replay(const std::string& name, const S& copies, uint64_t node_bytes, const Config& cfg, const Trace& t,
+                  std::ofstream& out, uint64_t zero) {
+    constexpr bool ordered = has_order<S>();
+    const uint64_t n = cfg.keys.size(), ops = t.key.size(), visits = t.len.size(), ncopies = copies.copies();
+    if (ops == 0) {
+        std::cerr << "[" << cfg.node << "] " << name << " replay: no operations in the selected visits" << std::endl;
+        return;
+    }
+    const uint64_t empty = std::count(t.len.begin(), t.len.end(), 0u);
+    uint64_t hits = 0, exhausted = 0;
+    for (uint64_t i = 0; i < ops; ++i) {
+        if (ordered) {
+            hits += t.res[i] < n && cfg.keys[t.res[i]] == t.key[i];
+            exhausted += t.res[i] == n;
+        } else {
+            hits += t.res[i];
+        }
+    }
+
+    // The checksum of a run depends on the trace only: positions are local to a copy and the copies
+    // of the MPHF are the same function.
+    uint64_t want_acc = 0;
+    auto mismatches = [&](const std::vector<Query>& qs) {
+        uint64_t a = 0, cur = no_cursor, bad = 0;
+        want_acc = 0;
+        for (uint64_t i = 0; i < ops; ++i) {
+            Answer r;
+            if constexpr (ordered) {
+                r = do_seek(copies, qs[i], a, cur);
+                bad += r.pos != t.res[i] || (r.pos < n && r.value != cfg.keys[r.pos]);
+            } else {
+                r = do_lookup(copies, qs[i], a, cur);
+                bad += r.found != bool(t.res[i]);
+            }
+            want_acc += r.pos ^ r.found;
+        }
+        return bad;
+    };
+
+    for (uint32_t rep = 0; rep < cfg.reps; ++rep) {
+        for (const auto& regime : cfg.replay_regimes) {
+            const bool cold = regime == "cold";
+            const uint64_t seed = cfg.seed ^ (1ULL << 61) ^ (uint64_t(cold) << 58) ^ (uint64_t(rep) << 40);
+            const std::vector<Query> qs = replay_queries(t, cold, ncopies, seed);
+            // In cold, verification and warm-up go to another draw of copies, so that they do not warm
+            // the measured ones.
+            std::vector<Query> other;
+            if (cold)
+                other = replay_queries(t, true, ncopies, ~seed);
+            const std::vector<Query>& pre = cold ? other : qs;
+            for (int mode : cfg.modes) {
+                if (rep == 0) {
+                    if (uint64_t bad = mismatches(pre)) {
+                        std::cerr << "VERIFY FAILED replay " << name << " regime=" << regime << " bad=" << bad
+                                  << std::endl;
+                        std::exit(2);
+                    }
+                } else {
+                    const uint64_t warm = std::min<uint64_t>(ops, std::max<uint64_t>(cfg.hot_set, 65536));
+                    run_mode<S, ordered>(INDEP, copies, pre, warm, zero);
+                }
+                auto t0 = std::chrono::steady_clock::now();
+                uint64_t acc = run_mode<S, ordered>(mode, copies, qs, ops, zero);
+                auto t1 = std::chrono::steady_clock::now();
+                const double ns = std::chrono::duration<double, std::nano>(t1 - t0).count();
+                if (acc != want_acc) {
+                    std::cerr << "VERIFY FAILED replay " << name << " regime=" << regime << " rep=" << rep
+                              << " checksum " << acc << " != " << want_acc << std::endl;
+                    std::exit(2);
+                }
+
+                out << cfg.node << ',' << n << ',' << name << ',' << (ordered ? "x" : "h") << ',' << regime << ','
+                    << mode_name[mode] << ',' << rep << ',' << t.visit_offset << ',' << visits << ',' << empty << ','
+                    << ops << ',' << hits << ',' << exhausted << ',' << ns << ',' << ns / ops << ',' << ns / visits
+                    << ',' << cfg.seed << ',' << (cold ? ncopies : 1) << ',' << node_bytes << ',' << acc << '\n';
+                out.flush();
+            }
+        }
+        std::cerr << "[" << cfg.node << "] " << name << " replay rep " << rep << " done" << std::endl;
+    }
+}
+
 uint64_t copy_count(uint64_t node_bytes, const Config& cfg) {
     uint64_t bytes = std::max<uint64_t>(node_bytes, 1);
     uint64_t r = std::max<uint64_t>(1, (cfg.cold_bytes + bytes - 1) / bytes);
@@ -399,6 +577,8 @@ int main(int argc, char** argv) {
     bool no_point = false, no_seek = false;
     std::string pages = "huge";
     int width = 0;
+    std::string x_trace_path, h_trace_path, replay_path, replay_regimes = "single,cold";
+    uint64_t visit_offset = 0, max_visits = UINT64_MAX, max_ops = UINT64_MAX;
     app.add_option("keys", keys_path, "Sorted labels of the node (binary uint32)")->required();
     app.add_option("-o,--out", out_path, "Timing CSV")->required();
     app.add_option("--space", space_path, "Space CSV")->required();
@@ -420,6 +600,15 @@ int main(int argc, char** argv) {
     app.add_flag("--random-gaps", cfg.random_gaps, "Seek gaps geometric with mean g instead of fixed");
     app.add_flag("--no-point", no_point, "Skip point lookups");
     app.add_flag("--no-seek", no_seek, "Skip seek sweeps");
+    auto* replay_opt = app.add_option("--replay-out", replay_path, "Replay timing CSV");
+    app.add_option("--x-trace", x_trace_path, "Seeks of X in this node (.x.cltj-trace), replayed by ef and gallop")
+        ->needs(replay_opt);
+    app.add_option("--h-trace", h_trace_path, "Probes of H to this node (.h.cltj-trace), replayed by glgh and packed")
+        ->needs(replay_opt);
+    app.add_option("--replay-regimes", replay_regimes, "Subset of single,cold");
+    app.add_option("--visit-offset", visit_offset, "First visit of the traces to replay");
+    app.add_option("--max-visits", max_visits, "Visits of the traces to replay");
+    app.add_option("--max-ops", max_ops, "Stop at the first visit boundary with at least this many operations");
     CLI11_PARSE(app, argc, argv);
 
     cfg.width = static_cast<uint8_t>(width);
@@ -443,15 +632,44 @@ int main(int argc, char** argv) {
             else if (t == "fence") cfg.modes.push_back(FENCE);
             else throw std::runtime_error("unknown mode " + t);
         }
+        std::stringstream rs(replay_regimes);
+        while (std::getline(rs, t, ',')) {
+            if (t != "single" && t != "cold")
+                throw std::runtime_error("unknown replay regime " + t);
+            cfg.replay_regimes.push_back(t);
+        }
     }
     cfg.keys = read_keys(keys_path);
     std::cerr << "[" << cfg.node << "] n=" << cfg.keys.size() << " first=" << cfg.keys.front()
               << " last=" << cfg.keys.back() << std::endl;
 
+    Trace x_trace, h_trace;
+    auto load_trace = [&](const std::string& path, Trace& t, bool x) {
+        t = read_trace(path, visit_offset, max_visits, max_ops);
+        if (x)
+            check_x_trace(t, cfg.keys, path);
+        else
+            check_h_trace(t, cfg.keys, path);
+        std::cerr << "[" << cfg.node << "] " << path << ": visits " << t.visit_offset << " to "
+                  << t.visit_offset + t.len.size() << ", " << t.key.size() << " operations, consistent with the keys"
+                  << std::endl;
+    };
+    if (!x_trace_path.empty())
+        load_trace(x_trace_path, x_trace, true);
+    if (!h_trace_path.empty())
+        load_trace(h_trace_path, h_trace, false);
+    std::ofstream replay;
+    if (!replay_path.empty()) {
+        replay.open(replay_path, std::ios::app);
+        replay.precision(6);
+    }
+
     volatile uint64_t zero_v = 0;
     const uint64_t zero = zero_v;
 
     // timing: node,n,structure,op,gap,regime,keys,mode,queries,rep,ns,absent_frac,copies,node_bytes,checksum
+    // replay: node,n,structure,trace,regime,mode,rep,visit_offset,visits,empty_visits,ops,hits,exhausted,
+    //         ns_total,ns_per_op,ns_per_visit,seed,copies,node_bytes,checksum
     // space:  node,n,universe,structure,bytes,bits_per_key,g,used,rank,q,other,fallback,residual,width,build_s
     Out out;
     out.csv.open(out_path, std::ios::app);
@@ -484,6 +702,8 @@ int main(int argc, char** argv) {
                 std::cerr << "[" << cfg.node << "] " << s << " copies=" << copies.copies() << std::endl;
                 print_memory();
                 bench_structure(s, copies, bytes, cfg, out, zero);
+                if (!h_trace_path.empty())
+                    bench_replay(s, copies, bytes, cfg, h_trace, replay, zero);
             };
             if (s == "glgh")
                 run(GlGhNode());
@@ -500,6 +720,8 @@ int main(int argc, char** argv) {
             std::cerr << "[" << cfg.node << "] ef copies=" << copies.copies() << std::endl;
             print_memory();
             bench_structure(s, copies, bytes, cfg, out, zero);
+            if (!x_trace_path.empty())
+                bench_replay(s, copies, bytes, cfg, x_trace, replay, zero);
         } else if (s == "gallop") {
             auto built = t_build([&] { return GallopNodes(cfg.keys, cfg.width, 1); });
             const uint64_t bytes = built.first.size_in_bytes();
@@ -510,6 +732,8 @@ int main(int argc, char** argv) {
             std::cerr << "[" << cfg.node << "] gallop copies=" << copies.copies() << std::endl;
             print_memory();
             bench_structure(s, copies, bytes, cfg, out, zero);
+            if (!x_trace_path.empty())
+                bench_replay(s, copies, bytes, cfg, x_trace, replay, zero);
         } else {
             throw std::runtime_error("unknown structure " + s);
         }
