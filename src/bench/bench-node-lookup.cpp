@@ -12,7 +12,7 @@
 //   chain  the index of the next query depends on the answer of the previous one.
 //   fence  chain plus a serializing fence between queries (full latency).
 // Seek sweeps visit the node from the start with targets every --gaps
-// positions (from a random offset), each seek starting at the answer of the
+// positions (from a random offset; with --random-gaps, geometric jumps of that mean), each seek starting at the answer of the
 // previous one, as a leap of LTJ does. The MPHF answers the same targets with
 // lookups, since it has no order.
 
@@ -70,6 +70,7 @@ struct Config {
     std::vector<std::string> structures;
     std::vector<int> modes;
     bool point = true, seek = true;
+    bool random_gaps = false;
     uint64_t seed = 42;
 };
 
@@ -126,7 +127,8 @@ std::vector<Query> point_queries(const Config& cfg, bool hot, bool present, uint
     return qs;
 }
 
-// Targets of seek sweeps with gap g. Returns the fraction of targets that are absent.
+// Targets of seek sweeps with gap g: fixed, or geometric with mean g when
+// cfg.random_gaps. Returns the fraction of targets that are absent.
 double seek_queries(const Config& cfg, uint64_t g, bool hot, bool present, uint64_t copies, uint64_t seed,
                     std::vector<Query>& qs) {
     const auto& keys = cfg.keys;
@@ -135,12 +137,13 @@ double seek_queries(const Config& cfg, uint64_t g, bool hot, bool present, uint6
     qs.clear();
     qs.reserve(cfg.queries);
     uint64_t absent = 0;
+    std::geometric_distribution<uint64_t> extra(1.0 / double(g));
     while (qs.size() < cfg.queries) {
         uint64_t o = rng() % g;
         uint32_t copy = hot ? 0 : rng() % copies;
         uint64_t prev = 0;
         bool first = true;
-        for (uint64_t p = o; p < n && qs.size() < cfg.queries; p += g) {
+        for (uint64_t p = o; p < n && qs.size() < cfg.queries; p += cfg.random_gaps ? 1 + extra(rng) : g) {
             Query q{keys[p], copy, first ? 1u : 0u};
             if (!present) {
                 uint64_t lo = first ? 1 : prev + 1;
@@ -411,6 +414,7 @@ int main(int argc, char** argv) {
     app.add_option("--seed", cfg.seed, "Seed");
     app.add_option("--pages", pages, "huge: collapse the structures to huge pages before measuring; default: leave them")
         ->check(CLI::IsMember({"huge", "default"}));
+    app.add_flag("--random-gaps", cfg.random_gaps, "Seek gaps geometric with mean g instead of fixed");
     app.add_flag("--no-point", no_point, "Skip point lookups");
     app.add_flag("--no-seek", no_seek, "Skip seek sweeps");
     CLI11_PARSE(app, argc, argv);
