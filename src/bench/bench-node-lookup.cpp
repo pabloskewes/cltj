@@ -32,6 +32,9 @@
 
 #ifdef __linux__
 #include <sys/mman.h>
+#ifndef MADV_COLLAPSE
+#define MADV_COLLAPSE 25  // linux/mman.h, kernel 6.1; glibc < 2.37 does not define it
+#endif
 #endif
 
 #if defined(__x86_64__) || defined(__i386__)
