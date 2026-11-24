@@ -30,6 +30,10 @@
 #include <string>
 #include <vector>
 
+#ifdef __linux__
+#include <sys/mman.h>
+#endif
+
 #if defined(__x86_64__) || defined(__i386__)
 #include <immintrin.h>
 static inline void serialize_fence() { _mm_lfence(); }
@@ -315,13 +319,59 @@ std::vector<S> make_copies(S&& base, const Config& cfg) {
     r = std::min<uint64_t>(r, cfg.max_copies);
     std::vector<S> copies;
     copies.reserve(r);
+    copies.push_back(std::move(base));
     for (uint64_t i = 1; i < r; ++i)
-        copies.push_back(base.clone());
-    copies.insert(copies.begin(), std::move(base));
+        copies.push_back(copies[0].clone());
     return copies;
 }
 
+// Backs every anonymous writable mapping of the process with huge pages
+// (MADV_COLLAPSE, Linux >= 6.1), so that the copies are not limited by the
+// TLB reach of 4 KB pages. Returns the bytes asked to collapse and how many of
+// them failed.
+std::pair<uint64_t, uint64_t> collapse_to_huge_pages() {
+    uint64_t asked = 0, failed = 0;
+#if defined(__linux__) && defined(MADV_COLLAPSE)
+    const uint64_t huge = 2ULL << 20;
+    std::ifstream in("/proc/self/maps");
+    std::string line;
+    std::vector<std::pair<uint64_t, uint64_t>> ranges;
+    while (std::getline(in, line)) {
+        std::istringstream ls(line);
+        std::string range, perms, offset, dev, inode, path;
+        ls >> range >> perms >> offset >> dev >> inode;
+        std::getline(ls, path);
+        path.erase(0, path.find_first_not_of(' '));
+        if (perms != "rw-p" || !(path.empty() || path == "[heap]"))
+            continue;
+        uint64_t beg = std::stoull(range.substr(0, range.find('-')), nullptr, 16);
+        uint64_t end = std::stoull(range.substr(range.find('-') + 1), nullptr, 16);
+        beg = (beg + huge - 1) & ~(huge - 1);
+        end &= ~(huge - 1);
+        if (end > beg)
+            ranges.emplace_back(beg, end);
+    }
+    for (auto& r : ranges) {
+        for (uint64_t b = r.first; b < r.second; b += huge) {
+            asked += huge;
+            if (madvise(reinterpret_cast<void*>(b), huge, MADV_COLLAPSE) != 0)
+                failed += huge;
+        }
+    }
+#endif
+    return {asked, failed};
+}
+
+bool g_collapse = true;
+
 void print_memory() {
+    if (g_collapse) {
+        auto t0 = std::chrono::steady_clock::now();
+        auto r = collapse_to_huge_pages();
+        auto t1 = std::chrono::steady_clock::now();
+        std::cerr << "[mem] collapse asked " << (r.first >> 20) << " MB, failed " << (r.second >> 20) << " MB, "
+                  << std::chrono::duration<double>(t1 - t0).count() << " s" << std::endl;
+    }
     std::ifstream in("/proc/self/smaps_rollup");
     std::string line;
     while (std::getline(in, line))
@@ -347,6 +397,7 @@ int main(int argc, char** argv) {
     std::string keys_path, out_path, space_path, gaps = "1,4,16,64,256,1024,4096,16384,65536";
     std::string structures = "glgh,packed,ef,gallop", modes = "indep,chain,fence";
     bool no_point = false, no_seek = false;
+    std::string pages = "huge";
     int width = 0;
     app.add_option("keys", keys_path, "Sorted labels of the node (binary uint32)")->required();
     app.add_option("-o,--out", out_path, "Timing CSV")->required();
@@ -362,11 +413,14 @@ int main(int argc, char** argv) {
     app.add_option("--structures", structures, "Subset of glgh,packed,ef,gallop");
     app.add_option("--modes", modes, "Subset of indep,chain,fence");
     app.add_option("--seed", cfg.seed, "Seed");
+    app.add_option("--pages", pages, "huge: collapse the structures to huge pages before measuring; default: leave them")
+        ->check(CLI::IsMember({"huge", "default"}));
     app.add_flag("--no-point", no_point, "Skip point lookups");
     app.add_flag("--no-seek", no_seek, "Skip seek sweeps");
     CLI11_PARSE(app, argc, argv);
 
     cfg.width = static_cast<uint8_t>(width);
+    g_collapse = pages == "huge";
     cfg.point = !no_point;
     cfg.seek = !no_seek;
     cfg.gaps = parse_list(gaps);
