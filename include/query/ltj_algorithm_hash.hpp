@@ -71,6 +71,21 @@ class ltj_algorithm_hash {
     std::vector<IntersectionStats> m_stats;
     cltj::query::QueryTracer<cltj::TRACE_QUERY> m_tracer{"query_traces"};
     std::function<void(const IntersectionStats&)> m_stats_sink;
+#ifdef CLTJ_COLLECT_QUERY_STATS_ENABLED
+    IntersectionStats* m_frame = nullptr;
+    bool m_trace = false;
+    ListNode m_trace_node;
+
+    void track_probe(ltj_iter_type* iter, value_type key, bool found) {
+        if (ListVisit* l = m_frame ? m_frame->find_list(iter) : nullptr)
+            l->probe(key, found);
+    }
+
+    void track_enum(ltj_iter_type* iter, uint64_t count) {
+        if (ListVisit* l = m_frame ? m_frame->find_list(iter) : nullptr)
+            l->enumerated += count;
+    }
+#endif
 
     void copy(const ltj_algorithm_hash& o) {
         m_ptr_triple_patterns = o.m_ptr_triple_patterns;
@@ -122,6 +137,14 @@ class ltj_algorithm_hash {
     void set_stats_sink(std::function<void(const IntersectionStats&)> sink) { m_stats_sink = std::move(sink); }
 
     void set_query_id(uint64_t qid) { m_tracer.set_query_id(qid); }
+
+#ifdef CLTJ_COLLECT_QUERY_STATS_ENABLED
+    /// Keeps the operations on the lists of @p node (see ListVisit::ops).
+    void set_trace_node(const ListNode& node) {
+        m_trace = true;
+        m_trace_node = node;
+    }
+#endif
 
     ltj_algorithm_hash() = default;
 
@@ -459,6 +482,30 @@ class ltj_algorithm_hash {
                     else
                         sorted_itrs.push_back(iter);
                 }
+#ifdef CLTJ_COLLECT_QUERY_STATS_ENABLED
+                open_lists(stats, itrs, x_j, m_trace ? &m_trace_node : nullptr);
+                if (!stats.lists.empty()) {
+                    [[maybe_unused]] const bool min_hashed =
+                        std::find(hashed_itrs.begin(), hashed_itrs.end(), itrs[min_idx]) != hashed_itrs.end();
+#ifdef LTJ26_MIXED_MIN
+                    const bool min_scanned = min_hashed;
+#else
+                    const bool min_scanned = sorted_itrs.empty();
+#endif
+                    for (size_type i = 0; i < itrs.size(); ++i) {
+                        const bool hashed =
+                            std::find(hashed_itrs.begin(), hashed_itrs.end(), itrs[i]) != hashed_itrs.end();
+                        if (i == min_idx && min_scanned)
+                            stats.lists[i].role = ListRole::ENUM;
+                        else if (hashed)
+                            stats.lists[i].role = ListRole::PROBE;
+                        else
+                            stats.lists[i].role = min_scanned ? ListRole::SORTED : ListRole::LEAPFROG;
+                    }
+                }
+                IntersectionStats* outer_frame = m_frame;
+                m_frame = &stats;
+#endif
 
                 if (sorted_itrs.empty()) {
                     // All iterators hashed: Pure hash path.
@@ -480,6 +527,9 @@ class ltj_algorithm_hash {
                         std::vector<std::pair<value_type, size_type>> cand;
                         while (keys.next()) {
                             value_type c = keys.key();
+#ifdef CLTJ_COLLECT_QUERY_STATS_ENABLED
+                            track_enum(itrs[min_idx], 1);
+#endif
                             if (candidate_in_hashed_iterators(x_j, c, hashed_itrs, itrs[min_idx]))
                                 cand.emplace_back(c, beg + keys.slot());
                         }
@@ -510,6 +560,9 @@ class ltj_algorithm_hash {
                     while (keys.next()) {
                         const size_type pos = beg + keys.slot();
                         value_type c = keys.key();
+#ifdef CLTJ_COLLECT_QUERY_STATS_ENABLED
+                        track_enum(itrs[min_idx], 1);
+#endif
 
                         if (candidate_in_hashed_iterators(x_j, c, hashed_itrs, itrs[min_idx])) {
                             if constexpr (COLLECT_QUERY_STATS)
@@ -558,6 +611,9 @@ class ltj_algorithm_hash {
                     cand.reserve(end_pos - beg);
                     while (keys.next())
                         cand.emplace_back(keys.key(), beg + keys.slot());
+#ifdef CLTJ_COLLECT_QUERY_STATS_ENABLED
+                    track_enum(mi, cand.size());
+#endif
                     std::sort(cand.begin(), cand.end());
                     for (const auto& cp : cand) {
                         const size_type pos = cp.second;
@@ -566,6 +622,9 @@ class ltj_algorithm_hash {
                     while (keys.next()) {
                         const size_type pos = beg + keys.slot();
                         value_type c = keys.key();
+#ifdef CLTJ_COLLECT_QUERY_STATS_ENABLED
+                        track_enum(mi, 1);
+#endif
 #endif
                         if constexpr (COLLECT_QUERY_STATS)
                             stats.candidates++;
@@ -573,7 +632,13 @@ class ltj_algorithm_hash {
                             continue;
                         bool in_all = true;
                         for (ltj_iter_type* iter : sorted_itrs) {
+#ifdef CLTJ_COLLECT_QUERY_STATS_ENABLED
+                            const bool found = iter->exists(state_for(iter, x_j), c);
+                            track_probe(iter, c, found);
+                            if (!found) {
+#else
                             if (!iter->exists(state_for(iter, x_j), c)) {
+#endif
                                 in_all = false;
                                 break;
                             }
@@ -649,6 +714,10 @@ class ltj_algorithm_hash {
                     // leap() is undefined on a hashed node: its children are in slot order.
                     if (!sorted_itrs.empty())
                         stats.alternation_complexity = calculate_alternation_complexity(sorted_itrs, x_j);
+#ifdef CLTJ_COLLECT_QUERY_STATS_ENABLED
+                    close_lists(stats);
+                    m_frame = outer_frame;
+#endif
                     record_stats(stats);
                 }
             }
@@ -681,8 +750,15 @@ class ltj_algorithm_hash {
         for (ltj_iter_type* iter : hashed_itrs) {
             if (iter == skip)
                 continue;
+#ifdef CLTJ_COLLECT_QUERY_STATS_ENABLED
+            const bool found = iter->hash_contains(x_j, c);
+            track_probe(iter, c, found);
+            if (!found)
+                return false;
+#else
             if (!iter->hash_contains(x_j, c))
                 return false;
+#endif
         }
         return true;
     }
@@ -699,7 +775,11 @@ class ltj_algorithm_hash {
         for (ltj_iter_type* iter : hashed_itrs) {
             if (iter == skip)
                 continue;
+#ifdef CLTJ_COLLECT_QUERY_STATS_ENABLED
+            track_probe(iter, c, iter->exists(state_for(iter, x_j), c));
+#else
             iter->exists(state_for(iter, x_j), c);
+#endif
         }
     }
 
@@ -721,6 +801,9 @@ class ltj_algorithm_hash {
                 c_i = itrs[i]->leap(x_j);
             } else {
                 c_i = itrs[i]->leap(x_j, c);
+#ifdef CLTJ_COLLECT_QUERY_STATS_ENABLED
+                track_leap(m_frame, itrs[i], c, c_i);
+#endif
             }
             // std::cout << "Gets " << (::uint64_t) c_i << std::endl;
             if (c_i == 0) {

@@ -71,6 +71,11 @@ private:
   std::vector<IntersectionStats> m_stats;
   cltj::query::QueryTracer<cltj::TRACE_QUERY> m_tracer{"query_traces"};
   std::function<void(const IntersectionStats &)> m_stats_sink;
+#ifdef CLTJ_COLLECT_QUERY_STATS_ENABLED
+  IntersectionStats *m_frame = nullptr;
+  bool m_trace = false;
+  ListNode m_trace_node;
+#endif
 
   void copy(const ltj_algorithm &o) {
     m_ptr_triple_patterns = o.m_ptr_triple_patterns;
@@ -129,6 +134,14 @@ public:
   void set_query_id(uint64_t qid) {
     m_tracer.set_query_id(qid);
   }
+
+#ifdef CLTJ_COLLECT_QUERY_STATS_ENABLED
+  /// Keeps the operations on the lists of @p node (see ListVisit::ops).
+  void set_trace_node(const ListNode &node) {
+    m_trace = true;
+    m_trace_node = node;
+  }
+#endif
 
   ltj_algorithm() = default;
 
@@ -455,6 +468,11 @@ public:
             stats.list_sizes.push_back(iter->children(state));
           }
         }
+#ifdef CLTJ_COLLECT_QUERY_STATS_ENABLED
+        open_lists(stats, itrs, x_j, m_trace ? &m_trace_node : nullptr);
+        IntersectionStats *outer_frame = m_frame;
+        m_frame = &stats;
+#endif
 
         value_type c = seek(x_j);
         cltj::query::CandidateFrame<TRACE_QUERY, tuple_type> frame(
@@ -491,6 +509,10 @@ public:
         if constexpr (COLLECT_QUERY_STATS) {
           stats.alternation_complexity =
               calculate_alternation_complexity(itrs, x_j);
+#ifdef CLTJ_COLLECT_QUERY_STATS_ENABLED
+          close_lists(stats);
+          m_frame = outer_frame;
+#endif
           record_stats(stats);
         }
       }
@@ -519,6 +541,9 @@ public:
         c_i = itrs[i]->leap(x_j);
       } else {
         c_i = itrs[i]->leap(x_j, c);
+#ifdef CLTJ_COLLECT_QUERY_STATS_ENABLED
+        track_leap(m_frame, itrs[i], c, c_i);
+#endif
       }
       // std::cout << "Gets " << (::uint64_t) c_i << std::endl;
       if (c_i == 0) {

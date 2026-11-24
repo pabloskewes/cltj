@@ -22,6 +22,9 @@
 
 #include <cltj_config.hpp>
 #include <cltj_utils.hpp>
+#ifdef CLTJ_COLLECT_QUERY_STATS_ENABLED
+#include <query/intersection_stats.hpp>
+#endif
 #include <string>
 #include <triple_pattern.hpp>
 #include <vector>
@@ -509,6 +512,49 @@ public:
     auto it = m_status[m_nfixed].it[s_i];
     return trie->children(it);
   }
+
+#ifdef CLTJ_COLLECT_QUERY_STATS_ENABLED
+  // Same trie and parent as children(state).
+  ListNode list_node(state_type state) const {
+    ListNode node;
+    node.level = m_nfixed + 1;
+    if (m_nfixed == 0) {
+      node.trie = 2 * state;
+      return node;
+    }
+    size_type t_i, s_i;
+    if (m_nfixed == 1) {
+      if (state == s) {
+        t_i = (m_fixed[0] == o) ? 4 : 3;
+        s_i = (m_fixed[0] == o) ? 0 : 1;
+      } else if (state == p) {
+        t_i = (m_fixed[0] == s) ? 0 : 5;
+        s_i = (m_fixed[0] == s) ? 0 : 1;
+      } else {
+        t_i = (m_fixed[0] == p) ? 2 : 1;
+        s_i = (m_fixed[0] == p) ? 0 : 1;
+      }
+      node.label1 = m_path_label[0];
+    } else {
+      t_i = m_trie_i;
+      s_i = m_status_i;
+      if (s_i == 1)
+        t_i = (m_trie_i == 1) ? 4 : (m_trie_i == 3) ? 0 : 2;
+      // A switched trie stores the path in reverse order.
+      node.label1 = m_path_label[s_i == 1 ? 1 : 0];
+      node.label2 = m_path_label[s_i == 1 ? 0 : 1];
+    }
+    node.trie = t_i;
+    node.parent_pos = m_status[m_nfixed].it[s_i];
+    node.begin = m_ptr_index->get_trie(t_i)->first_child(node.parent_pos);
+    return node;
+  }
+
+  // Position left by the last leap() that found a value.
+  size_type leap_position() const {
+    return m_status[m_nfixed + 1].beg;
+  }
+#endif
 
   inline size_type subtree_size_fixed1(state_type state) const {
     size_type t_i, s_i;
