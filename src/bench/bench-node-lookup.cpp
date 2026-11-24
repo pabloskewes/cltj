@@ -162,7 +162,7 @@ double seek_queries(const Config& cfg, uint64_t g, bool hot, bool present, uint6
 
 template <class S>
 inline Answer do_lookup(const S& s, const Query& q, uint64_t&, uint64_t&) {
-    return s.lookup(q.key);
+    return s.lookup(q.copy, q.key);
 }
 
 template <class S>
@@ -171,14 +171,14 @@ inline Answer do_seek(const S& s, const Query& q, uint64_t& a, uint64_t& cur) {
         a = 0;
         cur = no_cursor;
     }
-    Answer r = s.seek(q.key, a, cur);
+    Answer r = s.seek(q.copy, q.key, a, cur);
     a = r.pos;
     cur = r.cur;
     return r;
 }
 
 template <class S, bool Seek, int M>
-uint64_t run_loop(const std::vector<S>& copies, const std::vector<Query>& qs, uint64_t count, uint64_t zero) {
+uint64_t run_loop(const S& copies, const std::vector<Query>& qs, uint64_t count, uint64_t zero) {
     uint64_t acc = 0, a = 0, cur = no_cursor;
     uint64_t i = 0;
     const uint64_t n = qs.size();
@@ -186,9 +186,9 @@ uint64_t run_loop(const std::vector<S>& copies, const std::vector<Query>& qs, ui
         const Query& q = qs[i];
         Answer r;
         if constexpr (Seek)
-            r = do_seek(copies[q.copy], q, a, cur);
+            r = do_seek(copies, q, a, cur);
         else
-            r = do_lookup(copies[q.copy], q, a, cur);
+            r = do_lookup(copies, q, a, cur);
         uint64_t res = r.pos ^ r.found;
         acc += res;
         uint64_t next = k + 1;
@@ -202,7 +202,7 @@ uint64_t run_loop(const std::vector<S>& copies, const std::vector<Query>& qs, ui
 }
 
 template <class S, bool Seek>
-uint64_t run_mode(int mode, const std::vector<S>& copies, const std::vector<Query>& qs, uint64_t count,
+uint64_t run_mode(int mode, const S& copies, const std::vector<Query>& qs, uint64_t count,
                   uint64_t zero) {
     switch (mode) {
         case INDEP: return run_loop<S, Seek, INDEP>(copies, qs, count, zero);
@@ -214,18 +214,18 @@ uint64_t run_mode(int mode, const std::vector<S>& copies, const std::vector<Quer
 // The MPHF answers slots, not positions: only membership is checked against the oracle.
 template <class S>
 constexpr bool has_order() {
-    return !std::is_same<S, GlGhNode>::value && !std::is_same<S, PackedGlGhNode>::value;
+    return std::is_same<S, EFNodes>::value || std::is_same<S, GallopNodes>::value;
 }
 
 template <class S, bool Seek>
-uint64_t verify(const std::vector<S>& copies, const std::vector<Query>& qs, const Config& cfg) {
+uint64_t verify(const S& copies, const std::vector<Query>& qs, const Config& cfg) {
     uint64_t a = 0, cur = no_cursor, bad = 0;
     for (const auto& q : qs) {
         Answer r;
         if constexpr (Seek)
-            r = do_seek(copies[q.copy], q, a, cur);
+            r = do_seek(copies, q, a, cur);
         else
-            r = do_lookup(copies[q.copy], q, a, cur);
+            r = do_lookup(copies, q, a, cur);
         bool ok = r.found == member(cfg.keys, q.key);
         if constexpr (has_order<S>()) {
             uint64_t want_pos = lower_pos(cfg.keys, q.key);
@@ -244,7 +244,7 @@ struct Out {
 };
 
 template <class S>
-void bench_structure(const std::string& name, std::vector<S>& copies, const Config& cfg, Out& out,
+void bench_structure(const std::string& name, const S& copies, uint64_t node_bytes, const Config& cfg, Out& out,
                      uint64_t zero) {
     struct Case {
         bool seek;
@@ -265,7 +265,7 @@ void bench_structure(const std::string& name, std::vector<S>& copies, const Conf
                             cases.push_back({true, g, bool(hot), bool(present), m});
             }
 
-    const uint64_t ncopies = copies.size();
+    const uint64_t ncopies = copies.copies();
     for (uint32_t rep = 0; rep < cfg.reps; ++rep) {
         for (const auto& c : cases) {
             uint64_t seed = cfg.seed ^ (uint64_t(c.seek) << 60) ^ (c.gap << 20) ^ (uint64_t(c.hot) << 58) ^
@@ -308,24 +308,17 @@ void bench_structure(const std::string& name, std::vector<S>& copies, const Conf
             out.csv << cfg.node << ',' << cfg.keys.size() << ',' << name << ',' << (c.seek ? "seek" : "lookup")
                     << ',' << c.gap << ',' << (c.hot ? "hot" : "cold") << ',' << (c.present ? "present" : "absent")
                     << ',' << mode_name[c.mode] << ',' << qs.size() << ',' << rep << ',' << ns << ','
-                    << absent_frac << ',' << ncopies << ',' << copies[0].size_in_bytes() << ',' << acc << '\n';
+                    << absent_frac << ',' << ncopies << ',' << node_bytes << ',' << acc << '\n';
             out.csv.flush();
         }
         std::cerr << "[" << cfg.node << "] " << name << " rep " << rep << " done" << std::endl;
     }
 }
 
-template <class S>
-std::vector<S> make_copies(S&& base, const Config& cfg) {
-    uint64_t bytes = std::max<uint64_t>(base.size_in_bytes(), 1);
+uint64_t copy_count(uint64_t node_bytes, const Config& cfg) {
+    uint64_t bytes = std::max<uint64_t>(node_bytes, 1);
     uint64_t r = std::max<uint64_t>(1, (cfg.cold_bytes + bytes - 1) / bytes);
-    r = std::min<uint64_t>(r, cfg.max_copies);
-    std::vector<S> copies;
-    copies.reserve(r);
-    copies.push_back(std::move(base));
-    for (uint64_t i = 1; i < r; ++i)
-        copies.push_back(copies[0].clone());
-    return copies;
+    return std::min<uint64_t>(r, cfg.max_copies);
 }
 
 // Backs every anonymous writable mapping of the process with huge pages
@@ -447,6 +440,8 @@ int main(int argc, char** argv) {
     volatile uint64_t zero_v = 0;
     const uint64_t zero = zero_v;
 
+    // timing: node,n,structure,op,gap,regime,keys,mode,queries,rep,ns,absent_frac,copies,node_bytes,checksum
+    // space:  node,n,universe,structure,bytes,bits_per_key,g,used,rank,q,other,fallback,residual,width,build_s
     Out out;
     out.csv.open(out_path, std::ios::app);
     std::ofstream space(space_path, std::ios::app);
@@ -468,40 +463,42 @@ int main(int argc, char** argv) {
                 using H = decltype(tag);
                 auto built = t_build([&] { return H(cfg.keys); });
                 auto b = built.first.breakdown();
-                space << cfg.node << ',' << n << ',' << u << ',' << s << ',' << built.first.size_in_bytes() << ','
-                      << 8.0 * built.first.size_in_bytes() / n << ',' << b.g_bytes << ',' << b.used_pos_bytes << ','
-                      << b.rank_bytes << ',' << b.q_bytes << ',' << b.other_bytes << ',' << b.fallback_bytes << ','
-                      << built.first.mphf().n_residual() << ',' << built.second << '\n';
+                const uint64_t bytes = built.first.size_in_bytes();
+                space << cfg.node << ',' << n << ',' << u << ',' << s << ',' << bytes << ',' << 8.0 * bytes / n << ','
+                      << b.g_bytes << ',' << b.used_pos_bytes << ',' << b.rank_bytes << ',' << b.q_bytes << ','
+                      << b.other_bytes << ',' << b.fallback_bytes << ',' << built.first.mphf().n_residual() << ",,"
+                      << built.second << '\n';
                 space.flush();
-                auto copies = make_copies(std::move(built.first), cfg);
-                std::cerr << "[" << cfg.node << "] " << s << " copies=" << copies.size() << std::endl;
+                HashNodes<typename H::storage_type> copies(std::move(built.first), copy_count(bytes, cfg));
+                std::cerr << "[" << cfg.node << "] " << s << " copies=" << copies.copies() << std::endl;
                 print_memory();
-                bench_structure(s, copies, cfg, out, zero);
+                bench_structure(s, copies, bytes, cfg, out, zero);
             };
             if (s == "glgh")
                 run(GlGhNode());
             else
                 run(PackedGlGhNode());
         } else if (s == "ef") {
-            auto built = t_build([&] { return EFNode(cfg.keys); });
-            space << cfg.node << ',' << n << ',' << u << ',' << s << ',' << built.first.size_in_bytes() << ','
-                  << 8.0 * built.first.size_in_bytes() / n << ",,,,,,," << built.first.low_width() << ','
-                  << built.second << '\n';
+            auto built = t_build([&] { return EFNodes(cfg.keys, 1); });
+            const uint64_t bytes = built.first.size_in_bytes();
+            space << cfg.node << ',' << n << ',' << u << ',' << s << ',' << bytes << ',' << 8.0 * bytes / n << ",,,,,"
+                  << (bytes - built.first.sd_bytes()) << ",,," << built.first.low_width() << ',' << built.second
+                  << '\n';
             space.flush();
-            auto copies = make_copies(std::move(built.first), cfg);
-            std::cerr << "[" << cfg.node << "] ef copies=" << copies.size() << std::endl;
+            EFNodes copies(cfg.keys, copy_count(bytes, cfg));
+            std::cerr << "[" << cfg.node << "] ef copies=" << copies.copies() << std::endl;
             print_memory();
-            bench_structure(s, copies, cfg, out, zero);
+            bench_structure(s, copies, bytes, cfg, out, zero);
         } else if (s == "gallop") {
-            auto built = t_build([&] { return GallopNode(cfg.keys, cfg.width); });
-            space << cfg.node << ',' << n << ',' << u << ',' << s << ',' << built.first.size_in_bytes() << ','
-                  << 8.0 * built.first.size_in_bytes() / n << ",,,,,,," << built.first.width() << ','
-                  << built.second << '\n';
+            auto built = t_build([&] { return GallopNodes(cfg.keys, cfg.width, 1); });
+            const uint64_t bytes = built.first.size_in_bytes();
+            space << cfg.node << ',' << n << ',' << u << ',' << s << ',' << bytes << ',' << 8.0 * bytes / n
+                  << ",,,,,,,," << built.first.width() << ',' << built.second << '\n';
             space.flush();
-            auto copies = make_copies(std::move(built.first), cfg);
-            std::cerr << "[" << cfg.node << "] gallop copies=" << copies.size() << std::endl;
+            GallopNodes copies(cfg.keys, cfg.width, copy_count(bytes, cfg));
+            std::cerr << "[" << cfg.node << "] gallop copies=" << copies.copies() << std::endl;
             print_memory();
-            bench_structure(s, copies, cfg, out, zero);
+            bench_structure(s, copies, bytes, cfg, out, zero);
         } else {
             throw std::runtime_error("unknown structure " + s);
         }
