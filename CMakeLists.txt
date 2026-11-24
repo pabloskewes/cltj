@@ -301,3 +301,12 @@ add_cltj_executable(bench-mphf-hashing src/bench/bench_mphf_hashing.cpp analysis
 target_link_libraries(bench-mphf-hashing PRIVATE PTHASH)
 
 add_cltj_executable(bench-fastmod-micro src/bench/bench_fastmod_micro.cpp bench)
+
+add_cltj_executable(extract-node-keys src/bench/extract-node-keys.cpp bench)
+set_target_properties(extract-node-keys PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+add_cltj_executable(bench-node-lookup src/bench/bench-node-lookup.cpp bench)
+set_target_properties(bench-node-lookup PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+add_cltj_executable(bench-memory-latency src/bench/bench-memory-latency.cpp bench)
+set_target_properties(bench-memory-latency PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+add_cltj_executable(test-node-lookup src/test/test-node-lookup.cpp test)
+set_target_properties(test-node-lookup PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
