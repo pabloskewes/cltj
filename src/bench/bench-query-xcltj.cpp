@@ -55,6 +55,9 @@ void query(const std::string &file, const std::string &queries, const uint64_t l
     sdsl::load_from_file(graph, file);
 
     std::cout << "Index loaded: " << sdsl::size_in_bytes(graph) << " bytes." << std::endl;
+#ifdef LTJ_ICACHE_STATS
+    ltj::icache::stats_type::header(std::cerr);
+#endif
 
     std::ifstream ifs;
     uint64_t nQ = 0;
@@ -96,6 +99,12 @@ void query(const std::string &file, const std::string &queries, const uint64_t l
             auto stop = std::chrono::high_resolution_clock::now();
             auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(stop - start).count();
             cout << nQ << ";" << res.size() << ";" << time << endl;
+#ifdef LTJ_ICACHE_STATS
+            ltj.icache_stats().print(cerr, nQ);
+#endif
+#ifdef LTJ_ICACHE_CHECK
+            ltj.icache_check_result().print(cerr, nQ);
+#endif
 #ifdef LTJ_VEO_TRACE
             cerr << "TRACE;" << nQ << ";" << ltj::veo::trace::signature << ";" << ltj::veo::trace::decisions << ";"
                  << ltj::veo::trace::switches << endl;
