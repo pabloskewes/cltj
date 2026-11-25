@@ -20,7 +20,13 @@
 //   var_tdist_hist               repeated F only: log2 bucket of the frames of the variable since
 //                                the last same F;
 //   cross_hits, op_mismatch      node LRU hits whose stored F differs / is the same but whose
-//                                operations differ (must be 0).
+//                                operations differ (must be 0);
+//   node_open_lru_*              like node_lru_*, with the bucket of S in the node's LRU as it is
+//                                when the frame opens (a cache looked up on open, filled on close);
+//   open_cross_hits              open hits whose stored F differs;
+//   nested_only_hits             visits whose S was seen at close but not at open;
+//   var_open_mismatch            visits whose variable bucket at open differs from the one at close
+//                                (must be 0: a variable is bound once per path).
 // --dump-node also writes <prefix>.ctx.tsv, one line per dumped visit in trace order.
 #include <CLI11.hpp>
 #include <algorithm>
@@ -44,6 +50,7 @@
 #include <set>
 #include <sstream>
 #include <string>
+#include <tuple>
 #include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
@@ -152,6 +159,14 @@ size_t lru_access(std::vector<T>& stack, const T& entry, bool seen, Eq same) {
     return d;
 }
 
+template <class T, class Eq>
+size_t lru_find(const std::vector<T>& stack, bool seen, Eq same) {
+    for (size_t i = 0; seen && i < stack.size(); ++i)
+        if (same(stack[i]))
+            return i + 1;
+    return 0;
+}
+
 struct node_entry {
     uint64_t s, f, ops;
 };
@@ -173,6 +188,15 @@ struct var_history {
 struct list_rep {
     size_t node_bucket = 0;
     bool prev_op_same = false, prev_set_same = false, cross_hit = false, op_mismatch = false;
+    size_t open_bucket = 0;
+    bool open_cross_hit = false;
+};
+
+// Lookups made when a frame opened, kept until it closes.
+struct open_frame {
+    const ltj::IntersectionStats* stats;
+    std::vector<std::pair<size_t, bool>> lists;  // node bucket, cross hit
+    size_t var_bucket;
 };
 
 struct repetitions {
@@ -181,15 +205,17 @@ struct repetitions {
     std::unordered_map<uint64_t, var_history> vars;
     std::vector<list_rep> lists;
     std::vector<uint64_t> ids, sorted;
+    std::vector<open_frame> open_frames;
     uint64_t s_hash = 0, f_hash = 0;
     size_t var_bucket = 0;
     int64_t var_tdist = -1;
+    bool var_open_mismatch = false;
 
     static uint64_t node_id(const ltj::ListNode& node) {
         return static_cast<uint64_t>(node.parent_pos + 1) << 8 | node.level << 3 | node.trie;
     }
 
-    void add(const ltj::IntersectionStats& s) {
+    void hash_frame(const ltj::IntersectionStats& s) {
         const size_t k = s.lists.size();
         ids.resize(k);
         for (size_t i = 0; i < k; ++i)
@@ -202,6 +228,49 @@ struct repetitions {
         s_hash = 0;
         for (uint64_t id : sorted)
             s_hash = ltj::mix64(s_hash, id);
+    }
+
+    // Looks S and F up without changing any LRU.
+    void open(const ltj::IntersectionStats& s) {
+        hash_frame(s);
+        const size_t k = s.lists.size();
+        open_frame o{&s, std::vector<std::pair<size_t, bool>>(k), 0};
+        const bool s_seen = seen_s.count(s_hash);
+        for (size_t i = 0; i < k; ++i) {
+            if (std::find(ids.begin(), ids.begin() + i, ids[i]) != ids.begin() + i)
+                continue;
+            size_t d = 0;
+            node_entry old{};
+            if (auto it = nodes.find(ids[i]); it != nodes.end())
+                d = lru_find(it->second.lru, s_seen, [&](const node_entry& x) {
+                    if (x.s != s_hash)
+                        return false;
+                    old = x;
+                    return true;
+                });
+            const std::pair<size_t, bool> r{lru_bucket(d, s_seen), d && old.f != f_hash};
+            for (size_t j = i; j < k; ++j)
+                if (ids[j] == ids[i])
+                    o.lists[j] = r;
+        }
+        size_t d = 0;
+        bool f_seen = false;
+        if (auto it = vars.find(s.variable_id); it != vars.end()) {
+            f_seen = it->second.last.count(f_hash);
+            d = lru_find(it->second.lru, f_seen, [&](uint64_t x) { return x == f_hash; });
+        }
+        o.var_bucket = lru_bucket(d, f_seen);
+        open_frames.push_back(std::move(o));
+    }
+
+    void add(const ltj::IntersectionStats& s) {
+        // Frames close in the reverse order they open; a timed-out frame never closes.
+        if (open_frames.empty() || open_frames.back().stats != &s) {
+            std::cerr << "a frame closes without being the last one opened" << std::endl;
+            std::exit(1);
+        }
+        hash_frame(s);
+        const size_t k = s.lists.size();
         const bool s_seen = !seen_s.insert(s_hash).second;
 
         lists.assign(k, list_rep{});
@@ -234,6 +303,9 @@ struct repetitions {
                 if (ids[j] == ids[i])
                     lists[j] = r;
         }
+        const open_frame& o = open_frames.back();
+        for (size_t i = 0; i < k; ++i)
+            std::tie(lists[i].open_bucket, lists[i].open_cross_hit) = o.lists[i];
 
         auto& v = vars[s.variable_id];
         auto [it, first] = v.last.try_emplace(f_hash, v.frames);
@@ -241,6 +313,8 @@ struct repetitions {
         it->second = v.frames++;
         const size_t d = lru_access(v.lru, f_hash, !first, [&](uint64_t x) { return x == f_hash; });
         var_bucket = lru_bucket(d, !first);
+        var_open_mismatch = o.var_bucket != var_bucket;
+        open_frames.pop_back();
     }
 };
 
@@ -267,6 +341,10 @@ struct list_sums {
     histogram var_tdist{};
     uint64_t cross_hits = 0;
     uint64_t op_mismatch = 0;
+    std::array<lru_histogram, 4> node_open_lru{};
+    uint64_t open_cross_hits = 0;
+    uint64_t nested_only_hits = 0;
+    uint64_t var_open_mismatch = 0;
 };
 
 // b:count;b:count over the non-empty buckets
@@ -377,7 +455,7 @@ struct dump_state {
         if (!ctx.is_open()) {
             ctx.open(prefix + ".ctx.tsv");
             ctx << "file\tidx\tdepth\tvar\titer\tpath\trole\tk\tn\tops\tresults\ts_hash\tf_hash\tnode_bucket\t"
-                   "var_bucket\tframe_nodes\tbindings\n";
+                   "var_bucket\tframe_nodes\tbindings\tnode_open_bucket\n";
         }
         const bool leapfrog = l.role == ltj::ListRole::LEAPFROG;
         ctx << (leapfrog ? 'x' : 'h') << '\t' << (leapfrog ? x_visits++ : h_visits++) << '\t' << s.depth << '\t'
@@ -389,7 +467,7 @@ struct dump_state {
         ctx << '\t';
         for (size_t j = 0; j < s.bindings.size(); ++j)
             ctx << (j ? ";" : "") << s.bindings[j].first << '=' << s.bindings[j].second;
-        ctx << '\n';
+        ctx << '\t' << rep.lists[i].open_bucket << '\n';
         auto& out = leapfrog ? x : h;
         if (!out.is_open())
             out.open(prefix + (l.role == ltj::ListRole::LEAPFROG ? ".x.cltj-trace" : ".h.cltj-trace"), std::ios::binary);
@@ -455,7 +533,8 @@ void run(
                      "sum_span,span_hist,probes,probes_found,enumerated,"
                      "prev_op_same,prev_set_same,node_lru_visits,node_lru_seeks,node_lru_probes,node_lru_enum,"
                      "var_lru_visits,var_lru_seeks,var_lru_probes,var_lru_enum,var_tdist_hist,cross_hits,"
-                     "op_mismatch\n";
+                     "op_mismatch,node_open_lru_visits,node_open_lru_seeks,node_open_lru_probes,"
+                     "node_open_lru_enum,open_cross_hits,nested_only_hits,var_open_mismatch\n";
     }
     const bool track_lists = !opt.lists_out.empty() || opt.top_nodes;
 
@@ -474,6 +553,11 @@ void run(
         if constexpr (names_nodes)
             if (opt.dump)
                 ltj.set_trace_node(opt.dump_node);
+        if (track_lists || opt.dump)
+            ltj.set_open_sink([&](const ltj::IntersectionStats& s) {
+                if (!s.lists.empty())
+                    reps.open(s);
+            });
         ltj.set_stats_sink([&](const ltj::IntersectionStats& s) {
             const auto& sizes = s.list_sizes;
             uint64_t large = std::count_if(sizes.begin(), sizes.end(), [&](uint64_t n) { return n >= threshold; });
@@ -543,11 +627,15 @@ void run(
                 for (size_t w = 0; w < weights.size(); ++w) {
                     ls.node_lru[w][r.node_bucket] += weights[w];
                     ls.var_lru[w][reps.var_bucket] += weights[w];
+                    ls.node_open_lru[w][r.open_bucket] += weights[w];
                 }
                 if (reps.var_tdist >= 0)
                     ls.var_tdist[ltj::log2_bucket(reps.var_tdist)]++;
                 ls.cross_hits += r.cross_hit;
                 ls.op_mismatch += r.op_mismatch;
+                ls.open_cross_hits += r.open_cross_hit;
+                ls.nested_only_hits += r.node_bucket != 0 && r.open_bucket == 0;
+                ls.var_open_mismatch += reps.var_open_mismatch;
             }
         });
         ltj.join(res, 0, timeout);
@@ -586,7 +674,11 @@ void run(
                         lists_out << ',' << sparse(h);
                     for (const auto& h : ls->var_lru)
                         lists_out << ',' << sparse(h);
-                    lists_out << ',' << sparse(ls->var_tdist) << ',' << ls->cross_hits << ',' << ls->op_mismatch << '\n';
+                    lists_out << ',' << sparse(ls->var_tdist) << ',' << ls->cross_hits << ',' << ls->op_mismatch;
+                    for (const auto& h : ls->node_open_lru)
+                        lists_out << ',' << sparse(h);
+                    lists_out << ',' << ls->open_cross_hits << ',' << ls->nested_only_hits << ','
+                              << ls->var_open_mismatch << '\n';
                 }
                 lists_out.flush();
             }
