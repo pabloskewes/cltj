@@ -483,7 +483,7 @@ class ltj_algorithm_hash {
                         sorted_itrs.push_back(iter);
                 }
 #ifdef CLTJ_COLLECT_QUERY_STATS_ENABLED
-                open_lists(stats, itrs, x_j, m_trace ? &m_trace_node : nullptr);
+                open_lists(stats, itrs, x_j, m_trace ? &m_trace_node : nullptr, tuple, j);
                 if (!stats.lists.empty()) {
                     [[maybe_unused]] const bool min_hashed =
                         std::find(hashed_itrs.begin(), hashed_itrs.end(), itrs[min_idx]) != hashed_itrs.end();

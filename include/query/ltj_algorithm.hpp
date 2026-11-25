@@ -469,7 +469,7 @@ public:
           }
         }
 #ifdef CLTJ_COLLECT_QUERY_STATS_ENABLED
-        open_lists(stats, itrs, x_j, m_trace ? &m_trace_node : nullptr);
+        open_lists(stats, itrs, x_j, m_trace ? &m_trace_node : nullptr, tuple, j);
         IntersectionStats *outer_frame = m_frame;
         m_frame = &stats;
 #endif

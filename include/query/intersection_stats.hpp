@@ -57,6 +57,14 @@ inline size_t log2_bucket(uint64_t x) {
 }
 constexpr size_t LOG2_BUCKETS = 34;
 
+/// @brief splitmix64 step: chains @p x into the hash @p h.
+inline uint64_t mix64(uint64_t h, uint64_t x) {
+  uint64_t z = h + 0x9e3779b97f4a7c15ULL + x;
+  z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9ULL;
+  z = (z ^ (z >> 27)) * 0x94d049bb133111ebULL;
+  return z ^ (z >> 31);
+}
+
 /// @brief One list in one frame (a visit to its node).
 struct ListVisit {
   const void *iter = nullptr;
@@ -73,6 +81,8 @@ struct ListVisit {
   uint64_t probes = 0;
   uint64_t probes_found = 0;
   uint64_t enumerated = 0;
+  /// Hash of the sequence of seeks and probes (0 when there are none).
+  uint64_t op_hash = 0;
   bool trace = false;
   /// With trace: (target, offset) per seek, or (key, found) per probe.
   std::vector<std::pair<uint32_t, uint32_t>> ops;
@@ -87,6 +97,7 @@ struct ListVisit {
     sum_jump += jump;
     ++jumps[b];
     cursor = offset;
+    op_hash = mix64(op_hash, target << 32 | offset);
     if (trace)
       ops.emplace_back(target, offset);
   }
@@ -94,6 +105,7 @@ struct ListVisit {
   void probe(uint64_t key, bool found) {
     ++probes;
     probes_found += found;
+    op_hash = mix64(op_hash, key << 32 | found);
     if (trace)
       ops.emplace_back(key, found);
   }
@@ -146,6 +158,9 @@ struct IntersectionStats {
   /// @brief One per iterator of the frame, in its order; empty when the
   /// iterator cannot name its node.
   std::vector<ListVisit> lists;
+  /// (variable, value) bound before the frame, in depth order; only when a
+  /// list is traced.
+  std::vector<std::pair<uint64_t, uint64_t>> bindings;
 
   ListVisit *find_list(const void *iter) {
     for (auto &l : lists)
@@ -193,10 +208,11 @@ struct names_list_nodes<Iter, std::void_t<decltype(&Iter::list_node)>>
     : std::true_type {};
 
 /// @brief Fills stats.lists (needs stats.list_sizes) before the frame's first
-/// leap; lists whose node is @p trace keep their operations.
-template <class Iter, class Var>
+/// leap; lists whose node is @p trace keep their operations, and then the
+/// first @p j bindings of @p tuple are kept too.
+template <class Iter, class Var, class Tuple>
 void open_lists(IntersectionStats &stats, const std::vector<Iter *> &itrs,
-                Var x, const ListNode *trace) {
+                Var x, const ListNode *trace, const Tuple &tuple, size_t j) {
   if constexpr (names_list_nodes<Iter>::value) {
     stats.lists.resize(itrs.size());
     for (size_t i = 0; i < itrs.size(); ++i) {
@@ -209,6 +225,9 @@ void open_lists(IntersectionStats &stats, const std::vector<Iter *> &itrs,
       l.n = stats.list_sizes[i];
       l.node = it->list_node(st);
       l.trace = trace && trace->same_node(l.node);
+      if (l.trace && stats.bindings.empty())
+        for (size_t d = 0; d < j; ++d)
+          stats.bindings.emplace_back(tuple[d].first, tuple[d].second);
     }
   }
 }
