@@ -235,6 +235,10 @@ add_executable(test-mt-dyn src/test/test-mt-dyn.cpp)
 target_link_libraries(test-mt-dyn sdsl divsufsort divsufsort64 hybridbv_gn)
 set_target_properties(test-mt-dyn PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
 
+add_executable(test-subtree-size src/test/test-subtree-size.cpp)
+target_link_libraries(test-subtree-size sdsl divsufsort divsufsort64 hybridbv_gn)
+set_target_properties(test-subtree-size PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
+
 add_executable(interactive-metatrie src/test/interactive-metatrie.cpp)
 target_link_libraries(interactive-metatrie sdsl divsufsort divsufsort64 hybridbv_gn)
 set_target_properties(interactive-metatrie PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
