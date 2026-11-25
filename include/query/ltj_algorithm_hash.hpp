@@ -27,6 +27,7 @@
 // #include <ltj_iterator.hpp>
 #include <dict/dict_map.hpp>
 #include <query/alternation_complexity.hpp>
+#include <query/intersection_cache.hpp>
 #include <query/intersection_stats.hpp>
 #include <query/ltj_iterator_basic.hpp>
 #include <query/ltj_iterator_lite.hpp>
@@ -96,6 +97,24 @@ class ltj_algorithm_hash {
     // candidate_in_hashed_iterators() and read by the position_hashed_iterators() of the same candidate, before
     // the recursion, so the frames do not overwrite each other's.
     std::vector<uint32_t> m_slots;
+#endif
+#ifdef LTJ_ICACHE_HOOKS
+    std::vector<uint64_t> m_ic_nodes;
+#endif
+#ifdef LTJ_ICACHE
+    icache::cache_type m_icache;
+    // Entry the frame at each depth records into, or nullptr.
+    std::vector<icache::entry*> m_ic_fill;
+#endif
+#ifdef LTJ_ICACHE_STATS
+    // Operations of the frame at each depth, without those of the frames below it.
+    std::vector<uint64_t> m_ic_own;
+    std::vector<uint64_t*> m_ic_outer;
+    uint64_t m_ic_no_frame_ops = 0;
+    uint64_t* m_ic_ops = &m_ic_no_frame_ops;
+#endif
+#ifdef LTJ_ICACHE_CHECK
+    icache::check_type m_ic_check;
 #endif
 #ifdef LTJ26_SS_REUSE
     // One buffer per depth: the frame at depth j is the only one using m_ss_cand[j] while it descends.
@@ -186,6 +205,10 @@ class ltj_algorithm_hash {
         }
 
         m_veo = veo_type(m_ptr_triple_patterns, &m_iterators, &m_var_to_iterators, m_ptr_ring);
+#ifdef LTJ_ICACHE
+        for (const auto& [x, itrs] : m_var_to_iterators)
+            m_icache.add_variable(x, itrs);
+#endif
     }
 
     //! Copy constructor
@@ -247,6 +270,14 @@ class ltj_algorithm_hash {
 #endif
 #ifdef LTJ26_SAVE_SLOT
         m_slots.resize(m_iterators.size());
+#endif
+#ifdef LTJ_ICACHE
+        m_ic_fill.assign(m_veo.size(), nullptr);
+#endif
+#ifdef LTJ_ICACHE_STATS
+        m_ic_own.assign(m_veo.size(), 0);
+        m_ic_outer.assign(m_veo.size(), nullptr);
+        m_ic_ops = &m_ic_no_frame_ops;
 #endif
         search(0, t, res, start, limit_results, timeout_seconds);
     };
@@ -428,6 +459,13 @@ class ltj_algorithm_hash {
             // Report results
             // res.emplace_back(tuple);
             res.add(tuple);
+#ifdef LTJ_ICACHE_CHECK
+            ++m_ic_check.results;
+            for (const auto& tv : tuple) {
+                icache::mix(m_ic_check.result_hash, tv.first);
+                icache::mix(m_ic_check.result_hash, tv.second);
+            }
+#endif
 #if EXPT_TIME_SOL
             if (res.size() % 1000 == 0) {
                 time_point_type stop = chrono::high_resolution_clock::now();
@@ -480,6 +518,14 @@ class ltj_algorithm_hash {
                     m_veo.up();
                 }
             } else {
+#ifdef LTJ_ICACHE_HOOKS
+                if (const icache::entry* e = icache_open(j, tuple, x_j, itrs)) {
+                    if (!icache_replay(*e, j, tuple, x_j, itrs, res, start, limit_results, timeout_seconds))
+                        return false;
+                    m_veo.done();
+                    return true;
+                }
+#endif
                 // Compute children sizes
                 std::vector<size_type> children_sizes(itrs.size());
                 size_type min_idx = 0;
@@ -515,6 +561,7 @@ class ltj_algorithm_hash {
                     );
 
                     auto keys = scan_trie->hash_keys(itrs[min_idx]->parent(), itrs[min_idx]->parent_r());
+                    LTJ_ICACHE_OP(end_pos - beg);
 #ifdef LTJ26_SORTED_SCAN
                     // When the next down() switches trie, filter first and descend in id order, so the
                     // accesses to the root of the full trie are monotone.
@@ -592,6 +639,9 @@ class ltj_algorithm_hash {
                             itrs[min_idx]->set_level_status(cp.second, beg, end_pos - beg);
 #endif
                             position_hashed_iterators(x_j, c, hashed_itrs, itrs[min_idx]);
+#ifdef LTJ_ICACHE_HOOKS
+                            icache_record(j, x_j, c, itrs);
+#endif
                             for (ltj_iter_type* iter : itrs) {
                                 iter->down(x_j, c);
                             }
@@ -624,6 +674,9 @@ class ltj_algorithm_hash {
                             // min_iter: position already known from scan, skip binary search
                             itrs[min_idx]->set_level_status(pos, beg, end_pos - beg);
                             position_hashed_iterators(x_j, c, hashed_itrs, itrs[min_idx]);
+#ifdef LTJ_ICACHE_HOOKS
+                            icache_record(j, x_j, c, itrs);
+#endif
                             for (ltj_iter_type* iter : itrs) {
                                 iter->down(x_j, c);
                             }
@@ -653,6 +706,7 @@ class ltj_algorithm_hash {
                     );
 
                     auto keys = scan_trie->hash_keys(mi->parent(), mi->parent_r());
+                    LTJ_ICACHE_OP(end_pos - beg);
 #ifdef LTJ26_SORTED_SCAN
                     std::vector<std::pair<value_type, size_type>> cand;
                     cand.reserve(end_pos - beg);
@@ -673,6 +727,7 @@ class ltj_algorithm_hash {
                             continue;
                         bool in_all = true;
                         for (ltj_iter_type* iter : sorted_itrs) {
+                            LTJ_ICACHE_OP(1);
                             if (!iter->exists(state_for(iter, x_j), c)) {
                                 in_all = false;
                                 break;
@@ -686,6 +741,9 @@ class ltj_algorithm_hash {
                         frame.add(c);
                         mi->set_level_status(pos, beg, end_pos - beg);
                         position_hashed_iterators(x_j, c, hashed_itrs, mi);
+#ifdef LTJ_ICACHE_HOOKS
+                        icache_record(j, x_j, c, itrs);
+#endif
                         for (ltj_iter_type* iter : itrs) {
                             iter->down(x_j, c);
                         }
@@ -719,6 +777,9 @@ class ltj_algorithm_hash {
                             tuple[j] = {x_j, c};
                             frame.add(c);
                             position_hashed_iterators(x_j, c, hashed_itrs);
+#ifdef LTJ_ICACHE_HOOKS
+                            icache_record(j, x_j, c, itrs);
+#endif
                             for (ltj_iter_type* iter : itrs) {
                                 iter->down(x_j, c);
                             }
@@ -739,6 +800,9 @@ class ltj_algorithm_hash {
                     frame.emit();
                 }
 
+#ifdef LTJ_ICACHE
+                icache_close(j);
+#endif
                 if constexpr (COLLECT_QUERY_STATS) {
                     stats.hashed_iterators = hashed_itrs.size();
                     if (sorted_itrs.empty()) {
@@ -782,6 +846,7 @@ class ltj_algorithm_hash {
         for (size_type i = 0; i < hashed_itrs.size(); ++i) {
             if (hashed_itrs[i] == skip)
                 continue;
+            LTJ_ICACHE_OP(1);
             auto [found, slot] = hashed_itrs[i]->hash_locate(x_j, c);
             if (!found)
                 return false;
@@ -791,6 +856,7 @@ class ltj_algorithm_hash {
         for (ltj_iter_type* iter : hashed_itrs) {
             if (iter == skip)
                 continue;
+            LTJ_ICACHE_OP(1);
             if (!iter->hash_contains(x_j, c))
                 return false;
         }
@@ -840,6 +906,7 @@ class ltj_algorithm_hash {
                 c_i = itrs[i]->leap(x_j);
             } else {
                 c_i = itrs[i]->leap(x_j, c);
+                LTJ_ICACHE_OP(1);
             }
             // std::cout << "Gets " << (::uint64_t) c_i << std::endl;
             if (c_i == 0) {
@@ -872,6 +939,138 @@ class ltj_algorithm_hash {
         vector<ltj_iter_type*>& itrs = m_var_to_iterators[x_j];
         return seek_on_iterators(x_j, itrs, c);
     }
+
+#ifdef LTJ_ICACHE_HOOKS
+    // The entry whose intersection the frame at depth j replays, or nullptr after preparing it to run.
+    const icache::entry* icache_open(
+        const size_type j,
+        const tuple_type& tuple,
+        const var_type x_j,
+        const vector<ltj_iter_type*>& itrs
+    ) {
+#ifdef LTJ_ICACHE
+        m_ic_fill[j] = nullptr;
+#ifdef LTJ_ICACHE_STATS
+        ++m_icache.stats.frames;
+        m_ic_outer[j] = m_ic_ops;
+        m_ic_own[j] = 0;
+        m_ic_ops = &m_ic_own[j];
+#endif
+        if (!m_icache.eligible(x_j, j ? int64_t(tuple[j - 1].first) : -1))
+            return nullptr;
+        m_ic_nodes.resize(itrs.size());
+        for (size_type i = 0; i < itrs.size(); ++i)
+            m_ic_nodes[i] = itrs[i]->icache_node(x_j);
+        const icache::entry* e = m_icache.open(x_j, m_ic_nodes.data(), itrs.size(), &m_ic_fill[j]);
+#ifdef LTJ_ICACHE_STATS
+        if (e) {
+            m_ic_ops = m_ic_outer[j];
+            m_icache.stats.served += e->size();
+            m_icache.stats.hit_lists += itrs.size();
+            m_icache.stats.ops_saved += e->ops;
+        }
+#endif
+        return e;
+#else
+        return nullptr;
+#endif
+    }
+
+    // Called with every iterator of the frame positioned at c, before their down().
+    void icache_record(const size_type j, const var_type x_j, const value_type c, const vector<ltj_iter_type*>& itrs) {
+#ifdef LTJ_ICACHE_CHECK
+        icache_check(j, x_j, c, itrs);
+#endif
+#ifdef LTJ_ICACHE
+        icache::entry* e = m_ic_fill[j];
+        if (!e)
+            return;
+        uint64_t* rec = e->push();
+        if (!rec)
+            return;
+        if (e->size() == 1)
+            for (size_type i = 0; i < itrs.size(); ++i)
+                itrs[i]->icache_level(e->level() + 2 * i);
+        rec[0] = c;
+        for (size_type i = 0; i < itrs.size(); ++i)
+            rec[1 + i] = itrs[i]->icache_pos();
+#endif
+    }
+
+#ifdef LTJ_ICACHE
+    // Only a frame that was not cut reaches this, so a cut frame never publishes.
+    void icache_close(const size_type j) {
+        icache::entry* e = m_ic_fill[j];
+#ifdef LTJ_ICACHE_STATS
+        m_icache.stats.ops_done += m_ic_own[j];
+        m_ic_ops = m_ic_outer[j];
+        if (e)
+            e->ops = m_ic_own[j];
+#endif
+        if (e)
+            m_icache.publish(e);
+    }
+#endif
+
+    // Same calls as the paths of search(), with the positions taken from the entry.
+    template <class results_type>
+    bool icache_replay(
+        const icache::entry& e,
+        const size_type j,
+        tuple_type& tuple,
+        const var_type x_j,
+        const vector<ltj_iter_type*>& itrs,
+        results_type& res,
+        const time_point_type start,
+        const size_type limit_results,
+        const size_type timeout_seconds
+    ) {
+        if (e.size())
+            for (size_type i = 0; i < itrs.size(); ++i)
+                itrs[i]->icache_restore_level(e.level() + 2 * i);
+        for (uint64_t r = 0; r < e.size(); ++r) {
+            const uint64_t* rec = e.result(r);
+            const value_type c = rec[0];
+            tuple[j] = {x_j, c};
+            for (size_type i = 0; i < itrs.size(); ++i)
+                itrs[i]->icache_restore(x_j, rec[1 + i]);
+#ifdef LTJ_ICACHE_CHECK
+            icache_check(j, x_j, c, itrs);
+#endif
+            for (ltj_iter_type* iter : itrs)
+                iter->down(x_j, c);
+            m_veo.down();
+            if (!search(j + 1, tuple, res, start, limit_results, timeout_seconds))
+                return false;
+            for (ltj_iter_type* iter : itrs)
+                iter->up(x_j);
+            m_veo.up();
+        }
+        for (ltj_iter_type* iter : itrs)
+            iter->leap_done();
+#ifdef LTJ_ICACHE
+        m_icache.release(&e);
+#endif
+        return true;
+    }
+#endif
+
+#ifdef LTJ_ICACHE_CHECK
+    void icache_check(const size_type j, const var_type x_j, const value_type c, const vector<ltj_iter_type*>& itrs) {
+        ++m_ic_check.positioned;
+        icache::mix(m_ic_check.state_hash, j);
+        icache::mix(m_ic_check.state_hash, x_j);
+        icache::mix(m_ic_check.state_hash, c);
+        for (const ltj_iter_type* iter : itrs)
+            iter->icache_digest(m_ic_check.state_hash);
+    }
+
+    const icache::check_type& icache_check_result() const { return m_ic_check; }
+#endif
+
+#ifdef LTJ_ICACHE_STATS
+    const icache::stats_type& icache_stats() const { return m_icache.stats; }
+#endif
 
     void print_veo(unordered_map<uint8_t, string>& ht) {
         cout << "veo: ";

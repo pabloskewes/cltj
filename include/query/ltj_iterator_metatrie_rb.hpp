@@ -22,6 +22,7 @@
 
 #include <cltj_config.hpp>
 #include <cltj_utils.hpp>
+#include <query/intersection_cache.hpp>
 #include <string>
 #include <triple_pattern.hpp>
 #include <vector>
@@ -485,6 +486,76 @@ public:
     // print_status();
     return value;
   }
+
+#ifdef LTJ_ICACHE_HOOKS
+  // Key of the node whose children are the list of `var`, with the trie that
+  // choose_trie() and the trie switch would use. Does not change the iterator.
+  uint64_t icache_node(var_type var) {
+    const state_type state = is_variable_subject(var)     ? s
+                             : is_variable_predicate(var) ? p
+                                                          : o;
+    if (m_nfixed == 0)
+      return icache::node_key(0, 2 * state, 1);
+    size_type t_i, s_i;
+    if (m_nfixed == 1) {
+      if (state == s) {
+        t_i = (m_fixed[0] == o) ? 4 : 3;
+        s_i = (m_fixed[0] == o) ? 0 : 1;
+      } else if (state == p) {
+        t_i = (m_fixed[0] == s) ? 0 : 5;
+        s_i = (m_fixed[0] == s) ? 0 : 1;
+      } else {
+        t_i = (m_fixed[0] == p) ? 2 : 1;
+        s_i = (m_fixed[0] == p) ? 0 : 1;
+      }
+    } else {
+      s_i = m_status_i;
+      t_i = (s_i == 0)        ? m_trie_i
+            : (m_trie_i == 1) ? 4
+            : (m_trie_i == 3) ? 0
+                              : 2;
+    }
+    return icache::node_key(m_status[m_nfixed].it[s_i], t_i, m_nfixed + 1);
+  }
+
+  // Position the last leap() (or exists()) left for the next down().
+  size_type icache_pos() const { return m_status[m_nfixed + 1].beg; }
+
+  void icache_level(uint64_t *out) const {
+    out[0] = m_status[m_nfixed + 1].end;
+    out[1] = m_status[m_nfixed + 1].cnt;
+  }
+
+  void icache_restore_level(const uint64_t *in) {
+    m_status[m_nfixed + 1].end = in[0];
+    m_status[m_nfixed + 1].cnt = in[1];
+  }
+
+  // Leaves the iterator as a leap() of `var` that found the value at `pos`.
+  void icache_restore(var_type var, size_type pos) {
+    choose_trie(
+        is_variable_subject(var)     ? s
+        : is_variable_predicate(var) ? p
+                                     : o
+    );
+    m_status[m_nfixed + 1].beg = pos;
+    m_redo[m_nfixed] = false;
+  }
+
+#ifdef LTJ_ICACHE_CHECK
+  // State a down() and the frames below can read; end and cnt are not written
+  // by a leap at the root.
+  void icache_digest(uint64_t &h) const {
+    icache::mix(h, m_nfixed);
+    icache::mix(h, m_trie_i);
+    icache::mix(h, m_status_i);
+    icache::mix(h, m_redo[m_nfixed]);
+    icache::mix(h, m_status[m_nfixed + 1].beg);
+    icache::mix(h, m_nfixed ? m_status[m_nfixed + 1].end : 0);
+    icache::mix(h, m_nfixed ? m_status[m_nfixed + 1].cnt : 0);
+  }
+#endif
+#endif
 
   bool in_last_level() {
     return m_nfixed == 2;
