@@ -8,6 +8,20 @@
 // <prefix>.x.cltj-trace (leapfrog visits) and <prefix>.h.cltj-trace (the others) with, per visit in
 // order, a uint32 m and m uint32 pairs (target, offset of the result in [0, n]) or (key, found);
 // <prefix>.meta.txt with key=value lines.
+//
+// Repeated visits, per query and in the order frames close. S = the sorted node ids of a frame's
+// lists; F = its variable and node ids in iterator order. Each node keeps an LRU of its last 64 S
+// (one access per frame, shared by all the frame's lists on that node) and each variable an LRU of
+// its last 64 F. Buckets: 0 first time in the query; 1..7 stack distance d = 1, 2, 3-4, ..., 33-64;
+// 8 seen before but farther than 64. Columns appended to --lists-output:
+//   prev_op_same, prev_set_same  visits whose node had, in its previous frame, the same operations
+//                                (on all its lists of the frame) / the same S;
+//   node_lru_*, var_lru_*        histograms of visits, seeks, probes and enumerated by bucket;
+//   var_tdist_hist               repeated F only: log2 bucket of the frames of the variable since
+//                                the last same F;
+//   cross_hits, op_mismatch      node LRU hits whose stored F differs / is the same but whose
+//                                operations differ (must be 0).
+// --dump-node also writes <prefix>.ctx.tsv, one line per dumped visit in trace order.
 #include <CLI11.hpp>
 #include <algorithm>
 #include <array>
@@ -32,6 +46,7 @@
 #include <string>
 #include <type_traits>
 #include <unordered_map>
+#include <unordered_set>
 #include <util/file_util.hpp>
 #include <util/rdf_util.hpp>
 #include <veo/veo_adaptive.hpp>
@@ -108,6 +123,126 @@ struct list_key_hash {
 
 using histogram = std::array<uint64_t, ltj::LOG2_BUCKETS>;
 
+constexpr size_t LRU_SIZE = 64;
+constexpr size_t LRU_BUCKETS = 9;
+using lru_histogram = std::array<uint64_t, LRU_BUCKETS>;
+
+// d = 1-based position in the LRU, 0 if absent
+size_t lru_bucket(size_t d, bool seen) {
+    if (d == 0)
+        return seen ? LRU_BUCKETS - 1 : 0;
+    return ltj::log2_bucket(d - 1) + 1;
+}
+
+// Moves the entry that satisfies @p same to the front as @p entry, or inserts @p entry, dropping the
+// last one beyond LRU_SIZE; returns the old 1-based position or 0.
+template <class T, class Eq>
+size_t lru_access(std::vector<T>& stack, const T& entry, Eq same) {
+    size_t i = 0;
+    while (i < stack.size() && !same(stack[i]))
+        ++i;
+    const size_t d = i < stack.size() ? i + 1 : 0;
+    if (d == 0) {
+        if (stack.size() < LRU_SIZE)
+            stack.emplace_back();
+        i = stack.size() - 1;
+    }
+    std::move_backward(stack.begin(), stack.begin() + i, stack.begin() + i + 1);
+    stack[0] = entry;
+    return d;
+}
+
+struct node_entry {
+    uint64_t s, f, ops;
+};
+
+struct node_history {
+    std::vector<node_entry> lru;
+    uint64_t prev_s = 0, prev_ops = 0;
+    bool visited = false;
+};
+
+struct var_history {
+    std::vector<uint64_t> lru;
+    // F -> index of its last frame
+    std::unordered_map<uint64_t, uint64_t> last;
+    uint64_t frames = 0;
+};
+
+// Repetition of one list in one frame.
+struct list_rep {
+    size_t node_bucket = 0;
+    bool prev_op_same = false, prev_set_same = false, cross_hit = false, op_mismatch = false;
+};
+
+struct repetitions {
+    std::unordered_map<uint64_t, node_history> nodes;
+    std::unordered_set<uint64_t> seen_s;
+    std::unordered_map<uint64_t, var_history> vars;
+    std::vector<list_rep> lists;
+    uint64_t s_hash = 0, f_hash = 0;
+    size_t var_bucket = 0;
+    int64_t var_tdist = -1;
+
+    static uint64_t node_id(const ltj::ListNode& node) {
+        return static_cast<uint64_t>(node.parent_pos + 1) << 8 | node.level << 3 | node.trie;
+    }
+
+    void add(const ltj::IntersectionStats& s) {
+        const size_t k = s.lists.size();
+        std::vector<uint64_t> ids(k);
+        for (size_t i = 0; i < k; ++i)
+            ids[i] = node_id(s.lists[i].node);
+        f_hash = s.variable_id;
+        for (uint64_t id : ids)
+            f_hash = ltj::mix64(f_hash, id);
+        std::vector<uint64_t> sorted = ids;
+        std::sort(sorted.begin(), sorted.end());
+        s_hash = 0;
+        for (uint64_t id : sorted)
+            s_hash = ltj::mix64(s_hash, id);
+        const bool s_seen = !seen_s.insert(s_hash).second;
+
+        lists.assign(k, list_rep{});
+        for (size_t i = 0; i < k; ++i) {
+            if (std::find(ids.begin(), ids.begin() + i, ids[i]) != ids.begin() + i)
+                continue;
+            uint64_t ops = 0;
+            for (size_t j = i; j < k; ++j)
+                if (ids[j] == ids[i])
+                    ops = ltj::mix64(ops, s.lists[j].op_hash);
+            auto& h = nodes[ids[i]];
+            list_rep r;
+            r.prev_op_same = h.visited && h.prev_ops == ops;
+            r.prev_set_same = h.visited && h.prev_s == s_hash;
+            h.visited = true;
+            h.prev_ops = ops;
+            h.prev_s = s_hash;
+            const node_entry e{s_hash, f_hash, ops};
+            node_entry old{};
+            const size_t d = lru_access(h.lru, e, [&](const node_entry& x) {
+                if (x.s != s_hash)
+                    return false;
+                old = x;
+                return true;
+            });
+            r.node_bucket = lru_bucket(d, s_seen);
+            r.cross_hit = d && old.f != f_hash;
+            r.op_mismatch = d && old.f == f_hash && old.ops != ops;
+            for (size_t j = i; j < k; ++j)
+                if (ids[j] == ids[i])
+                    lists[j] = r;
+        }
+
+        auto& v = vars[s.variable_id];
+        auto [it, first] = v.last.try_emplace(f_hash, v.frames);
+        var_tdist = first ? -1 : static_cast<int64_t>(v.frames - it->second);
+        it->second = v.frames++;
+        const size_t d = lru_access(v.lru, f_hash, [&](uint64_t x) { return x == f_hash; });
+        var_bucket = lru_bucket(d, !first);
+    }
+};
+
 struct list_sums {
     uint64_t visits = 0;
     uint64_t sum_n = 0;
@@ -123,10 +258,19 @@ struct list_sums {
     uint64_t probes = 0;
     uint64_t probes_found = 0;
     uint64_t enumerated = 0;
+    uint64_t prev_op_same = 0;
+    uint64_t prev_set_same = 0;
+    // visits, seeks, probes, enumerated
+    std::array<lru_histogram, 4> node_lru{};
+    std::array<lru_histogram, 4> var_lru{};
+    histogram var_tdist{};
+    uint64_t cross_hits = 0;
+    uint64_t op_mismatch = 0;
 };
 
 // b:count;b:count over the non-empty buckets
-std::string sparse(const histogram& h) {
+template <size_t N>
+std::string sparse(const std::array<uint64_t, N>& h) {
     std::string out;
     for (size_t b = 0; b < h.size(); ++b) {
         if (!h[b])
@@ -217,8 +361,8 @@ int64_t label_width(const index_type& index, const ltj::ListNode& node) {
 }
 
 struct dump_state {
-    std::ofstream x, h;
-    uint64_t visits = 0, ops = 0;
+    std::ofstream x, h, ctx;
+    uint64_t visits = 0, ops = 0, x_visits = 0, h_visits = 0;
     bool found = false;
     ltj::ListNode node;
     uint64_t n = 0;
@@ -227,9 +371,25 @@ struct dump_state {
 
     static void put(std::ofstream& out, uint32_t v) { out.write(reinterpret_cast<const char*>(&v), sizeof(v)); }
 
-    void add(const ltj::IntersectionStats& s, size_t i, const std::string& prefix) {
+    void add(const ltj::IntersectionStats& s, size_t i, const std::string& prefix, const repetitions& rep) {
         const auto& l = s.lists[i];
-        auto& out = l.role == ltj::ListRole::LEAPFROG ? x : h;
+        if (!ctx.is_open()) {
+            ctx.open(prefix + ".ctx.tsv");
+            ctx << "file\tidx\tdepth\tvar\titer\tpath\trole\tk\tn\tops\tresults\ts_hash\tf_hash\tnode_bucket\t"
+                   "var_bucket\tframe_nodes\tbindings\n";
+        }
+        const bool leapfrog = l.role == ltj::ListRole::LEAPFROG;
+        ctx << (leapfrog ? 'x' : 'h') << '\t' << (leapfrog ? x_visits++ : h_visits++) << '\t' << s.depth << '\t'
+            << int(s.variable_id) << '\t' << i << '\t' << path_name(s.path) << '\t' << role_name(l.role) << '\t' << s.k()
+            << '\t' << l.n << '\t' << l.ops.size() << '\t' << s.result_size << '\t' << rep.s_hash << '\t'
+            << rep.f_hash << '\t' << rep.lists[i].node_bucket << '\t' << rep.var_bucket << '\t';
+        for (size_t j = 0; j < s.lists.size(); ++j)
+            ctx << (j ? ";" : "") << node_name(s.lists[j].node);
+        ctx << '\t';
+        for (size_t j = 0; j < s.bindings.size(); ++j)
+            ctx << (j ? ";" : "") << s.bindings[j].first << '=' << s.bindings[j].second;
+        ctx << '\n';
+        auto& out = leapfrog ? x : h;
         if (!out.is_open())
             out.open(prefix + (l.role == ltj::ListRole::LEAPFROG ? ".x.cltj-trace" : ".h.cltj-trace"), std::ios::binary);
         put(out, l.ops.size());
@@ -291,7 +451,10 @@ void run(
         }
         lists_out << "query,depth,var,iter,trie,level,parent_pos,label1,label2,n,path,role,k,hashed,"
                      "visits,sum_n,sum_result,sum_alt,seeks,moved,sum_jump,jump_hist,first_jump_hist,"
-                     "sum_span,span_hist,probes,probes_found,enumerated\n";
+                     "sum_span,span_hist,probes,probes_found,enumerated,"
+                     "prev_op_same,prev_set_same,node_lru_visits,node_lru_seeks,node_lru_probes,node_lru_enum,"
+                     "var_lru_visits,var_lru_seeks,var_lru_probes,var_lru_enum,var_tdist_hist,cross_hits,"
+                     "op_mismatch\n";
     }
     const bool track_lists = !opt.lists_out.empty() || opt.top_nodes;
 
@@ -302,6 +465,7 @@ void run(
         std::map<group_key, group_sums> groups;
         std::unordered_map<list_key, list_sums, list_key_hash> lists;
         dump_state dump;
+        repetitions reps;
         ::util::results_counter res;
 
         auto start = std::chrono::high_resolution_clock::now();
@@ -331,10 +495,12 @@ void run(
             g.candidates += s.candidates;
             g.alternation += s.alternation_complexity;
 
+            if (!s.lists.empty() && (track_lists || opt.dump))
+                reps.add(s);
             for (size_t i = 0; i < s.lists.size(); ++i) {
                 const auto& l = s.lists[i];
                 if (l.trace)
-                    dump.add(s, i, opt.dump_prefix);
+                    dump.add(s, i, opt.dump_prefix, reps);
                 if (!track_lists)
                     continue;
                 list_key lk = {
@@ -369,6 +535,18 @@ void run(
                 ls.probes += l.probes;
                 ls.probes_found += l.probes_found;
                 ls.enumerated += l.enumerated;
+                const list_rep& r = reps.lists[i];
+                ls.prev_op_same += r.prev_op_same;
+                ls.prev_set_same += r.prev_set_same;
+                const std::array<uint64_t, 4> weights = {1, l.seeks, l.probes, l.enumerated};
+                for (size_t w = 0; w < weights.size(); ++w) {
+                    ls.node_lru[w][r.node_bucket] += weights[w];
+                    ls.var_lru[w][reps.var_bucket] += weights[w];
+                }
+                if (reps.var_tdist >= 0)
+                    ls.var_tdist[ltj::log2_bucket(reps.var_tdist)]++;
+                ls.cross_hits += r.cross_hit;
+                ls.op_mismatch += r.op_mismatch;
             }
         });
         ltj.join(res, 0, timeout);
@@ -401,7 +579,13 @@ void run(
                               << ls->visits << ',' << ls->sum_n << ',' << ls->result << ',' << ls->alternation << ','
                               << ls->seeks << ',' << ls->moved << ',' << ls->sum_jump << ',' << sparse(ls->jumps)
                               << ',' << sparse(ls->first_jumps) << ',' << ls->sum_span << ',' << sparse(ls->spans)
-                              << ',' << ls->probes << ',' << ls->probes_found << ',' << ls->enumerated << '\n';
+                              << ',' << ls->probes << ',' << ls->probes_found << ',' << ls->enumerated << ','
+                              << ls->prev_op_same << ',' << ls->prev_set_same;
+                    for (const auto& h : ls->node_lru)
+                        lists_out << ',' << sparse(h);
+                    for (const auto& h : ls->var_lru)
+                        lists_out << ',' << sparse(h);
+                    lists_out << ',' << sparse(ls->var_tdist) << ',' << ls->cross_hits << ',' << ls->op_mismatch << '\n';
                 }
                 lists_out.flush();
             }
