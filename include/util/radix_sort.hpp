@@ -35,6 +35,38 @@ inline void radix_sort_high32(std::vector<uint64_t>& a, std::vector<uint64_t>& t
     }
 }
 
+/// Stable LSD radix sort of the records of @p a, each @p width consecutive values, by the first value of each
+/// record, one byte per pass. Bytes that are equal in every record are skipped. @p tmp is scratch.
+inline void radix_sort_records32(std::vector<uint32_t>& a, size_t width, std::vector<uint32_t>& tmp) {
+    const size_t n = a.size() / width;
+    if (n < 2)
+        return;
+    size_t count[4][256] = {};
+    for (size_t i = 0; i < n; ++i)
+        for (int d = 0; d < 4; ++d)
+            ++count[d][(a[i * width] >> (8 * d)) & 0xff];
+    tmp.resize(a.size());
+    for (int d = 0; d < 4; ++d) {
+        const int shift = 8 * d;
+        size_t* c = count[d];
+        if (c[(a[0] >> shift) & 0xff] == n)
+            continue;
+        size_t sum = 0;
+        for (int b = 0; b < 256; ++b) {
+            const size_t k = c[b];
+            c[b] = sum;
+            sum += k;
+        }
+        for (size_t i = 0; i < n; ++i) {
+            const uint32_t* src = &a[i * width];
+            uint32_t* dst = &tmp[c[(src[0] >> shift) & 0xff]++ * width];
+            for (size_t k = 0; k < width; ++k)
+                dst[k] = src[k];
+        }
+        a.swap(tmp);
+    }
+}
+
 }  // namespace util
 
 #endif
