@@ -1,4 +1,4 @@
-// util::radix_sort_high32 against std::stable_sort by the high 32 bits, over random inputs whose keys
+// util::radix_sort_high32 and util::radix_sort_records32 against std::stable_sort by the high 32 bits, over random inputs whose keys
 // use 1 to 4 bytes, with repeated and distinct keys; and, for distinct keys, the packed (key, slot)
 // order against std::sort of (key, beg + slot) pairs, which is the order of LTJ26_SORTED_SCAN.
 #include <util/radix_sort.hpp>
@@ -108,6 +108,53 @@ void test_same_order_as_pairs(std::mt19937_64& rng) {
     }
 }
 
+void test_records(std::mt19937_64& rng) {
+    std::vector<uint32_t> tmp;
+    for (size_t width : {1, 2, 3, 5}) {
+        for (size_t n : {0, 1, 2, 17, 1000, 200000}) {
+            for (uint64_t range : {1ULL, 200ULL, 1ULL << 16, 1ULL << 24, 1ULL << 32}) {
+                std::uniform_int_distribution<uint64_t> key(0, range - 1);
+                std::vector<std::vector<uint32_t>> recs(n, std::vector<uint32_t>(width));
+                std::vector<uint32_t> a;
+                for (size_t i = 0; i < n; ++i) {
+                    recs[i][0] = static_cast<uint32_t>(key(rng));
+                    for (size_t k = 1; k < width; ++k)
+                        recs[i][k] = static_cast<uint32_t>(rng());
+                    a.insert(a.end(), recs[i].begin(), recs[i].end());
+                }
+                std::stable_sort(recs.begin(), recs.end(), [](const auto& x, const auto& y) { return x[0] < y[0]; });
+                std::vector<uint32_t> expected;
+                for (const auto& r : recs)
+                    expected.insert(expected.end(), r.begin(), r.end());
+                util::radix_sort_records32(a, width, tmp);
+                check(a == expected, "records width=" + std::to_string(width) + " n=" + std::to_string(n)
+                                         + " range=" + std::to_string(range));
+            }
+        }
+    }
+}
+
+// Records (key, slot) sort like key << 32 | slot: the two layouts of the sorted pass give the same order.
+void test_records_same_as_packed(std::mt19937_64& rng) {
+    std::vector<uint64_t> tmp64;
+    std::vector<uint32_t> tmp32;
+    std::vector<uint64_t> keys = make_input(rng, 300000, 1ULL << 32, true);
+    std::vector<uint64_t> packed;
+    std::vector<uint32_t> recs;
+    for (size_t slot = 0; slot < keys.size(); ++slot) {
+        const uint32_t key = keys[slot] >> 32;
+        packed.push_back(uint64_t(key) << 32 | slot);
+        recs.push_back(key);
+        recs.push_back(static_cast<uint32_t>(slot));
+    }
+    util::radix_sort_high32(packed, tmp64);
+    util::radix_sort_records32(recs, 2, tmp32);
+    bool same = true;
+    for (size_t i = 0; same && i < packed.size(); ++i)
+        same = (packed[i] >> 32) == recs[2 * i] && uint32_t(packed[i]) == recs[2 * i + 1];
+    check(same, "records (key, slot) in the order of the packed sort");
+}
+
 }  // namespace
 
 int main() {
@@ -116,10 +163,12 @@ int main() {
     test_keys_only_in_top_byte(rng);
     test_reused_scratch(rng);
     test_same_order_as_pairs(rng);
+    test_records(rng);
+    test_records_same_as_packed(rng);
     if (failures) {
         std::cout << failures << " failures" << std::endl;
         return 1;
     }
-    std::cout << "all radix_sort_high32 tests passed" << std::endl;
+    std::cout << "all radix sort tests passed" << std::endl;
     return 0;
 }
