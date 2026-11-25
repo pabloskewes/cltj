@@ -135,10 +135,10 @@ size_t lru_bucket(size_t d, bool seen) {
 }
 
 // Moves the entry that satisfies @p same to the front as @p entry, or inserts @p entry, dropping the
-// last one beyond LRU_SIZE; returns the old 1-based position or 0.
+// last one beyond LRU_SIZE; returns the old 1-based position or 0. Without @p seen it is not searched.
 template <class T, class Eq>
-size_t lru_access(std::vector<T>& stack, const T& entry, Eq same) {
-    size_t i = 0;
+size_t lru_access(std::vector<T>& stack, const T& entry, bool seen, Eq same) {
+    size_t i = seen ? 0 : stack.size();
     while (i < stack.size() && !same(stack[i]))
         ++i;
     const size_t d = i < stack.size() ? i + 1 : 0;
@@ -180,6 +180,7 @@ struct repetitions {
     std::unordered_set<uint64_t> seen_s;
     std::unordered_map<uint64_t, var_history> vars;
     std::vector<list_rep> lists;
+    std::vector<uint64_t> ids, sorted;
     uint64_t s_hash = 0, f_hash = 0;
     size_t var_bucket = 0;
     int64_t var_tdist = -1;
@@ -190,13 +191,13 @@ struct repetitions {
 
     void add(const ltj::IntersectionStats& s) {
         const size_t k = s.lists.size();
-        std::vector<uint64_t> ids(k);
+        ids.resize(k);
         for (size_t i = 0; i < k; ++i)
             ids[i] = node_id(s.lists[i].node);
         f_hash = s.variable_id;
         for (uint64_t id : ids)
             f_hash = ltj::mix64(f_hash, id);
-        std::vector<uint64_t> sorted = ids;
+        sorted = ids;
         std::sort(sorted.begin(), sorted.end());
         s_hash = 0;
         for (uint64_t id : sorted)
@@ -220,7 +221,7 @@ struct repetitions {
             h.prev_s = s_hash;
             const node_entry e{s_hash, f_hash, ops};
             node_entry old{};
-            const size_t d = lru_access(h.lru, e, [&](const node_entry& x) {
+            const size_t d = lru_access(h.lru, e, s_seen, [&](const node_entry& x) {
                 if (x.s != s_hash)
                     return false;
                 old = x;
@@ -238,7 +239,7 @@ struct repetitions {
         auto [it, first] = v.last.try_emplace(f_hash, v.frames);
         var_tdist = first ? -1 : static_cast<int64_t>(v.frames - it->second);
         it->second = v.frames++;
-        const size_t d = lru_access(v.lru, f_hash, [&](uint64_t x) { return x == f_hash; });
+        const size_t d = lru_access(v.lru, f_hash, !first, [&](uint64_t x) { return x == f_hash; });
         var_bucket = lru_bucket(d, !first);
     }
 };
