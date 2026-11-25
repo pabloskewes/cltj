@@ -574,8 +574,9 @@ namespace ltj {
             m_status[m_nfixed+1].cnt = in[1];
         }
 
-        // Leaves the iterator as a leap() of `var` that found the value at `pos`. The cursor of EF (cur) is not
-        // restored: nothing reads m_status[k+1].cur before leap_done(), and the next leap of the level resets it.
+        // Leaves the iterator as a leap() of `var` that found the value at `pos`; like leap(), it leaves m_redo
+        // alone at the root. The cursor of EF (cur) is not restored: nothing reads m_status[k+1].cur before
+        // leap_done(), and the next leap of the level resets it.
         void icache_restore(var_type var, size_type pos) {
             state_type state = o;
             if (is_variable_subject(var)) {
@@ -585,7 +586,8 @@ namespace ltj {
             }
             choose_trie(state);
             m_status[m_nfixed+1].beg = pos;
-            m_redo[m_nfixed] = false;
+            if (m_nfixed)
+                m_redo[m_nfixed] = false;
         }
 
 #ifdef LTJ_ICACHE_CHECK
