@@ -213,12 +213,14 @@ foreach(t ${veo_bench_targets})
 endforeach()
 
 # Variants of the SORTED_SCAN pre-pass of C2-rb-ss (include/query/ltj_algorithm_hash.hpp), V0 and V1
-set(ss_pass_variants rsv reuse pack radix all)
+set(ss_pass_variants rsv reuse pack radix all radix-slot)
 set(ss_pass_defs_rsv LTJ26_SS_RESERVE)
 set(ss_pass_defs_reuse LTJ26_SS_REUSE)
 set(ss_pass_defs_pack LTJ26_SS_PACK)
 set(ss_pass_defs_radix LTJ26_SS_PACK LTJ26_SS_RADIX)
 set(ss_pass_defs_all LTJ26_SS_RESERVE LTJ26_SS_REUSE LTJ26_SS_PACK LTJ26_SS_RADIX)
+# radix plus the slot of the hashed filter reused to position, instead of a second locate
+set(ss_pass_defs_radix-slot LTJ26_SS_PACK LTJ26_SS_RADIX LTJ26_SAVE_SLOT)
 foreach(s ${ss_pass_variants})
   foreach(v 0 1)
     if(v EQUAL 0)

@@ -276,6 +276,33 @@ class ltj_iterator_metatrie_hash {
         return resolve_trie()->hash_contains(parent(), parent_r(), key);
     }
 
+#ifdef LTJ26_SAVE_SLOT
+    //! hash_contains() that also returns the slot of @p key in the MPHF of the current node.
+    std::pair<bool, uint32_t> hash_locate(var_type var, value_type key) {
+        state_type state = o;
+        if (is_variable_subject(var))
+            state = s;
+        else if (is_variable_predicate(var))
+            state = p;
+        choose_trie(state);
+        return resolve_trie()->hash_locate(parent(), parent_r(), key);
+    }
+
+    //! exists() for a key that hash_locate() already found at @p slot of the current hashed node.
+    void exists_at_slot(state_type state, size_type c, uint32_t slot) {
+        choose_trie(state);
+        const auto* trie = resolve_trie();
+        const size_type node =
+            (m_nfixed == 1 && m_status_i == 1) ? trie->nodeselect(m_status[m_nfixed].beg - 1) : parent();
+        if (!trie->node_has_hash(node, parent_r())) {
+            exists(state, c);
+            return;
+        }
+        const size_type beg = trie->first_child(node);
+        set_level_status(beg + slot, beg, trie->children(node));
+    }
+#endif
+
     /**
      * @brief Returns the LOUDS position range [beg, end) for children of the current node.
      *

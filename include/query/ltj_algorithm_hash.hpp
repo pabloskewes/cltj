@@ -45,6 +45,11 @@
 #endif
 #include <util/radix_sort.hpp>
 #endif
+#ifdef LTJ26_SAVE_SLOT
+#if !defined(LTJ26_SS_RADIX) || defined(LTJ26_SS_REUSE)
+#error "LTJ26_SAVE_SLOT is implemented on LTJ26_SS_PACK + LTJ26_SS_RADIX, without LTJ26_SS_REUSE"
+#endif
+#endif
 
 #define EXPT_TIME_SOL 0
 
@@ -86,6 +91,12 @@ class ltj_algorithm_hash {
     std::vector<IntersectionStats> m_stats;
     cltj::query::QueryTracer<cltj::TRACE_QUERY> m_tracer{"query_traces"};
     std::function<void(const IntersectionStats&)> m_stats_sink;
+#ifdef LTJ26_SAVE_SLOT
+    // Slot of the current candidate in each hashed iterator, by index in hashed_itrs. It is written by
+    // candidate_in_hashed_iterators() and read by the position_hashed_iterators() of the same candidate, before
+    // the recursion, so the frames do not overwrite each other's.
+    std::vector<uint32_t> m_slots;
+#endif
 #ifdef LTJ26_SS_REUSE
     // One buffer per depth: the frame at depth j is the only one using m_ss_cand[j] while it descends.
     std::vector<std::vector<sorted_cand_type>> m_ss_cand;
@@ -233,6 +244,9 @@ class ltj_algorithm_hash {
         tuple_type t(m_veo.size());
 #ifdef LTJ26_SS_REUSE
         m_ss_cand.resize(m_veo.size());
+#endif
+#ifdef LTJ26_SAVE_SLOT
+        m_slots.resize(m_iterators.size());
 #endif
         search(0, t, res, start, limit_results, timeout_seconds);
     };
@@ -508,6 +522,29 @@ class ltj_algorithm_hash {
                     for (ltj_iter_type* iter : itrs)
                         ltj26_sorted = ltj26_sorted || iter->ltj26_next_down_switches();
                     if (ltj26_sorted) {
+#ifdef LTJ26_SAVE_SLOT
+                        // One record per candidate: the key, then its slot in each of hashed_itrs (here all of
+                        // itrs, in the same order); the slot of the min iterator is the one of the scan.
+                        assert(hashed_itrs.size() == itrs.size());
+                        const size_type width = 1 + hashed_itrs.size();
+                        std::vector<uint32_t> cand;
+#ifdef LTJ26_SS_RESERVE
+                        cand.reserve((end_pos - beg) * width);
+#endif
+                        while (keys.next()) {
+                            value_type c = keys.key();
+                            if (candidate_in_hashed_iterators(x_j, c, hashed_itrs, itrs[min_idx])) {
+                                m_slots[min_idx] = keys.slot();
+                                cand.push_back(c);
+                                cand.insert(cand.end(), m_slots.begin(), m_slots.begin() + hashed_itrs.size());
+                            }
+                        }
+                        std::vector<uint32_t> tmp;
+                        ::util::radix_sort_records32(cand, width, tmp);
+                        for (size_type e = 0; e < cand.size(); e += width) {
+                            value_type c = cand[e];
+                            std::copy(cand.begin() + e + 1, cand.begin() + e + width, m_slots.begin());
+#else
 #ifdef LTJ26_SS_REUSE
                         std::vector<sorted_cand_type>& cand = m_ss_cand[j];
                         cand.clear();
@@ -542,11 +579,14 @@ class ltj_algorithm_hash {
 #else
                             value_type c = cp.first;
 #endif
+#endif
                             if constexpr (COLLECT_QUERY_STATS)
                                 stats.result_size++;
                             tuple[j] = {x_j, c};
                             frame.add(c);
-#ifdef LTJ26_SS_PACK
+#if defined(LTJ26_SAVE_SLOT)
+                            itrs[min_idx]->set_level_status(beg + m_slots[min_idx], beg, end_pos - beg);
+#elif defined(LTJ26_SS_PACK)
                             itrs[min_idx]->set_level_status(beg + static_cast<uint32_t>(cp), beg, end_pos - beg);
 #else
                             itrs[min_idx]->set_level_status(cp.second, beg, end_pos - beg);
@@ -738,12 +778,23 @@ class ltj_algorithm_hash {
         const vector<ltj_iter_type*>& hashed_itrs,
         ltj_iter_type* skip = nullptr
     ) {
+#ifdef LTJ26_SAVE_SLOT
+        for (size_type i = 0; i < hashed_itrs.size(); ++i) {
+            if (hashed_itrs[i] == skip)
+                continue;
+            auto [found, slot] = hashed_itrs[i]->hash_locate(x_j, c);
+            if (!found)
+                return false;
+            m_slots[i] = slot;
+        }
+#else
         for (ltj_iter_type* iter : hashed_itrs) {
             if (iter == skip)
                 continue;
             if (!iter->hash_contains(x_j, c))
                 return false;
         }
+#endif
         return true;
     }
 
@@ -756,11 +807,19 @@ class ltj_algorithm_hash {
         const vector<ltj_iter_type*>& hashed_itrs,
         ltj_iter_type* skip = nullptr
     ) {
+#ifdef LTJ26_SAVE_SLOT
+        for (size_type i = 0; i < hashed_itrs.size(); ++i) {
+            if (hashed_itrs[i] == skip)
+                continue;
+            hashed_itrs[i]->exists_at_slot(state_for(hashed_itrs[i], x_j), c, m_slots[i]);
+        }
+#else
         for (ltj_iter_type* iter : hashed_itrs) {
             if (iter == skip)
                 continue;
             iter->exists(state_for(iter, x_j), c);
         }
+#endif
     }
 
     /**
