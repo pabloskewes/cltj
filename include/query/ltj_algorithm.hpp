@@ -73,6 +73,7 @@ private:
   std::function<void(const IntersectionStats &)> m_stats_sink;
 #ifdef CLTJ_COLLECT_QUERY_STATS_ENABLED
   IntersectionStats *m_frame = nullptr;
+  std::function<void(const IntersectionStats &)> m_open_sink;
   bool m_trace = false;
   ListNode m_trace_node;
 #endif
@@ -140,6 +141,11 @@ public:
   void set_trace_node(const ListNode &node) {
     m_trace = true;
     m_trace_node = node;
+  }
+
+  /// Receives each frame once its lists are open, before its first leap.
+  void set_open_sink(std::function<void(const IntersectionStats &)> sink) {
+    m_open_sink = std::move(sink);
   }
 #endif
 
@@ -470,6 +476,8 @@ public:
         }
 #ifdef CLTJ_COLLECT_QUERY_STATS_ENABLED
         open_lists(stats, itrs, x_j, m_trace ? &m_trace_node : nullptr, tuple, j);
+        if (m_open_sink)
+          m_open_sink(stats);
         IntersectionStats *outer_frame = m_frame;
         m_frame = &stats;
 #endif

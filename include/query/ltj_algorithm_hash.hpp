@@ -73,6 +73,7 @@ class ltj_algorithm_hash {
     std::function<void(const IntersectionStats&)> m_stats_sink;
 #ifdef CLTJ_COLLECT_QUERY_STATS_ENABLED
     IntersectionStats* m_frame = nullptr;
+    std::function<void(const IntersectionStats&)> m_open_sink;
     bool m_trace = false;
     ListNode m_trace_node;
 
@@ -144,6 +145,9 @@ class ltj_algorithm_hash {
         m_trace = true;
         m_trace_node = node;
     }
+
+    /// Receives each frame once its lists are open, before its first leap.
+    void set_open_sink(std::function<void(const IntersectionStats&)> sink) { m_open_sink = std::move(sink); }
 #endif
 
     ltj_algorithm_hash() = default;
@@ -503,6 +507,8 @@ class ltj_algorithm_hash {
                             stats.lists[i].role = min_scanned ? ListRole::SORTED : ListRole::LEAPFROG;
                     }
                 }
+                if (m_open_sink)
+                    m_open_sink(stats);
                 IntersectionStats* outer_frame = m_frame;
                 m_frame = &stats;
 #endif
