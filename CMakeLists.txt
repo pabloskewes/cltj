@@ -255,6 +255,27 @@ foreach(t bench-query-hcltj-c3-rb-ss-veo1 bench-query-hcltj-c3-rb-ss-radix-slot 
   endif()
 endforeach()
 
+# Cache of the last intersection (include/query/intersection_cache.hpp) on X-rb and C2-rb-ss + radix + slot, V1:
+# -icv one entry per variable, -icn one table of slots by node; -stats adds the counters of the cache
+set(icache_defs_icv LTJ_ICACHE_VAR)
+set(icache_defs_icn LTJ_ICACHE_NODE)
+foreach(c icv icn)
+  foreach(st "" "-stats")
+    set(tx bench-query-xcltj-rb-veo1-${c}${st})
+    add_cltj_executable(${tx} src/bench/bench-query-xcltj.cpp bench)
+    target_compile_definitions(${tx} PRIVATE ADAPTIVE=1 CLTJ_ROOT_BITMAP LTJ_VEO_VARIANT=1 ${icache_defs_${c}})
+    set(th bench-query-hcltj-c-rb-ss-radix-slot-veo1-${c}${st})
+    add_cltj_executable(${th} src/bench/bench-query-hcltj.cpp bench)
+    target_compile_definitions(${th} PRIVATE ADAPTIVE=1 CLTJ_OVERLAY_STEP_TABLE CLTJ_ROOT_BITMAP LTJ26_MIXED_MIN LTJ26_SORTED_SCAN ${ss_pass_defs_radix-slot} LTJ_VEO_VARIANT=1 ${icache_defs_${c}})
+    foreach(t ${tx} ${th})
+      set_target_properties(${t} PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+      if(st STREQUAL "-stats")
+        target_compile_definitions(${t} PRIVATE LTJ_ICACHE_STATS)
+      endif()
+    endforeach()
+  endforeach()
+endforeach()
+
 add_cltj_executable(bench-query-hcltj-global src/bench/bench-query-hcltj.cpp bench)
 target_compile_definitions(bench-query-hcltj-global PRIVATE ADAPTIVE=0)
 
