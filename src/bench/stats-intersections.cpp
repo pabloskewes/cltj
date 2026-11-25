@@ -14,8 +14,8 @@
 // (one access per frame, shared by all the frame's lists on that node) and each variable an LRU of
 // its last 64 F. Buckets: 0 first time in the query; 1..7 stack distance d = 1, 2, 3-4, ..., 33-64;
 // 8 seen before but farther than 64. Columns appended to --lists-output:
-//   prev_op_same, prev_set_same  visits whose node had, in its previous frame, the same operations
-//                                (on all its lists of the frame) / the same S;
+//   prev_op_same, prev_set_same  visits whose node had, in the previous frame that touched it, the
+//                                same operations (on all its lists of the frame) / the same S;
 //   node_lru_*, var_lru_*        histograms of visits, seeks, probes and enumerated by bucket;
 //   var_tdist_hist               repeated F only: log2 bucket of the frames of the variable since
 //                                the last same F;
