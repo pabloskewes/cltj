@@ -231,7 +231,6 @@ class node_cache {
     struct free_deleter {
         void operator()(slot_type* p) const { std::free(p); }
     };
-    // calloc: the pages of the table are zeroed lazily, so a query pays only for the slots it touches.
     std::unique_ptr<slot_type, free_deleter> m_table{
         static_cast<slot_type*>(std::calloc(LTJ_ICACHE_NODE_SLOTS, sizeof(slot_type)))
     };
